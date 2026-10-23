@@ -1,0 +1,111 @@
+[package]
+name = "cdk-cashu-auditor"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+leptos = { version = "0.8.0", features = ["nightly"] }
+leptos_router = { version = "0.8.0", features = ["nightly"] }
+axum = { version = "0.8.0", optional = true }
+console_error_panic_hook = { version = "0.1", optional = true }
+leptos_axum = { version = "0.8.0", optional = true }
+leptos_meta = { version = "0.8.0" }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "time"], optional = true }
+wasm-bindgen-futures = { version = "0.4", optional = true }
+wasm-bindgen = { version = "0.2.106", optional = true }
+web-sys = { version = "0.3", features = ["Clipboard", "Navigator", "Window", "Document"], optional = true }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+form_urlencoded = { version = "1.2", optional = true }
+reqwest = { version = "0.12", features = ["json"], optional = true }
+getrandom = { version = "0.2", features = ["js"] }
+dotenvy = { version = "0.15", optional = true }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
+chrono = { version = "0.4", features = ["serde"], optional = true }
+uuid = { version = "1", features = ["v4"], optional = true }
+tower-http = { version = "0.6", features = ["cors"], optional = true }
+rand = "0.8"
+regex = { version = "1", optional = true }
+once_cell = { version = "1", optional = true }
+thiserror = { version = "2", optional = true }
+qrcode = { version = "0.14", default-features = false, features = ["svg"], optional = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+rusqlite = { version = "0.31", features = ["bundled"], optional = true }
+cdk = { version = "0.18.0", default-features = false, features = ["wallet", "nostr"], optional = true }
+cdk-sqlite = { version = "0.18.0", default-features = false, features = ["wallet"], optional = true }
+home = { version = "0.5", optional = true }
+bip39 = { version = "2.1", optional = true }
+nostr-sdk = { version = "0.44.1", default-features = false, optional = true }
+
+[features]
+hydrate = [
+    "leptos/hydrate",
+    "dep:console_error_panic_hook",
+    "dep:wasm-bindgen",
+    "dep:wasm-bindgen-futures",
+    "dep:web-sys",
+    "dep:chrono",
+]
+ssr = [
+    "dep:axum",
+    "dep:tower-http",
+    "dep:tokio",
+    "dep:leptos_axum",
+    "dep:reqwest",
+    "dep:form_urlencoded",
+    "dep:dotenvy",
+    "dep:tracing-subscriber",
+    "dep:cdk",
+    "dep:cdk-sqlite",
+    "dep:nostr-sdk",
+    "dep:home",
+    "dep:bip39",
+    "dep:chrono",
+    "dep:uuid",
+    "dep:rusqlite",
+    "dep:regex",
+    "dep:once_cell",
+    "dep:thiserror",
+    "dep:qrcode",
+    "leptos/ssr",
+    "leptos_meta/ssr",
+    "leptos_router/ssr",
+]
+
+[profile.wasm-release]
+inherits = "release"
+opt-level = 'z'
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[dev-dependencies]
+nostr-relay-builder = "0.44"
+
+[package.metadata.leptos]
+output-name = "cdk-cashu-auditor"
+site-root = "target/site"
+site-pkg-dir = "pkg"
+style-file = "style/main.css"
+assets-dir = "public"
+site-addr = "127.0.0.1:3000"
+reload-port = 3001
+end2end-cmd = "npx playwright test"
+end2end-dir = "end2end"
+browserquery = "defaults"
+bin-features = ["ssr"]
+bin-default-features = false
+lib-features = ["hydrate"]
+lib-default-features = false
+lib-profile-release = "wasm-release"
+wasm-opt-features = [
+    "-Oz",
+    "--enable-reference-types",
+    "--enable-bulk-memory",
+    "--enable-nontrapping-float-to-int",
+]

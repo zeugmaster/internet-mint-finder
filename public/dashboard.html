@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Cashu Mint Auditor — Analytics</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="color-scheme" content="dark" />
+<meta name="theme-color" content="#0a0d13" />
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  /* ===================================================================
+     Design tokens
+     =================================================================== */
+  :root {
+    /* Surfaces — layered elevation from base canvas up to floating cards */
+    --bg-0: #0c1016;
+    --bg-1: #111720;
+    --bg-2: #161e29;
+    --bg-3: #202b39;
+    --bg-4: #232d3d;
+
+    --line-1: rgba(148, 163, 184, 0.09);
+    --line-2: rgba(148, 163, 184, 0.16);
+    --line-3: rgba(148, 163, 184, 0.28);
+
+    --text-1: #f2f6fc;
+    --text-2: #9aa7bc;
+    --text-3: #8593a8;
+
+    --accent: #f0a43c;
+    --accent-strong: #ffc46b;
+    --accent-dim: rgba(240, 164, 60, 0.12);
+
+    --ok: #3ecf8e;
+    --ok-dim: rgba(62, 207, 142, 0.14);
+    --warn: #eec33f;
+    --warn-dim: rgba(238, 195, 63, 0.16);
+    --err: #f2555a;
+    --err-dim: rgba(242, 85, 90, 0.14);
+    --blue: #5b9dd9;
+    --violet: #a78bfa;
+
+    --radius-sm: 8px;
+    --radius: 14px;
+    --radius-lg: 18px;
+
+    --shadow-1: 0 1px 2px rgba(0,0,0,0.4);
+    --shadow-2: 0 12px 30px rgba(0,0,0,0.45);
+
+    --font-sans: 'Archivo', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; min-height: 100vh; }
+
+  body {
+    font-family: var(--font-sans);
+    color: var(--text-1);
+    font-size: 14px;
+    line-height: 1.45;
+    background-color: var(--bg-0);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  button, input, select { font: inherit; }
+  a:focus-visible, button:focus-visible, input:focus-visible,
+  .choices.is-focused .choices__inner {
+    outline: 2px solid var(--accent-strong);
+    outline-offset: 3px;
+  }
+
+  /* ===================================================================
+     Header
+     =================================================================== */
+  header {
+    position: sticky; top: 0; z-index: 40;
+    padding: 0 24px; height: 62px;
+    display: flex; align-items: center; gap: 14px;
+    border-bottom: 1px solid var(--line-1);
+    background: rgba(10, 13, 19, 0.78);
+    backdrop-filter: saturate(160%) blur(16px);
+    -webkit-backdrop-filter: saturate(160%) blur(16px);
+  }
+  header .logo {
+    width: 30px; height: 30px; display: grid; place-items: center;
+    filter: drop-shadow(0 0 10px rgba(240, 164, 60, 0.28));
+  }
+  header .logo svg { width: 30px; height: 30px; display: block; }
+  header .brand { display: flex; flex-direction: column; line-height: 1.1; }
+  header h1 {
+    margin: 0; font-size: 15px; font-weight: 800; letter-spacing: -0.02em;
+    color: var(--text-1);
+  }
+  header .sub {
+    color: var(--text-3); font-family: var(--font-mono);
+    font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+  }
+  header .spacer { flex: 1; }
+  .live {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-family: var(--font-mono); font-size: 11px; color: var(--text-2);
+    padding: 5px 11px; border-radius: 999px;
+    background: var(--bg-2); border: 1px solid var(--line-2);
+  }
+  .live .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--ok); box-shadow: 0 0 0 0 rgba(62,207,142,0.6);
+    animation: pulse 2.4s var(--ease) infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(62,207,142,0.55); }
+    70% { box-shadow: 0 0 0 7px rgba(62,207,142,0); }
+    100% { box-shadow: 0 0 0 0 rgba(62,207,142,0); }
+  }
+  header .back {
+    color: var(--text-2); font-size: 13px; font-weight: 600;
+    text-decoration: none; padding: 7px 14px; border-radius: var(--radius-sm);
+    background: var(--bg-2); border: 1px solid var(--line-2);
+    transition: color 140ms var(--ease), border-color 140ms var(--ease);
+  }
+  header .back:hover { color: var(--accent-strong); border-color: var(--accent); }
+
+  /* ===================================================================
+     Layout
+     =================================================================== */
+  main {
+    position: relative; z-index: 1;
+    padding: 22px;
+    max-width: 1560px; margin: 0 auto;
+    display: grid; gap: 18px;
+    grid-template-columns: 290px 1fr;
+    align-items: start;
+  }
+  .stack { display: grid; gap: 18px; min-width: 0; }
+
+  .section-head {
+    display: flex; align-items: baseline; gap: 12px;
+    margin: 6px 2px 0;
+  }
+  .section-head .t {
+    font-size: 12px; font-weight: 700; color: var(--text-1);
+    letter-spacing: 0.02em;
+  }
+  .section-head .d {
+    font-size: 11px; color: var(--text-3); font-family: var(--font-mono);
+  }
+
+  /* ===================================================================
+     Cards
+     =================================================================== */
+  .card {
+    background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
+    border: 1px solid var(--line-1);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-1);
+    overflow: hidden;
+  }
+  .panel { padding: 18px; position: sticky; top: 80px; }
+  .chart { padding: 12px 14px 8px; }
+  .chart .head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; padding: 4px 4px 12px;
+  }
+  .chart .head .ttl { font-size: 13px; font-weight: 700; color: var(--text-1); }
+  .chart .head .meta { font-size: 11px; color: var(--text-3); font-family: var(--font-mono); }
+  .plot { width: 100%; }
+
+  h2 {
+    margin: 0 0 12px 0; font-size: 11px; color: var(--text-3);
+    text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700;
+    font-family: var(--font-mono);
+  }
+
+  .grid { display: grid; gap: 18px; }
+  .g2 { grid-template-columns: 1fr 1fr; }
+  .g3 { grid-template-columns: 1fr 1fr 1fr; }
+
+  /* ===================================================================
+     KPI tiles
+     =================================================================== */
+  .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; }
+  .kpi {
+    position: relative; padding: 15px 16px 12px;
+    background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
+    border: 1px solid var(--line-1); border-radius: var(--radius);
+    box-shadow: var(--shadow-1);
+    transition: transform 220ms var(--ease), border-color 220ms var(--ease);
+    overflow: hidden;
+  }
+  .kpi:hover { transform: translateY(-2px); border-color: var(--line-2); }
+  .kpi::before {
+    content: ''; position: absolute; top: 0; left: 16px; right: 16px; height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent); opacity: 0.5;
+  }
+  .kpi .lbl {
+    font-size: 10px; color: var(--text-3); text-transform: uppercase;
+    letter-spacing: 0.13em; font-weight: 600; font-family: var(--font-mono);
+  }
+  .kpi .val {
+    font-size: 23px; font-weight: 700; margin-top: 8px;
+    font-family: var(--font-mono); letter-spacing: -0.02em; color: var(--text-1);
+    display: flex; align-items: baseline; gap: 5px; line-height: 1;
+  }
+  .kpi .val .u { font-size: 13px; color: var(--accent); font-weight: 600; }
+  .kpi .foot { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; height: 26px; }
+  .kpi .spark { width: 96px; height: 26px; display: block; }
+  .delta {
+    display: inline-flex; align-items: center; gap: 3px;
+    font-size: 11px; font-weight: 700; font-family: var(--font-mono);
+    padding: 2px 7px; border-radius: 999px;
+  }
+  .delta.up { color: var(--ok); background: var(--ok-dim); }
+  .delta.down { color: var(--err); background: var(--err-dim); }
+  .delta.flat { color: var(--text-3); background: var(--bg-3); }
+  .delta.up.inv { color: var(--err); background: var(--err-dim); }
+  .delta.down.inv { color: var(--ok); background: var(--ok-dim); }
+
+  /* ===================================================================
+     Filters
+     =================================================================== */
+  .filters fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+  .filter-toggle { display: none; }
+  .filters label, .filters legend {
+    display: block; font-size: 10px; color: var(--text-3);
+    font-family: var(--font-mono); letter-spacing: 0.1em;
+    text-transform: uppercase; margin: 15px 0 6px;
+  }
+  .filters input[type="date"] {
+    width: 100%; padding: 8px 10px; background: var(--bg-0);
+    border: 1px solid var(--line-2); border-radius: var(--radius-sm);
+    color: var(--text-1); font-family: var(--font-mono); font-size: 12px;
+    color-scheme: dark;
+  }
+  .filters input[type="date"]:focus {
+    outline: none; border-color: rgba(240, 164, 60, 0.4);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+  }
+  .filters .row { display: flex; gap: 8px; }
+  .filters .row > * { flex: 1; }
+
+  .btn {
+    width: 100%; margin-top: 16px; padding: 10px;
+    border: 1px solid transparent; border-radius: var(--radius-sm);
+    cursor: pointer; font: inherit; font-weight: 700; font-size: 13px;
+    color: #181006;
+    background: linear-gradient(180deg, var(--accent-strong), var(--accent));
+    box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 6px 20px rgba(240,164,60,0.22);
+    transition: box-shadow 160ms var(--ease), transform 60ms var(--ease);
+  }
+  .btn:hover { box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 8px 26px rgba(240,164,60,0.4); }
+  .btn:active { transform: translateY(1px); }
+  .btn:disabled { cursor: wait; opacity: 0.65; transform: none; }
+  .btn.secondary {
+    margin-top: 8px; background: var(--bg-2); color: var(--text-1);
+    border-color: var(--line-2); box-shadow: none;
+  }
+  .btn.secondary:hover { background: var(--bg-3); }
+
+  /* ===================================================================
+     Segmented control (time range + chart toggles)
+     =================================================================== */
+  .seg {
+    display: inline-flex; padding: 3px; gap: 2px;
+    background: var(--bg-0); border: 1px solid var(--line-1);
+    border-radius: 10px;
+  }
+  .seg button {
+    background: transparent; border: 0; color: var(--text-3);
+    padding: 6px 13px; font: inherit; font-weight: 600; font-size: 12px;
+    cursor: pointer; border-radius: 7px;
+    transition: color 150ms var(--ease), background-color 150ms var(--ease);
+  }
+  .seg button:hover { color: var(--text-1); }
+  .seg button.active { color: var(--accent-strong); background: var(--accent-dim); }
+  .seg button:disabled { cursor: wait; opacity: 0.65; }
+  .seg.sm button { padding: 4px 10px; font-size: 11px; }
+
+  /* ===================================================================
+     Fleet uptime — single aggregate timeline
+     =================================================================== */
+  .sla { padding: 6px 6px 4px; }
+  .sla-single { display: flex; align-items: center; gap: 22px; }
+  .sla-figure { flex: none; min-width: 116px; }
+  .sla-figure .big {
+    font-family: var(--font-mono); font-size: 32px; font-weight: 700;
+    letter-spacing: -0.02em; line-height: 1; font-variant-numeric: tabular-nums;
+  }
+  .sla-figure .cap {
+    margin-top: 6px; font-size: 10px; color: var(--text-3);
+    font-family: var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .sla-figure .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .sla-wrap { flex: 1; min-width: 0; }
+  .sla-cells { display: flex; gap: 2px; height: 38px; align-items: stretch; overflow: hidden; }
+  .sla-cell {
+    flex: 1 1 0; min-width: 1px; border-radius: 2px; background: var(--bg-3);
+    transition: transform 120ms var(--ease), filter 120ms var(--ease);
+  }
+  .sla-cell:hover { transform: scaleY(1.12); filter: brightness(1.25); }
+  .sla-cell.ok   { background: var(--ok); }
+  .sla-cell.warn { background: var(--warn); }
+  .sla-cell.err  { background: var(--err); }
+  .sla-cell.none { background: var(--bg-3); }
+  .sla-axis {
+    display: flex; justify-content: space-between; margin-top: 7px;
+    font-size: 10px; color: var(--text-3); font-family: var(--font-mono);
+  }
+
+  /* ===================================================================
+     Tables
+     =================================================================== */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 9px 10px; text-align: left; border-bottom: 1px solid var(--line-1); }
+  th {
+    color: var(--text-3); font-weight: 600; font-size: 10px;
+    font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em;
+  }
+  tbody tr { transition: background-color 120ms var(--ease); }
+  tbody tr:hover { background: var(--bg-3); }
+  tbody tr:last-child td { border-bottom: none; }
+  td { color: var(--text-2); }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--font-mono); font-size: 12px; }
+  .pill {
+    display: inline-block; padding: 1px 8px; border-radius: 999px;
+    font-size: 10px; font-weight: 700; font-family: var(--font-mono);
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .pill.network { color: var(--blue); background: rgba(91,157,217,0.14); }
+  .pill.timeout { color: var(--warn); background: var(--warn-dim); }
+  .pill.mint { color: var(--accent); background: var(--accent-dim); }
+  .pill.liquidity { color: var(--violet); background: rgba(167,139,250,0.16); }
+  .pill.fee, .pill.ssl, .pill.config { color: var(--err); background: var(--err-dim); }
+  .pill.internal, .pill.unknown { color: var(--text-2); background: var(--bg-3); }
+
+  /* ===================================================================
+     Skeleton + empty states
+     =================================================================== */
+  .skel {
+    position: relative; overflow: hidden; border-radius: var(--radius-sm);
+    background: var(--bg-3);
+  }
+  .skel::after {
+    content: ''; position: absolute; inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(148,163,184,0.10), transparent);
+    animation: shimmer 1.4s infinite;
+  }
+  @keyframes shimmer { 100% { transform: translateX(100%); } }
+  .empty {
+    display: grid; place-items: center; text-align: center;
+    color: var(--text-3); font-size: 12px; font-family: var(--font-mono);
+    height: 100%; min-height: 120px; gap: 6px; padding: 18px;
+  }
+  .empty svg { width: 26px; height: 26px; opacity: 0.4; }
+
+  /* ===================================================================
+     Choices.js dark overrides
+     =================================================================== */
+  .choices { margin-bottom: 0; }
+  .choices__inner {
+    background: var(--bg-0) !important; border: 1px solid var(--line-2) !important;
+    border-radius: var(--radius-sm) !important; min-height: 36px;
+    color: var(--text-1); font-size: 12px;
+  }
+  .choices__list--dropdown, .choices__list[aria-expanded] {
+    background: var(--bg-2) !important; border: 1px solid var(--line-2) !important;
+    border-radius: var(--radius-sm) !important; box-shadow: var(--shadow-2);
+  }
+  .choices__list--dropdown .choices__item, .choices__list[aria-expanded] .choices__item { color: var(--text-2); font-size: 12px; }
+  .choices__list--dropdown .choices__item--selectable.is-highlighted,
+  .choices__list[aria-expanded] .choices__item--selectable.is-highlighted { background: var(--bg-3) !important; color: var(--text-1); }
+  .choices__list--multiple .choices__item {
+    background: var(--accent-dim) !important; border: 1px solid rgba(240,164,60,0.35) !important;
+    color: var(--accent-strong) !important; font-weight: 600; font-size: 11px; border-radius: 6px !important;
+  }
+  .choices__input { background: transparent !important; color: var(--text-1) !important; font-size: 12px; }
+  .choices[data-type*="select-multiple"] .choices__button {
+    border-left-color: rgba(240,164,60,0.4);
+    filter: invert(70%) sepia(50%) saturate(400%) hue-rotate(340deg);
+  }
+  .choices__placeholder { color: var(--text-3); opacity: 1; }
+
+  /* ===================================================================
+     Motion
+     =================================================================== */
+  .rise { opacity: 0; transform: translateY(8px); animation: rise 520ms var(--ease) forwards; }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+
+  @media (max-width: 1180px) {
+    main { grid-template-columns: 1fr; }
+    .panel { position: static; padding: 0; }
+    .filter-toggle {
+      width: 100%; padding: 15px 18px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      border: 0; background: transparent; color: var(--text-1); cursor: pointer;
+      font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase;
+    }
+    .filter-toggle-meta { color: var(--accent-strong); font-size: 10px; }
+    .filter-toggle-icon { color: var(--text-3); transition: transform 150ms var(--ease); }
+    .filter-fields { display: none; padding: 4px 18px 18px; border-top: 1px solid var(--line-1); }
+    .filters.is-open .filter-fields { display: block; }
+    .filters.is-open .filter-toggle-icon { transform: rotate(180deg); }
+    .filter-fields > h2 { display: none; }
+    .kpis { grid-template-columns: repeat(3, 1fr); }
+    .g2, .g3 { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 860px) {
+    header {
+      height: auto; min-height: 62px; padding: 10px 16px;
+      flex-wrap: wrap;
+    }
+    #range-seg { order: 3; width: 100%; }
+    #range-seg button { flex: 1; padding-inline: 8px; }
+    main { padding: 14px; }
+    .sla-single { align-items: flex-start; }
+  }
+  @media (max-width: 620px) {
+    .kpis { grid-template-columns: repeat(2, 1fr); }
+    header .live { display: none; }
+    .sla-single { flex-direction: column; gap: 14px; }
+    .sla-figure { min-width: 0; }
+    .sla-cells { gap: 1px; }
+    .chart { padding-inline: 10px; }
+    .section-head { flex-direction: column; gap: 2px; }
+  }
+  .data-status { max-width: 1560px; margin: 18px auto 0; padding: 0 24px; color: var(--text-2); font: 11px var(--font-mono); }
+  :focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 3px; }
+  button:disabled { opacity: .6; cursor: wait; }
+  .plot { min-width: 0; }
+  main > *, .grid > * { min-width: 0; }
+  @media (max-width: 760px) {
+    header { height: auto; padding: 16px; gap: 10px; flex-wrap: wrap; }
+    #range-seg { order: 5; flex-basis: 100%; justify-content: center; }
+    header .back { padding: 8px 10px; font-size: 11px; }
+    main { padding: 16px; }
+    .data-status { padding: 0 16px; line-height: 1.6; }
+    .kpi .val { font-size: 26px; overflow-wrap: anywhere; }
+  }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="btc-symbol" viewBox="0 0 24 24">
+    <text x="12" y="20" text-anchor="middle" font-size="22" fill="currentColor" font-family="Arial,Helvetica,sans-serif">₿</text>
+  </symbol>
+</svg>
+
+<header>
+  <div class="logo" aria-hidden="true">
+    <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="24" cy="24" r="17" stroke="#f0a43c" stroke-width="2" opacity="0.4"/>
+      <path d="M13 24 H19 L21.5 16.5 L25 31.5 L27.5 24 H35" stroke="#ffc46b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="24" cy="7" r="3.6" fill="#3ecf8e"/>
+      <circle cx="9.3" cy="32.5" r="3.6" fill="#f0a43c"/>
+      <circle cx="38.7" cy="32.5" r="3.6" fill="#f0a43c"/>
+    </svg>
+  </div>
+  <div class="brand">
+    <h1>Cashu Mint Auditor</h1>
+    <span class="sub">Analytics Console</span>
+  </div>
+  <div class="spacer"></div>
+  <div class="seg" id="range-seg" role="group" aria-label="Time range">
+    <button type="button" data-days="1" aria-pressed="false">24h</button>
+    <button type="button" data-days="7" aria-pressed="false">7d</button>
+    <button type="button" data-days="30" class="active" aria-pressed="true">30d</button>
+    <button type="button" data-days="90" aria-pressed="false">90d</button>
+    <button type="button" data-days="0" aria-pressed="false">All</button>
+  </div>
+  <button id="refresh" class="back" type="button">Refresh</button>
+  <a href="/" class="back">← Console</a>
+</header>
+
+<div id="data-status" class="data-status" role="status" aria-live="polite">Loading analytics…</div>
+<main aria-busy="false">
+  <aside class="card panel filters" aria-label="Analytics filters">
+    <button
+      type="button"
+      id="filter-toggle"
+      class="filter-toggle"
+      aria-expanded="false"
+      aria-controls="filter-fields"
+    >
+      <span>Filters</span>
+      <span class="filter-toggle-meta" id="filter-toggle-meta">30d</span>
+      <span class="filter-toggle-icon" aria-hidden="true">⌄</span>
+    </button>
+    <div class="filter-fields" id="filter-fields">
+      <h2>Filters</h2>
+
+      <fieldset>
+        <legend>Custom date range</legend>
+        <div class="row">
+          <input type="date" id="f-start" aria-label="Start date" />
+          <input type="date" id="f-end" aria-label="End date" />
+        </div>
+      </fieldset>
+
+      <label for="f-from">From mint (source)</label>
+      <select id="f-from" multiple></select>
+
+      <label for="f-to">To mint (destination)</label>
+      <select id="f-to" multiple></select>
+
+      <label for="f-from-version">Source mint version</label>
+      <select id="f-from-version" multiple></select>
+
+      <label for="f-to-version">Destination mint version</label>
+      <select id="f-to-version" multiple></select>
+
+      <button type="button" id="apply" class="btn">Apply filters</button>
+      <button type="button" id="reset" class="btn secondary">Reset</button>
+    </div>
+  </aside>
+
+  <div class="stack">
+
+    <!-- KPI strip -->
+    <div class="kpis" id="kpis"></div>
+
+    <!-- Reliability -->
+    <div class="section-head"><span class="t">Reliability</span><span class="d">health probes · SLA</span></div>
+    <div class="grid g2">
+      <div class="card chart" style="grid-column: 1 / -1;">
+        <div class="head">
+          <span class="ttl">Fleet uptime</span>
+          <span class="meta" id="sla-meta"></span>
+        </div>
+        <div id="sla" class="sla"></div>
+      </div>
+    </div>
+    <div class="grid g3">
+      <div class="card chart">
+        <div class="head"><span class="ttl">Failure stage funnel</span></div>
+        <div id="stages" class="plot" style="height:280px;"></div>
+      </div>
+      <div class="card chart">
+        <div class="head"><span class="ttl">Error categories</span></div>
+        <div id="cat-donut" class="plot" style="height:280px;"></div>
+      </div>
+      <div class="card chart">
+        <div class="head"><span class="ttl">Blamed mints</span></div>
+        <div id="blame" class="plot" style="height:280px;"></div>
+      </div>
+    </div>
+
+    <!-- Money flow -->
+    <div class="section-head"><span class="t">Money flow</span><span class="d">balances · routes · fees</span></div>
+    <div class="grid g2">
+      <div class="card chart">
+        <div class="head"><span class="ttl">Total value locked</span><span class="meta">stacked by mint</span></div>
+        <div id="tvl" class="plot" style="height:300px;"></div>
+      </div>
+      <div class="card chart">
+        <div class="head"><span class="ttl">Sats flow between mints</span><span class="meta" id="flow-meta"></span></div>
+        <div id="flow" class="plot" style="height:300px;"></div>
+      </div>
+    </div>
+    <div class="grid g2">
+      <div class="card chart">
+        <div class="head"><span class="ttl">Donations over time</span><span class="meta" id="donations-meta"></span></div>
+        <div id="donations" class="plot" style="height:260px;"></div>
+      </div>
+      <div class="card chart">
+        <div class="head"><span class="ttl">Priciest fee corridors</span><span class="meta">effective fee %</span></div>
+        <div style="padding:4px;">
+          <table id="fees">
+            <thead><tr><th>Route</th><th class="num">Swaps</th><th class="num">Routed</th><th class="num">Fee</th><th class="num">Fee %</th></tr></thead>
+            <tbody><tr><td colspan="5"><div class="skel" style="height:120px"></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Performance -->
+    <div class="section-head"><span class="t">Performance</span><span class="d">latency · throughput · errors</span></div>
+    <div class="grid g2">
+      <div class="card chart">
+        <div class="head">
+          <span class="ttl">Latency vs error rate</span>
+          <div class="seg sm" id="scatter-seg" role="group" aria-label="Group mint performance by direction">
+            <button type="button" data-v="from_url" class="active" aria-pressed="true">From</button>
+            <button type="button" data-v="to_url" aria-pressed="false">To</button>
+          </div>
+        </div>
+        <div id="scatter" class="plot" style="height:320px;"></div>
+      </div>
+      <div class="card chart">
+        <div class="head"><span class="ttl">Best mint performance</span></div>
+        <div style="padding:4px;">
+          <table id="top5">
+            <thead><tr><th class="num">#</th><th>Mint</th><th class="num">Attempts</th><th class="num">Err %</th><th class="num">Avg ms</th><th class="num">Score</th></tr></thead>
+            <tbody><tr><td colspan="6"><div class="skel" style="height:120px"></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="grid g2">
+      <div class="card chart">
+        <div class="head"><span class="ttl">Swaps vs errors</span></div>
+        <div id="ts-swaps" class="plot" style="height:280px;"></div>
+      </div>
+      <div class="card chart">
+        <div class="head"><span class="ttl">Average latency</span></div>
+        <div id="ts-latency" class="plot" style="height:280px;"></div>
+      </div>
+    </div>
+    <div class="grid g2">
+      <div class="card chart">
+        <div class="head"><span class="ttl">Latency distribution</span></div>
+        <div id="hist" class="plot" style="height:280px;"></div>
+      </div>
+      <div class="card chart">
+        <div class="head"><span class="ttl">Error breakdown</span></div>
+        <div id="err-bar" class="plot" style="height:280px;"></div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+//===================== state & utils =====================
+const state = {
+  start: null, end: null,
+  from_urls: [], to_urls: [], from_versions: [], to_versions: [],
+  scatter_group: "from_url", scatter_group_locked_by_user: false,
+  range_days: 30,
+};
+const fmt = new Intl.NumberFormat();
+const $ = (id) => document.getElementById(id);
+
+function compact(n) {
+  if (n == null) return "0";
+  const a = Math.abs(n);
+  if (a >= 1e9) return (n/1e9).toFixed(2)+"B";
+  if (a >= 1e6) return (n/1e6).toFixed(2)+"M";
+  if (a >= 1e3) return (n/1e3).toFixed(1)+"k";
+  return fmt.format(Math.round(n));
+}
+
+function qs(extra = {}) {
+  const p = new URLSearchParams();
+  if (state.start) p.set("start", state.start);
+  if (state.end)   p.set("end",   state.end);
+  state.from_urls.forEach(u => p.append("from_url", u));
+  state.to_urls.forEach(u   => p.append("to_url",   u));
+  state.from_versions.forEach(v => p.append("from_version", v));
+  state.to_versions.forEach(v   => p.append("to_version", v));
+  for (const [k, v] of Object.entries(extra)) p.set(k, v);
+  return "?" + p.toString();
+}
+const requests = new Map();
+const failedRequests = new Set();
+function getJSON(path, extra) {
+  const url = path + qs(extra);
+  if (!requests.has(url)) {
+    requests.set(url, (async () => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 15000);
+      try {
+        const r = await fetch(url, { signal: controller.signal });
+        if (!r.ok) throw new Error(`${path}: ${r.status}`);
+        return await r.json();
+      } catch (error) {
+        failedRequests.add(path);
+        throw error;
+      } finally { clearTimeout(timer); }
+    })());
+  }
+  return requests.get(url);
+}
+
+//===================== Plotly theming =====================
+const AXIS = {
+  gridcolor: "rgba(148,163,184,0.08)",
+  zerolinecolor: "rgba(148,163,184,0.16)",
+  tickfont: { color: "#8593a8", family: "JetBrains Mono, monospace", size: 10 },
+  linecolor: "rgba(148,163,184,0.16)",
+};
+// Plotly writes inferred axis types and internal fields back into the layout
+// object it is handed. Sharing one nested `xaxis`/`yaxis` object across charts
+// therefore leaks state between tiles (e.g. a `type:"linear"` inferred for a
+// scatter silently turns a later horizontal bar chart's categorical axis
+// numeric, dropping every label and bar). Keep only scalars here and build
+// fresh nested axis objects per render with `baseLayout`.
+function baseLayout({ xaxis = {}, yaxis = {}, ...rest } = {}) {
+  return {
+    paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+    font: { color: "#9aa7bc", family: "Archivo, system-ui, sans-serif", size: 11 },
+    margin: { l: 52, r: 18, t: 14, b: 38 },
+    hoverlabel: { bgcolor: "#1b2330", bordercolor: "rgba(148,163,184,0.28)",
+                  font: { color: "#f2f6fc", family: "JetBrains Mono, monospace", size: 11 } },
+    transition: { duration: 350, easing: "cubic-in-out" },
+    ...rest,
+    xaxis: { ...AXIS, ...xaxis },
+    yaxis: { ...AXIS, ...yaxis },
+  };
+}
+const config = { displaylogo: false, responsive: true, displayModeBar: false };
+const C = {
+  accent: "#f0a43c", accentFill: "rgba(240,164,60,0.14)",
+  ok: "#3ecf8e", okFill: "rgba(62,207,142,0.14)",
+  err: "#f2555a", errFill: "rgba(242,85,90,0.14)",
+  blue: "#5b9dd9", blueFill: "rgba(91,157,217,0.14)",
+  violet: "#a78bfa", warn: "#eec33f",
+};
+const PALETTE = ["#f0a43c","#3ecf8e","#5b9dd9","#a78bfa","#eec33f","#f2555a","#56c9d6","#e879a6"];
+
+function emptyState(el, msg) {
+  // Purge any live Plotly state before clobbering the DOM. Overwriting the
+  // graph's children directly leaves Plotly's registry pointing at missing
+  // nodes, so a later Plotly.react() renders nothing.
+  if (window.Plotly && el._fullLayout) Plotly.purge(el);
+  el.innerHTML = `<div class="empty">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 2 5-6" stroke-linecap="round"/></svg>
+    <div>${msg || "No data in this range"}</div></div>`;
+}
+
+//===================== KPI strip =====================
+function deltaChip(pct, invert) {
+  if (pct == null) return `<span class="delta flat">—</span>`;
+  const up = pct >= 0;
+  const cls = (up ? "up" : "down") + (invert ? " inv" : "");
+  const arrow = up ? "▲" : "▼";
+  return `<span class="delta ${cls}">${arrow} ${Math.abs(pct).toFixed(0)}%</span>`;
+}
+function sparkSVG(values, color) {
+  const w = 96, h = 26;
+  if (!values || values.length < 2) return "";
+  const max = Math.max(...values), min = Math.min(...values);
+  const span = (max - min) || 1;
+  const pts = values.map((v, i) => {
+    const x = (i / (values.length - 1)) * w;
+    const y = h - 2 - ((v - min) / span) * (h - 4);
+    return [x, y];
+  });
+  const line = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
+  const area = line + ` L${w} ${h} L0 ${h} Z`;
+  const id = "g" + Math.random().toString(36).slice(2, 8);
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="${color}" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
+    <path d="${area}" fill="url(#${id})"/>
+    <path d="${line}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+}
+function countUp(el, target, opts) {
+  const dur = 750, t0 = performance.now();
+  if (el._animation) cancelAnimationFrame(el._animation);
+  const fn = opts && opts.compact ? compact : (n) => fmt.format(Math.round(n));
+  const suffix = (opts && opts.suffix) || "";
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    el.textContent = fn(target) + suffix;
+    return;
+  }
+  function step(t) {
+    const k = Math.min(1, (t - t0) / dur);
+    const e = 1 - Math.pow(1 - k, 3);
+    el.textContent = fn(target * e) + suffix;
+    if (k < 1) el._animation = requestAnimationFrame(step);
+  }
+  el._animation = requestAnimationFrame(step);
+}
+
+const KPI_DEFS = [
+  { key: "sats",  lbl: "Sats swapped", unit: "sat", color: C.accent, compact: true },
+  { key: "succ",  lbl: "Success rate", unit: "%", color: C.ok },
+  { key: "p95",   lbl: "p95 latency",  unit: "ms", color: C.blue, compact: true },
+  { key: "fees",  lbl: "Fees paid",    unit: "sat", color: C.violet, compact: true },
+  { key: "tvl",   lbl: "Value locked", unit: "sat", color: C.warn, compact: true },
+  { key: "don",   lbl: "Donations",    unit: "sat", color: C.ok, compact: true },
+];
+function buildKpiSkeletons() {
+  $("kpis").innerHTML = KPI_DEFS.map(d => `
+    <div class="kpi">
+      <div class="lbl">${d.lbl}</div>
+      <div class="val"><span id="kv-${d.key}">—</span><span class="u">${d.unit}</span></div>
+      <div class="foot"><span id="kd-${d.key}"></span><span id="ks-${d.key}"></span></div>
+    </div>`).join("");
+}
+async function renderKPIs() {
+  try {
+    const [k, swapsTs, latTs, tvl, donTs] = await Promise.all([
+      getJSON("/api/kpis"),
+      getJSON("/api/timeseries/swaps").catch(() => []),
+      getJSON("/api/timeseries/latency").catch(() => []),
+      getJSON("/api/tvl").catch(() => ({ total: [] })),
+      getJSON("/api/donations/timeseries").catch(() => []),
+    ]);
+    const set = (key, val, opts) => countUp($("kv-" + key), val, opts);
+    set("sats", k.total_sats_swapped, { compact: true });
+    $("kv-succ").textContent = k.total_swaps ? (k.success_rate * 100).toFixed(1) : "—";
+    set("p95", k.p95_latency_ms, { compact: true });
+    set("fees", k.total_fees_paid, { compact: true });
+    set("tvl", (tvl.total && tvl.total.length) ? tvl.total[tvl.total.length - 1] : 0, { compact: true });
+    set("don", k.total_donations, { compact: true });
+
+    $("kd-sats").textContent = "Successful settlements";
+    $("kd-succ").innerHTML = `<span class="delta flat">${compact(k.total_swaps)} swaps</span>`;
+    $("kd-p95").innerHTML  = `<span class="delta flat">${compact(k.total_errors)} errs</span>`;
+    $("kd-fees").textContent = "Recorded routing fees";
+    $("kd-tvl").innerHTML  = "";
+    $("kd-don").textContent = "Working capital received";
+
+    $("ks-sats").textContent = "";
+    $("ks-succ").innerHTML = sparkSVG(swapsTs.filter(r => r.swaps > 0).map(r => (r.swaps - r.errors) / r.swaps), C.ok);
+    $("ks-p95").textContent = "";
+    $("ks-fees").textContent = "";
+    $("ks-tvl").innerHTML  = sparkSVG(tvl.total || [], C.warn);
+    $("ks-don").innerHTML  = sparkSVG(donTs.map(r => r.amount), C.ok);
+  } catch (e) {
+    console.error(e);
+    KPI_DEFS.forEach(d => {
+      const el = $("kv-" + d.key);
+      if (el._animation) cancelAnimationFrame(el._animation);
+      el.textContent = "—";
+      $("kd-" + d.key).textContent = "Unable to load";
+      $("ks-" + d.key).textContent = "";
+    });
+  }
+}
+
+//===================== Fleet uptime (single aggregate timeline) =====================
+const STATE_COLOR = { ok: "var(--ok)", warn: "var(--warn)", err: "var(--err)", none: "var(--text-3)" };
+// Per-bucket fleet state from the pooled failure rate across all mints.
+function bucketClass(checks, failures) {
+  if (checks <= 0) return "none";
+  if (failures <= 0) return "ok";
+  return (failures / checks) <= 0.1 ? "warn" : "err";
+}
+async function renderSLA() {
+  const el = $("sla");
+  try {
+    const g = await getJSON("/api/uptime/grid");
+    if (!g.rows.length || !g.buckets.length) { emptyState(el, "No health probes recorded yet"); $("sla-meta").textContent = ""; return; }
+
+    // Pool every mint's checks into one cell per bucket — per-mint detail
+    // lives in each mint's own page.
+    const agg = g.buckets.map(() => ({ checks: 0, failures: 0 }));
+    g.rows.forEach(row => row.cells.forEach((c, i) => { agg[i].checks += c.checks; agg[i].failures += c.failures; }));
+    const totalChecks = agg.reduce((s, a) => s + a.checks, 0);
+    const totalFailures = agg.reduce((s, a) => s + a.failures, 0);
+    const uptime = totalChecks > 0 ? (totalChecks - totalFailures) / totalChecks : 0;
+    const last = [...agg].reverse().find(a => a.checks > 0) || { checks: 0, failures: 0 };
+    const curCls = bucketClass(last.checks, last.failures);
+
+    $("sla-meta").textContent = `${g.rows.length} mints · ${compact(totalChecks)} probes`;
+    const cells = agg.map((a, i) => {
+      const cls = bucketClass(a.checks, a.failures);
+      const tip = a.checks ? `${g.buckets[i]}\n${a.checks} checks · ${a.failures} failed · ${((a.checks-a.failures)/a.checks*100).toFixed(1)}%` : `${g.buckets[i]}\nno data`;
+      return `<div class="sla-cell ${cls}" title="${tip}"></div>`;
+    }).join("");
+    const pct = (uptime * 100).toFixed(uptime >= 0.9995 ? 1 : 2);
+
+    el.innerHTML = `<div class="sla-single">
+      <div class="sla-figure">
+        <div class="big" style="color:${STATE_COLOR[curCls]}">${pct}%</div>
+        <div class="cap"><span class="dot" style="background:${STATE_COLOR[curCls]}"></span>fleet uptime</div>
+      </div>
+      <div class="sla-wrap">
+        <div class="sla-cells">${cells}</div>
+        <div class="sla-axis"><span>${g.buckets[0]}</span><span>${g.buckets[g.buckets.length-1]}</span></div>
+      </div>
+    </div>`;
+  } catch (e) { console.error(e); emptyState(el, "Failed to load uptime"); }
+}
+
+//===================== Reliability charts =====================
+async function renderStages() {
+  const el = $("stages");
+  try {
+    const rows = await getJSON("/api/failure-stages");
+    if (!rows.length) { emptyState(el, "No failures — all clear"); return; }
+    Plotly.react(el, [{
+      x: rows.map(r => r.count), y: rows.map(r => r.stage),
+      type: "bar", orientation: "h",
+      marker: { color: rows.map((_, i) => PALETTE[i % PALETTE.length]) },
+      hovertemplate: "%{y}: %{x}<extra></extra>",
+    }], baseLayout({ bargap: 0.35, margin: { l: 130, r: 16, t: 10, b: 34 },
+          xaxis: { title: "failures" },
+          yaxis: { type: "category", automargin: true, autorange: "reversed" } }), config);
+  } catch (e) { console.error(e); emptyState(el, "Failed to load"); }
+}
+async function renderCatDonut() {
+  const el = $("cat-donut");
+  try {
+    const rows = await getJSON("/api/errors/category");
+    if (!rows.length) { emptyState(el, "No errors — all clear"); return; }
+    Plotly.react(el, [{
+      labels: rows.map(r => r.category), values: rows.map(r => r.count),
+      type: "pie", hole: 0.62, sort: true, direction: "clockwise",
+      marker: { colors: PALETTE, line: { color: "#0f131c", width: 2 } },
+      textfont: { color: "#f2f6fc", family: "JetBrains Mono, monospace", size: 11 },
+      hovertemplate: "%{label}: %{value} (%{percent})<extra></extra>",
+    }], baseLayout({ margin: { l: 10, r: 10, t: 10, b: 10 },
+          showlegend: true, legend: { font: { color: "#9aa7bc", size: 10 }, orientation: "v" } }), config);
+  } catch (e) { console.error(e); emptyState(el, "Failed to load"); }
+}
+async function renderBlame() {
+  const el = $("blame");
+  try {
+    const rows = await getJSON("/api/blame", { limit: 8 });
+    if (!rows.length) { emptyState(el, "No attributable failures"); return; }
+    Plotly.react(el, [{
+      x: rows.map(r => r.failures), y: rows.map(r => r.mint.replace(/^https?:\/\//,"")),
+      type: "bar", orientation: "h",
+      marker: { color: C.err, line: { color: "rgba(10,13,19,0.6)", width: 0.5 } },
+      customdata: rows.map(r => r.top_category),
+      hovertemplate: "%{y}<br>%{x} failures · %{customdata}<extra></extra>",
+    }], baseLayout({ bargap: 0.3, margin: { l: 150, r: 16, t: 10, b: 34 },
+          xaxis: { title: "failures" },
+          yaxis: { type: "category", automargin: true, autorange: "reversed" } }), config);
+  } catch (e) { console.error(e); emptyState(el, "Failed to load"); }
+}
+
+//===================== Money charts =====================
+async function renderTVL() {
+  const el = $("tvl");
+  try {
+    const d = await getJSON("/api/tvl");
+    if (!d.buckets.length) { emptyState(el, "No balance snapshots yet"); return; }
+    const traces = d.mints.map((m, i) => ({
+      x: d.buckets, y: m.values, name: m.mint.replace(/^https?:\/\//,""),
+      type: "scatter", mode: "lines", stackgroup: "tvl",
+      line: { width: 0.5, color: PALETTE[i % PALETTE.length] },
+      fillcolor: PALETTE[i % PALETTE.length] + "55",
+      hovertemplate: "%{fullData.name}: %{y} sats<extra></extra>",
+    }));
+    Plotly.react(el, traces, baseLayout({
+      xaxis: { type: "date" },
+      yaxis: { title: "sats" },
+      showlegend: d.mints.length <= 8,
+      legend: { orientation: "h", y: 1.12, font: { color: "#9aa7bc", size: 9 } } }), config);
+  } catch (e) { console.error(e); emptyState(el, "Failed to load"); }
+}
+// Collapse a→b and b→a corridors into one net direction, keep the largest N,
+// and order nodes by throughput. The raw graph is full of back-and-forth
+// edges (cycles), which is what makes the Sankey unreadable; netting removes
+// them and top-N bounds the clutter. `net` positions colour senders vs
+// receivers.
+function buildFlow(d, topN) {
+  const byPair = new Map();
+  d.links.forEach(l => {
+    if (l.source === l.target) return;
+    const lo = Math.min(l.source, l.target), hi = Math.max(l.source, l.target);
+    const key = lo + ":" + hi;
+    let e = byPair.get(key);
+    if (!e) { e = { lo, hi, net: 0, fee: 0 }; byPair.set(key, e); }
+    e.net += (l.source === lo ? 1 : -1) * l.value;
+    e.fee += l.fee;
+  });
+  const corridors = [...byPair.values()].filter(e => e.net !== 0)
+    .sort((a, b) => Math.abs(b.net) - Math.abs(a.net));
+  const kept = corridors.slice(0, topN);
+  const dropped = corridors.slice(topN);
+
+  const throughput = new Map(), net = new Map();
+  kept.forEach(c => {
+    throughput.set(c.lo, (throughput.get(c.lo) || 0) + Math.abs(c.net));
+    throughput.set(c.hi, (throughput.get(c.hi) || 0) + Math.abs(c.net));
+    net.set(c.lo, (net.get(c.lo) || 0) + c.net);
+    net.set(c.hi, (net.get(c.hi) || 0) - c.net);
+  });
+  const order = [...throughput.keys()].sort((a, b) =>
+    (throughput.get(b) - throughput.get(a)) || (a - b));
+  const index = new Map(order.map((id, i) => [id, i]));
+
+  return {
+    labels: order.map(id => (d.nodes[id] ? d.nodes[id].name : "mint " + id)),
+    net: order.map(id => net.get(id) || 0),
+    links: kept.map(c => ({
+      source: index.get(c.net > 0 ? c.lo : c.hi),
+      target: index.get(c.net > 0 ? c.hi : c.lo),
+      value: Math.abs(c.net),
+      fee: c.fee,
+    })),
+    dropped: dropped.length,
+    droppedValue: dropped.reduce((s, c) => s + Math.abs(c.net), 0),
+  };
+}
+async function renderFlow() {
+  const el = $("flow"), meta = $("flow-meta");
+  try {
+    const d = await getJSON("/api/flow");
+    if (!d.links.length) { emptyState(el, "No completed swaps to chart"); meta.textContent = ""; return; }
+    const f = buildFlow(d, 12);
+    if (!f.links.length) { emptyState(el, "No net flow in this range"); meta.textContent = ""; return; }
+    Plotly.react(el, [{
+      type: "sankey", arrangement: "snap",
+      node: {
+        label: f.labels, pad: 18, thickness: 16,
+        color: f.net.map(n => n >= 0 ? C.accent : C.blue),
+        line: { color: "rgba(10,13,19,0.6)", width: 0.5 },
+      },
+      link: {
+        source: f.links.map(l => l.source), target: f.links.map(l => l.target),
+        value: f.links.map(l => l.value),
+        customdata: f.links.map(l => l.fee),
+        color: "rgba(240,164,60,0.20)",
+        hovertemplate: "%{source.label} → %{target.label}<br>%{value} sats net · fee %{customdata}<extra></extra>",
+      },
+    }], baseLayout({ margin: { l: 8, r: 8, t: 10, b: 8 },
+          font: { color: "#9aa7bc", family: "JetBrains Mono, monospace", size: 10 } }), config);
+    meta.textContent = f.dropped
+      ? `top ${f.links.length} net corridors · ${compact(f.droppedValue)} sats in ${f.dropped} smaller`
+      : `${f.links.length} net corridors`;
+  } catch (e) { console.error(e); emptyState(el, "Failed to load"); meta.textContent = ""; }
+}
+
+// The donations API only buckets days with activity. Rebuild the full bucket
+// axis for the selected range (matching the backend's day/hour/week rule) so
+// sparse donations render as discrete bars, and add a cumulative series so
+// the trend stays legible with only one or two events.
+function bucketDate(bucket) {
+  return new Date(bucket.length === 10 ? bucket + "T00:00:00Z" : bucket + ":00Z");
+}
+function donationUnit() {
+  // Mirror bucket_expr_col: both bounds set => day span; otherwise 30 days.
+  const days = (state.start && state.end)
+    ? (Date.parse(state.end) - Date.parse(state.start)) / 86400000
+    : 30;
+  if (!isFinite(days)) return "day";
+  return days <= 2 ? "hour" : days <= 90 ? "day" : "week";
+}
+function donationAxis(rows, unit) {
+  let startMs = state.start ? Date.parse(state.start + "T00:00:00Z") : bucketDate(rows[0].bucket).getTime();
+  let endMs = state.end ? Date.parse(state.end + "T00:00:00Z") : bucketDate(rows[rows.length - 1].bucket).getTime();
+  if (!isFinite(startMs)) startMs = endMs;
+  if (!isFinite(endMs)) endMs = startMs;
+  if (unit === "hour" && state.end && state.end.length === 10) endMs += 23 * 3600000;
+  if (unit === "week") startMs -= ((new Date(startMs).getUTCDay() + 6) % 7) * 86400000;
+  const step = unit === "hour" ? 3600000 : unit === "week" ? 7 * 86400000 : 86400000;
+  const label = unit === "hour"
+    ? (d) => d.toISOString().slice(0, 13) + ":00"
+    : (d) => d.toISOString().slice(0, 10);
+  const out = [];
+  for (let t = startMs; t <= endMs && out.length < 2000; t += step) out.push(label(new Date(t)));
+  return out;
+}
+function buildDonationSeries(rows, unit) {
+  const amounts = new Map(rows.map(r => [r.bucket, r.amount]));
+  let running = 0;
+  const x = donationAxis(rows, unit), bar = [], cum = [];
+  x.forEach(b => { running += amounts.get(b) || 0; bar.push(amounts.get(b) || 0); cum.push(running); });
+  const events = rows.reduce((s, r) => s + r.count, 0);
+  return { x, bar, cum, total: running, events };
+}
+async function renderDonations() {
+  const el = $("donations"), meta = $("donations-meta");
+  try {
+    const rows = await getJSON("/api/donations/timeseries");
+    if (!rows.length) { emptyState(el, "No donations recorded"); meta.textContent = ""; return; }
+    const s = buildDonationSeries(rows, donationUnit());
+    Plotly.react(el, [
+      { x: s.x, y: s.bar, type: "bar", name: "Received",
+        marker: { color: C.ok, line: { color: "rgba(10,13,19,0.6)", width: 0.5 } },
+        hovertemplate: "%{x}<br>%{y} sats<extra></extra>" },
+      { x: s.x, y: s.cum, type: "scatter", mode: "lines+markers", name: "Cumulative",
+        yaxis: "y2", line: { color: C.accent, width: 2 }, marker: { size: 5, color: C.accent },
+        hovertemplate: "%{x}<br>%{y} sats cumulative<extra></extra>" },
+    ], baseLayout({
+      bargap: 0.2,
+      xaxis: { type: "date" },
+      yaxis: { title: "sats / bucket" },
+      yaxis2: { title: "cumulative sats", overlaying: "y", side: "right", showgrid: false, ...AXIS },
+      showlegend: true,
+      legend: { orientation: "h", y: 1.14, font: { color: "#9aa7bc" } },
+      margin: { l: 52, r: 62, t: 14, b: 38 },
+      hovermode: "x unified",
+    }), config);
+    meta.textContent = `${s.events} donation${s.events === 1 ? "" : "s"} · ${compact(s.total)} sats`;
+  } catch (e) { console.error(e); emptyState(el, "Failed to load"); meta.textContent = ""; }
+}
+async function renderFees() {
+  const tbody = document.querySelector("#fees tbody");
+  try {
+    const rows = await getJSON("/api/fees", { limit: 10 });
+    if (!rows.length) { tbody.innerHTML = `<tr><td colspan="5"><div class="empty">No routed swaps</div></td></tr>`; return; }
+    tbody.innerHTML = rows.map(r => `
+      <tr>
+        <td title="${r.from} → ${r.to}">${r.from} <span style="color:var(--text-3)">→</span> ${r.to}</td>
+        <td class="num">${fmt.format(r.swaps)}</td>
+        <td class="num">${compact(r.total_amount)}</td>
+        <td class="num">${compact(r.total_fee)}</td>
+        <td class="num" style="color:var(--accent-strong)">${(r.fee_pct*100).toFixed(2)}%</td>
+      </tr>`).join("");
+  } catch (e) { console.error(e); tbody.innerHTML = `<tr><td colspan="5"><div class="empty">Failed to load</div></td></tr>`; }
+}
+
+//===================== Performance charts (retained) =====================
+async function renderScatter() {
+  const el = $("scatter");
+  try {
+    const rows = await getJSON("/api/scatter", { group_by: state.scatter_group });
+    if (!rows.length) { emptyState(el, "No swaps in range"); return; }
+    Plotly.react(el, [{
+      x: rows.map(r => r.error_rate * 100), y: rows.map(r => r.avg_latency_ms),
+      text: rows.map(r => `${r.mint}<br>attempts: ${fmt.format(r.attempts)}<br>errors: ${fmt.format(r.errors)} (${(r.error_rate*100).toFixed(1)}%)<br>avg: ${Math.round(r.avg_latency_ms)} ms`),
+      type: "scatter", mode: "markers", hoverinfo: "text",
+      marker: { size: rows.map(r => Math.max(7, Math.min(22, Math.sqrt(r.attempts)*2))),
+                color: rows.map(r => r.error_rate), colorscale: [[0, C.ok],[0.5, C.warn],[1, C.err]],
+                opacity: 0.85, line: { color: "rgba(10,13,19,0.9)", width: 1 } },
+    }], baseLayout({
+          xaxis: { title: "Error rate (%)" },
+          yaxis: { title: "Avg latency (ms)" } }), config);
+  } catch (e) { console.error(e); emptyState(el, "Failed to load"); }
+}
+async function renderTop5() {
+  const tbody = document.querySelector("#top5 tbody");
+  try {
+    const rows = await getJSON("/api/top-quality", { group_by: state.scatter_group, limit: 10 });
+    if (!rows.length) { tbody.innerHTML = `<tr><td colspan="6"><div class="empty">No qualifying mints</div></td></tr>`; return; }
+    tbody.innerHTML = rows.map((r, i) => `
+      <tr>
+        <td class="num">#${i+1}</td>
+        <td title="${r.mint}">${r.mint.replace(/^https?:\/\//, "")}</td>
+        <td class="num">${fmt.format(r.attempts)}</td>
+        <td class="num">${(r.error_rate*100).toFixed(1)}</td>
+        <td class="num">${Math.round(r.avg_latency_ms)}</td>
+        <td class="num" style="color:var(--accent-strong)">${r.score.toFixed(3)}</td>
+      </tr>`).join("");
+  } catch (e) { console.error(e); }
+}
+async function renderTSSwaps() {
+  const el = $("ts-swaps");
+  try {
+    const rows = await getJSON("/api/timeseries/swaps");
+    if (!rows.length) { emptyState(el, "No swaps in range"); return; }
+    const x = rows.map(r => r.bucket);
+    Plotly.react(el, [
+      { x, y: rows.map(r => r.swaps), name: "Swaps", type: "scatter", mode: "lines",
+        line: { color: C.accent, width: 2.4, shape: "spline" }, fill: "tozeroy", fillcolor: C.accentFill },
+      { x, y: rows.map(r => r.errors), name: "Errors", type: "scatter", mode: "lines",
+        line: { color: C.err, width: 2, shape: "spline" } },
+    ], baseLayout({ xaxis: { type: "date" },
+         legend: { orientation: "h", y: 1.14, font: { color: "#9aa7bc" } } }), config);
+  } catch (e) { console.error(e); emptyState(el, "Failed to load"); }
+}
+async function renderTSLatency() {
+  const el = $("ts-latency");
+  try {
+    const rows = await getJSON("/api/timeseries/latency");
+    if (!rows.length) { emptyState(el, "No successful swaps in range"); return; }
+    Plotly.react(el, [
+      { x: rows.map(r => r.bucket), y: rows.map(r => r.avg_ms), type: "scatter", mode: "lines",
+        line: { color: C.ok, width: 2.4, shape: "spline" }, fill: "tozeroy", fillcolor: C.okFill, name: "Avg ms" },
+    ], baseLayout({ xaxis: { type: "date" },
+         yaxis: { title: "ms" } }), config);
+  } catch (e) { console.error(e); emptyState(el, "Failed to load"); }
+}
+async function renderHist() {
+  const el = $("hist");
+  try {
+    const h = await getJSON("/api/histogram/latency", { bins: 30 });
+    if (!h.edges.length) { emptyState(el, "No successful swaps in range"); return; }
+    const x = h.edges.slice(0, -1).map((e, i) => (e + h.edges[i+1]) / 2);
+    Plotly.react(el, [
+      { x, y: h.counts, type: "bar", marker: { color: C.blue, line: { color: "rgba(10,13,19,0.6)", width: 0.5 } }, opacity: 0.9 },
+    ], baseLayout({ bargap: 0.06,
+         xaxis: { title: "ms" } }), config);
+  } catch (e) { console.error(e); emptyState(el, "Failed to load"); }
+}
+async function renderErrors() {
+  const el = $("err-bar");
+  try {
+    const rows = await getJSON("/api/errors");
+    if (!rows.length) { emptyState(el, "No errors — all clear"); return; }
+    Plotly.react(el, [
+      { x: rows.map(r => r.count), y: rows.map(r => r.label), type: "bar", orientation: "h",
+        marker: { color: C.err, line: { color: "rgba(10,13,19,0.6)", width: 0.5 } }, opacity: 0.9 },
+    ], baseLayout({ bargap: 0.06, margin: { l: 160, r: 18, t: 14, b: 38 },
+         xaxis: { title: "count" },
+         yaxis: { type: "category", automargin: true, autorange: "reversed" } }), config);
+  } catch (e) { console.error(e); emptyState(el, "Failed to load"); }
+}
+
+//===================== orchestration =====================
+let rendering = false;
+let renderAgain = false;
+async function renderAll() {
+  if (rendering) { renderAgain = true; return; }
+  rendering = true;
+  setDashboardBusy(true);
+  try {
+    do {
+      renderAgain = false;
+      readFilters();
+      if (state.start && state.end && state.start > state.end) {
+        $("data-status").textContent = "Choose an end date on or after the start date.";
+        return;
+      }
+      requests.clear(); failedRequests.clear();
+      $("data-status").textContent = "Updating analytics…";
+      await Promise.allSettled([
+        renderKPIs(), renderSLA(), renderStages(), renderCatDonut(), renderBlame(),
+        renderTVL(), renderFlow(), renderDonations(), renderFees(),
+        renderScatter(), renderTop5(), renderTSSwaps(), renderTSLatency(), renderHist(), renderErrors(),
+      ]);
+      const stamp = new Date().toLocaleTimeString([], { timeZone: "UTC", hour12: false });
+      $("data-status").textContent = failedRequests.size
+        ? "Some data could not be loaded. Refresh to try again."
+        : `Updated ${stamp} UTC · Use Refresh for the latest measurements`;
+    } while (renderAgain);
+  } finally {
+    rendering = false;
+    setDashboardBusy(false);
+  }
+}
+
+function setDashboardBusy(busy) {
+  document.querySelector("main").setAttribute("aria-busy", String(busy));
+  document.querySelectorAll("#range-seg button, #scatter-seg button, #apply, #reset, #refresh")
+    .forEach(button => { button.disabled = busy; });
+  $("apply").textContent = busy ? "Updating…" : "Apply filters";
+}
+
+//===================== filters =====================
+let fromChoices, toChoices, fromVersionChoices, toVersionChoices;
+function makeChoices(selector, options) {
+  if (typeof Choices !== "undefined") return new Choices(selector, { ...options, allowHTML: false });
+  const select = document.querySelector(selector);
+  options.choices.forEach(item => select.add(new Option(item.label, item.value)));
+  return {
+    getValue: () => Array.from(select.selectedOptions, option => option.value),
+    removeActiveItems: () => Array.from(select.options).forEach(option => { option.selected = false; }),
+  };
+}
+async function initFilters() {
+  let data;
+  try { data = await getJSON("/api/filters"); }
+  catch (error) {
+    console.error(error);
+    data = { date: {}, from_urls: [], to_urls: [], from_versions: [], to_versions: [] };
+  }
+  if (data.date.min) { $("f-start").min = data.date.min.slice(0,10); $("f-end").min = data.date.min.slice(0,10); }
+  if (data.date.max) { $("f-start").max = data.date.max.slice(0,10); $("f-end").max = data.date.max.slice(0,10); }
+  const opts = (arr) => arr.map(u => ({ value: u, label: u, selected: false }));
+  fromChoices = makeChoices("#f-from", { removeItemButton: true, searchEnabled: true, shouldSort: false, placeholderValue: "Any source mint", choices: opts(data.from_urls) });
+  toChoices = makeChoices("#f-to", { removeItemButton: true, searchEnabled: true, shouldSort: false, placeholderValue: "Any destination mint", choices: opts(data.to_urls) });
+  fromVersionChoices = makeChoices("#f-from-version", { removeItemButton: true, searchEnabled: true, shouldSort: false, placeholderValue: "Any source version", choices: opts(data.from_versions) });
+  toVersionChoices = makeChoices("#f-to-version", { removeItemButton: true, searchEnabled: true, shouldSort: false, placeholderValue: "Any destination version", choices: opts(data.to_versions) });
+}
+function readFilters() {
+  state.start = $("f-start").value || null;
+  state.end   = $("f-end").value   || null;
+  state.from_urls = fromChoices.getValue(true);
+  state.to_urls   = toChoices.getValue(true);
+  state.from_versions = fromVersionChoices.getValue(true);
+  state.to_versions   = toVersionChoices.getValue(true);
+  if (!state.scatter_group_locked_by_user) {
+    if (state.from_urls.length === 1 && state.scatter_group === "from_url") { state.scatter_group = "to_url"; paintScatterToggle(); }
+    else if (state.from_urls.length !== 1 && state.scatter_group === "to_url") { state.scatter_group = "from_url"; paintScatterToggle(); }
+  }
+}
+function paintScatterToggle() {
+  document.querySelectorAll("#scatter-seg button").forEach(b => {
+    const active = b.dataset.v === state.scatter_group;
+    b.classList.toggle("active", active);
+    b.setAttribute("aria-pressed", String(active));
+  });
+}
+function setRange(days) {
+  state.range_days = days;
+  const today = new Date();
+  if (days === 0) { $("f-start").value = ""; $("f-end").value = ""; return; }
+  const d = new Date(today); d.setUTCDate(d.getUTCDate() - days);
+  $("f-start").value = d.toISOString().slice(0, 10);
+  $("f-end").value = today.toISOString().slice(0, 10);
+}
+function paintRangeToggle() {
+  document.querySelectorAll("#range-seg button").forEach(b => {
+    const active = Number(b.dataset.days) === state.range_days;
+    b.classList.toggle("active", active);
+    b.setAttribute("aria-pressed", String(active));
+  });
+  $("filter-toggle-meta").textContent = state.range_days > 0
+    ? `${state.range_days}d`
+    : state.range_days === 0 ? "All time" : "Custom";
+}
+function setFilterPanel(open) {
+  document.querySelector(".filters").classList.toggle("is-open", open);
+  $("filter-toggle").setAttribute("aria-expanded", String(open));
+}
+
+//===================== wire up =====================
+document.addEventListener("DOMContentLoaded", async () => {
+  buildKpiSkeletons();
+  if (typeof Plotly === "undefined") {
+    $("data-status").textContent = "The chart library could not load. Check your connection, then refresh this page.";
+    $("refresh").addEventListener("click", () => location.reload());
+    return;
+  }
+  await initFilters();
+  $("refresh").addEventListener("click", renderAll);
+  setRange(30); paintRangeToggle(); paintScatterToggle();
+
+  $("filter-toggle").addEventListener("click", () => {
+    setFilterPanel($("filter-toggle").getAttribute("aria-expanded") !== "true");
+  });
+  $("apply").addEventListener("click", () => {
+    state.range_days = -1; paintRangeToggle();
+    if (window.matchMedia("(max-width: 1180px)").matches) setFilterPanel(false);
+    renderAll();
+  });
+  $("reset").addEventListener("click", () => {
+    setRange(30); paintRangeToggle();
+    fromChoices.removeActiveItems(); toChoices.removeActiveItems();
+    fromVersionChoices.removeActiveItems(); toVersionChoices.removeActiveItems();
+    state.scatter_group_locked_by_user = false; state.scatter_group = "from_url"; paintScatterToggle();
+    renderAll();
+  });
+  document.querySelectorAll("#range-seg button").forEach(b => {
+    b.addEventListener("click", () => { setRange(Number(b.dataset.days)); paintRangeToggle(); renderAll(); });
+  });
+  document.querySelectorAll("#scatter-seg button").forEach(b => {
+    b.addEventListener("click", () => {
+      state.scatter_group = b.dataset.v; state.scatter_group_locked_by_user = true;
+      paintScatterToggle(); renderAll();
+    });
+  });
+
+  await renderAll();
+});
+</script>
+</body>
+</html>

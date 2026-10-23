@@ -1,0 +1,56 @@
+# One Internet Mint Finder instance: the app, its archive relay, TLS and an
+# onion service. Every operator runs exactly this on their own box with their
+# own .env (see .env.example). Nothing here is shared between operators.
+services:
+  imf:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: imf:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      SITE_ADDR: "0.0.0.0:3000"
+    volumes:
+      - imf-data:/data
+    expose: ["3000"]
+
+  strfry:
+    image: ghcr.io/hoytech/strfry:latest
+    restart: unless-stopped
+    command: ["relay"]
+    volumes:
+      - ./strfry/strfry.conf:/etc/strfry.conf:ro
+      - strfry-data:/app/strfry-db
+    expose: ["7777"]
+
+  caddy:
+    build: ./caddy
+    image: imf-caddy:latest
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [imf, strfry]
+
+  tor:
+    build: ./tor
+    image: imf-tor:latest
+    restart: unless-stopped
+    volumes:
+      - tor-data:/var/lib/tor
+    expose: ["9050"]
+    depends_on: [caddy]
+
+volumes:
+  imf-data:
+  strfry-data:
+  caddy-data:
+  caddy-config:
+  tor-data:

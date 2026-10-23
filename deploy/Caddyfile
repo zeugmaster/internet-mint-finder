@@ -1,0 +1,29 @@
+# TLS terminates here. Certificates come from Let's Encrypt via DNS-01 against
+# Bunny DNS, so every box issues its own certificate for the shared apex and
+# HTTP-01 never has to guess which box the validator reaches.
+{
+	email {$ACME_EMAIL}
+}
+
+# Plain HTTP is proxied to the app, not redirected here: the app answers the
+# 308 itself except for /api/health, so Bunny's port-80 check sees a 5xx when
+# the app is down. Catch-all host, because the check may send the bare IP.
+:80 {
+	reverse_proxy imf:3000
+}
+
+{$IMF_DOMAIN}, {$IMF_HOSTNAME} {
+	tls {
+		dns bunny {$BUNNY_API_KEY}
+	}
+	# Delete this line until tor has printed the hostname (ONION_HOSTNAME in .env.example).
+	header Onion-Location "http://{$ONION_HOSTNAME}{uri}"
+	reverse_proxy imf:3000
+}
+
+{$RELAY_HOSTNAME} {
+	tls {
+		dns bunny {$BUNNY_API_KEY}
+	}
+	reverse_proxy strfry:7777
+}
