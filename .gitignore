@@ -14,3 +14,6 @@ result/
 # Documentation lives outside the repository.
 *.md
 !README.md
+
+# Finder metadata
+.DS_Store

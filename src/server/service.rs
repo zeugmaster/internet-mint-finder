@@ -171,12 +171,15 @@ fn rewrite_token_mint_url(mut token: Token, mint_url: &str) -> Result<Token, Aud
 pub async fn with_balance(state: &AppState, mint: Mint) -> MintRead {
     let pubkey = mint.pubkey();
     let mut read = MintRead::from(mint);
-    match local_balance(state, &read.url).await {
-        Ok(balance) => {
-            read.balance = balance;
-            read.balance_available = true;
+    // Peer-only and announced mints have no local wallet to ask.
+    if read.sum_donations > 0 {
+        match local_balance(state, &read.url).await {
+            Ok(balance) => {
+                read.balance = balance;
+                read.balance_available = true;
+            }
+            Err(error) => tracing::warn!(mint = %read.url, %error, "balance unavailable"),
         }
-        Err(error) => tracing::warn!(mint = %read.url, %error, "balance unavailable"),
     }
     match state
         .auditor_db

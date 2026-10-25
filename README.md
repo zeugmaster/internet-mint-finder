@@ -164,8 +164,18 @@ docker compose up --build
 ```
 
 The development compose file runs two instances (`:3000` and `:3001`) sharing
-one local strfry relay plus four fake-wallet mints, so the mirror can be
-watched locally: donate to one instance, and its swaps appear on the other.
+one local strfry relay plus four fake-wallet mints (`:8085`-`:8088`), so the
+mirror can be watched locally. Swaps run every 20-60 s there. To fund an
+instance, mint test ecash and paste the token into `/receive`:
+
+```sh
+cargo +nightly run --no-default-features --features ssr --example fund -- http://localhost:8085 2000
+```
+
+Donate from two different mints to one instance and it starts swapping; the
+other instance shows those swaps within seconds, marked with the first
+instance's pubkey.
+
 Production deployment (app, archive relay, Caddy with DNS-01, onion) is in
 `deploy/`; copy `deploy/.env.example` to `deploy/.env` to start.
 

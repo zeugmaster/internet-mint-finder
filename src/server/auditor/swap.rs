@@ -80,6 +80,12 @@ pub(super) struct SwapSelection {
 // Swap round
 // ---------------------------------------------------------------------------
 
+/// Mints this instance holds ecash for. Rows that exist only because a peer or a
+/// NIP-87 announcement mentioned the mint have no local wallet and never swap.
+fn funded(mints: Vec<Mint>) -> Vec<Mint> {
+    mints.into_iter().filter(|m| m.sum_donations > 0).collect()
+}
+
 pub(super) async fn run_round(
     wallet_repository: &Arc<cdk::wallet::WalletRepository>,
     auditor_db: &Arc<AuditorDatabase>,
@@ -88,7 +94,7 @@ pub(super) async fn run_round(
     guards: &MintGuards,
     support_cache: &SwapSupportCache,
 ) -> Result<(), AuditorError> {
-    let mints = auditor_db.get_all_mints().await?;
+    let mints = funded(auditor_db.get_all_mints().await?);
 
     if mints.len() < 2 {
         info!("Not enough mints for swap, need at least 2");
@@ -225,7 +231,7 @@ pub(super) async fn run_error_retry_round(
     guards: &MintGuards,
     support_cache: &SwapSupportCache,
 ) -> Result<(), AuditorError> {
-    let mints = auditor_db.get_all_mints().await?;
+    let mints = funded(auditor_db.get_all_mints().await?);
     if mints.len() < 2 {
         return Ok(());
     }

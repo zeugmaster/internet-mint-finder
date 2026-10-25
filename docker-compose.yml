@@ -12,14 +12,17 @@ x-cdk-mintd-env: &cdk-mintd-env
   CDK_MINTD_FAKE_WALLET_MAX_DELAY: "3"
 
 x-cdk-mintd: &cdk-mintd
-  image: cashubtc/mintd:latest
+  image: cashubtc/mintd:0.17.7  # 0.18+ needs a TOML imported with `config init`; 0.17 still reads env vars
   restart: unless-stopped
   command: ["cdk-mintd"]
 
 services:
   # Two instances share one relay so the mirror can be watched locally:
   # whatever instance A audits shows up on B (and vice versa) within a minute.
-  # Keys below are throwaway dev keys; never reuse them.
+  # Keys below are throwaway dev keys; never reuse them. Swaps run every
+  # 20-60 s, and the relay is also listed as ws://localhost:7777 so the
+  # browser review form can reach it through the published port (the app
+  # logs a refused connection for that address; harmless).
   auditor:
     build:
       context: .
@@ -39,9 +42,12 @@ services:
       - .env
     environment:
       APP_NAME: "IMF A (dev)"
+      CDK_MNEMONIC: "shock rally bird garage senior false farm picture duty rack vault donkey"
       IMF_NOSTR_NSEC: nsec1dqusu47ykkazha56pucayjc83ypuhv007yenc2wkp85e7rt0avzs6mh6f2
       IMF_AUDITORS: npub17dyrarcleswq8sf7zt0v9hda894nfm8sxjpqqracupffyd7gzlzsc0azqn,npub1zx0xhymkaywxpycg3jz9rf25p7wna3mly0us7ughdzs5l4avdczsjy9t2r
-      IMF_RELAYS: ws://strfry:7777
+      IMF_RELAYS: ws://strfry:7777,ws://localhost:7777
+      AUDITOR_MIN_DELAY_SECS: "20"
+      AUDITOR_MAX_DELAY_SECS: "60"
       IMF_PUBLIC_URLS: http://localhost:3000
       AUDITOR_MINT_URL_ALIASES: >-
         http://0.0.0.0:8085=http://mint-one:8085,
@@ -72,7 +78,9 @@ services:
       CDK_MNEMONIC: "private position month coconut club error above park absurd divorce symbol blind"
       IMF_NOSTR_NSEC: nsec178dq4dlpc6t8vkgac4gh3h9xcyp7tsmlrzyuxfgf4h5nyaf5u9lsmrg7hg
       IMF_AUDITORS: npub17dyrarcleswq8sf7zt0v9hda894nfm8sxjpqqracupffyd7gzlzsc0azqn,npub1zx0xhymkaywxpycg3jz9rf25p7wna3mly0us7ughdzs5l4avdczsjy9t2r
-      IMF_RELAYS: ws://strfry:7777
+      IMF_RELAYS: ws://strfry:7777,ws://localhost:7777
+      AUDITOR_MIN_DELAY_SECS: "20"
+      AUDITOR_MAX_DELAY_SECS: "60"
       IMF_PUBLIC_URLS: http://localhost:3001
       AUDITOR_MINT_URL_ALIASES: >-
         http://0.0.0.0:8085=http://mint-one:8085,
