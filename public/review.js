@@ -1,16 +1,74 @@
-// Signs a NIP-87 mint review (kind 38000) with a NIP-07 browser extension and
-// sends it straight to the relays this instance reads. The server never sees
-// the review on the write path; it ingests it from the relays like any client.
+// Signs a NIP-87 mint review (kind 38000) in the browser, with the nsec the
+// user signed in with or a NIP-07 extension, and sends it straight to the
+// relays this instance reads. The server never sees the review on the write
+// path; it ingests it from the relays like any client.
+// nostr-tools.js is lib/nostr.bundle.js from nostr-tools@2.25.2 on npm,
+// unmodified (sha256 a7c4846fde84a0d6ce7596f3fcfc88435d29fdcd616887205ab97f9a16bc6407).
+// shortcut: the nsec sits in localStorage, readable by any script on this
+// origin; move to NIP-46 if the site ever loads third-party scripts.
+const NSEC_KEY = 'imf.nsec';
+
+function say(msg, ok) {
+  const status = document.getElementById('review-status');
+  if (status) { status.textContent = msg; status.dataset.ok = ok ? '1' : '0'; }
+}
+
+function storedKey() {
+  try {
+    const nsec = localStorage.getItem(NSEC_KEY);
+    return nsec ? NostrTools.nip19.decode(nsec).data : null;
+  } catch (_) { return null; }
+}
+
+// Shows either the sign-in box or the signed-in line. Re-runs on DOM changes
+// because pages are swapped client-side after the first load.
+function render() {
+  const sk = storedKey();
+  for (const el of document.querySelectorAll('[data-signer]')) {
+    const show = (el.dataset.signer === 'in') === !!sk;
+    if (el.hidden === show) el.hidden = !show;
+  }
+  const label = document.getElementById('review-npub');
+  if (label && sk) {
+    const npub = NostrTools.nip19.npubEncode(NostrTools.getPublicKey(sk));
+    const short = `${npub.slice(0, 12)}…${npub.slice(-6)}`;
+    if (label.textContent !== short) { label.textContent = short; label.title = npub; }
+  }
+}
+render();
+new MutationObserver(render).observe(document.documentElement, { childList: true, subtree: true });
+
+document.addEventListener('click', (ev) => {
+  const id = ev.target instanceof Element ? ev.target.id : '';
+  if (id === 'review-signin') {
+    const input = document.getElementById('review-nsec');
+    const nsec = input.value.trim();
+    let decoded = null;
+    try { decoded = NostrTools.nip19.decode(nsec); } catch (_) { /* not bech32 */ }
+    if (!decoded || decoded.type !== 'nsec') { say('That is not an nsec.', false); return; }
+    try { localStorage.setItem(NSEC_KEY, nsec); } catch (_) { say('This browser blocks local storage.', false); return; }
+    input.value = '';
+    render();
+    say('Signed in. Reviews are signed with this key in your browser.', true);
+  } else if (id === 'review-signout') {
+    try { localStorage.removeItem(NSEC_KEY); } catch (_) { /* nothing stored */ }
+    render();
+  }
+});
+
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Enter' && ev.target instanceof Element && ev.target.id === 'review-nsec') {
+    document.getElementById('review-signin').click();
+  }
+});
+
 document.addEventListener('submit', async (ev) => {
   const form = ev.target;
   if (!(form instanceof HTMLFormElement) || form.id !== 'review-form') return;
   ev.preventDefault();
-  const status = form.querySelector('#review-status');
-  const say = (msg, ok) => {
-    if (status) { status.textContent = msg; status.dataset.ok = ok ? '1' : '0'; }
-  };
-  if (!window.nostr) {
-    say('No Nostr signer found. Install a NIP-07 extension (Alby, nos2x), or review this mint from eNuts, Zeus or Boardwalk.', false);
+  const sk = storedKey();
+  if (!sk && !window.nostr) {
+    say('Sign in with your nsec above, install a NIP-07 extension (Alby, nos2x), or review this mint from Zeus or Boardwalk.', false);
     return;
   }
   const data = form.dataset;
@@ -27,8 +85,8 @@ document.addEventListener('submit', async (ev) => {
     content: `[${rating}/5] ${text}`,
   };
   let event;
-  try { event = await window.nostr.signEvent(unsigned); }
-  catch (_) { say('Signing was cancelled.', false); return; }
+  try { event = sk ? NostrTools.finalizeEvent(unsigned, sk) : await window.nostr.signEvent(unsigned); }
+  catch (_) { say('Signing failed.', false); return; }
   const relays = (data.relays || '').split(',').filter(Boolean);
   say('Publishing…', true);
   const results = await Promise.all(relays.map((url) => publish(url, event)));

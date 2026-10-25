@@ -11,7 +11,8 @@ Nostr key. Instances ingest each other's events plus
 NIP-87 announcements (kind 38172) and reviews (kind 38000) from relays, so any
 instance shows the union: a directory of every announced or audited mint, each
 auditor's own numbers side by side, and the reviews. Reviews are signed in the
-browser (NIP-07) and sent to relays; this server never receives them directly.
+browser (pasted nsec or NIP-07) and sent to relays; this server never receives
+them directly.
 Each operator runs one box behind a shared, health-checked domain; the stack is
 in `deploy/`.
 

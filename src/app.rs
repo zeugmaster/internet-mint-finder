@@ -29,6 +29,7 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
                 <HashedStylesheet id="leptos" options=options.clone()/>
                 <HydrationScripts options/>
                 <MetaTags/>
+                <script src="/nostr-tools.js" defer></script>
                 <script src="/review.js" defer></script>
                 <link rel="preconnect" href="https://fonts.googleapis.com"/>
                 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""/>

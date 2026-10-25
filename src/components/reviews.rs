@@ -38,7 +38,8 @@ pub fn AnnouncementCard(announcement: Option<AnnouncementRead>) -> impl IntoView
 }
 
 /// Reviews (kind 38000) read from relays, plus a form that signs a new one in
-/// the browser with NIP-07 (`public/review.js`). Nothing is posted to us.
+/// the browser with a pasted nsec or NIP-07 (`public/review.js`). Nothing is
+/// posted to us.
 #[component]
 pub fn ReviewsPanel(data: MintReviews) -> impl IntoView {
     let ctx = data.context.clone();
@@ -69,6 +70,18 @@ pub fn ReviewsPanel(data: MintReviews) -> impl IntoView {
                     </div>
                 }.into_any()
             }}
+            <div class="field mt-6" data-signer="out">
+                <label class="field-label" for="review-nsec">"Sign in to review"</label>
+                <div class="flex gap-2">
+                    <input id="review-nsec" type="password" class="field-input" placeholder="nsec1…" autocomplete="off" spellcheck="false"/>
+                    <button type="button" id="review-signin" class="btn btn-secondary">"Sign in"</button>
+                </div>
+                <p class="field-hint">"Your key stays in this browser and only signs reviews. A NIP-07 extension (Alby, nos2x) works without signing in."</p>
+            </div>
+            <p class="field-hint mt-6" data-signer="in" hidden=true>
+                "Signed in as " <span id="review-npub" class="mono"></span> " · "
+                <button type="button" id="review-signout" class="btn btn-ghost btn-small">"Sign out"</button>
+            </p>
             <form id="review-form" class="mt-6"
                 data-mint-url=ctx.mint_url.clone()
                 data-mint-pubkey=ctx.mint_pubkey.clone().unwrap_or_default()
@@ -88,7 +101,7 @@ pub fn ReviewsPanel(data: MintReviews) -> impl IntoView {
                 </div>
                 <button type="submit" class="btn btn-primary" disabled=!can_review>"Sign with Nostr and publish"</button>
                 <p id="review-status" class="field-hint mt-2">
-                    {if can_review { "Signed in your browser with a NIP-07 extension and sent to the relays; this server never receives it." } else { "The mint's key is not known yet (no NUT-06 probe answered), so a review cannot be addressed to it." }}
+                    {if can_review { "Signed in your browser and sent to the relays; this server never receives it." } else { "The mint's key is not known yet (no NUT-06 probe answered), so a review cannot be addressed to it." }}
                 </p>
             </form>
         </div>
