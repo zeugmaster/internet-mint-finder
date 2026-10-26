@@ -2,417 +2,444 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>Cashu Mint Auditor — Analytics</title>
+<title>Analytics — Internet Mint Finder</title>
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<meta name="color-scheme" content="dark" />
-<meta name="theme-color" content="#0a0d13" />
+<meta name="color-scheme" content="light dark" />
+<meta name="theme-color" content="#f3f2ee" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#121211" media="(prefers-color-scheme: dark)" />
+<script>(function(){var d=document.documentElement;d.dataset.theme=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');})();</script>
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css"/>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
   /* ===================================================================
-     Design tokens
+     Fonts — TX-02 for all text, served by the app from /fonts
+     =================================================================== */
+  @font-face {
+    font-family: 'TX-02';
+    src: url('/fonts/tx-02-regular.otf') format('opentype');
+    font-weight: 400; font-style: normal; font-display: swap;
+  }
+  @font-face {
+    font-family: 'TX-02';
+    src: url('/fonts/tx-02-italic.otf') format('opentype');
+    font-weight: 400; font-style: italic; font-display: swap;
+  }
+  @font-face {
+    font-family: 'TX-02';
+    src: url('/fonts/tx-02-bold.otf') format('opentype');
+    font-weight: 700; font-style: normal; font-display: swap;
+  }
+  @font-face {
+    font-family: 'TX-02';
+    src: url('/fonts/tx-02-bold-italic.otf') format('opentype');
+    font-weight: 700; font-style: italic; font-display: swap;
+  }
+
+  /* ===================================================================
+     Design tokens — flat, warm neutrals; colour only for health.
+     Mirrors style/main.css in the Leptos app.
      =================================================================== */
   :root {
-    /* Surfaces — layered elevation from base canvas up to floating cards */
-    --bg-0: #0c1016;
-    --bg-1: #111720;
-    --bg-2: #161e29;
-    --bg-3: #202b39;
-    --bg-4: #232d3d;
+    color-scheme: light;
+    --bg: #f3f2ee;
+    --surface: #ffffff;
+    --subtle: #e9e7e1;
+    --ink: #141413;
+    --muted: #5c5a55;
+    --faint: #68655e;
+    --rule: #ecebe6;
+    --ok: #2b7a3d;
+    --warn: #8a5a00;
+    --error: #b9330c;
+    --info: #2f5f9e;
+  }
+  :root[data-theme='dark'] {
+    color-scheme: dark;
+    --bg: #121211;
+    --surface: #1d1d1b;
+    --subtle: #2a2a27;
+    --ink: #f1f0eb;
+    --muted: #a9a79f;
+    --faint: #8a887f;
+    --rule: #262624;
+    --ok: #78c98c;
+    --warn: #e6b45a;
+    --error: #ff8a63;
+    --info: #8db4ec;
+  }
+  :root {
+    --font: 'TX-02', ui-monospace, 'SF Mono', Menlo, monospace;
+    --radius-control: 8px;
+    --radius-surface: 16px;
+    --ease: ease;
 
-    --line-1: rgba(148, 163, 184, 0.09);
-    --line-2: rgba(148, 163, 184, 0.16);
-    --line-3: rgba(148, 163, 184, 0.28);
-
-    --text-1: #f2f6fc;
-    --text-2: #9aa7bc;
-    --text-3: #8593a8;
-
-    --accent: #f0a43c;
-    --accent-strong: #ffc46b;
-    --accent-dim: rgba(240, 164, 60, 0.12);
-
-    --ok: #3ecf8e;
-    --ok-dim: rgba(62, 207, 142, 0.14);
-    --warn: #eec33f;
-    --warn-dim: rgba(238, 195, 63, 0.16);
-    --err: #f2555a;
-    --err-dim: rgba(242, 85, 90, 0.14);
-    --blue: #5b9dd9;
-    --violet: #a78bfa;
-
-    --radius-sm: 8px;
-    --radius: 14px;
-    --radius-lg: 18px;
-
-    --shadow-1: 0 1px 2px rgba(0,0,0,0.4);
-    --shadow-2: 0 12px 30px rgba(0,0,0,0.45);
-
-    --font-sans: 'Archivo', system-ui, -apple-system, sans-serif;
-    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
-
-    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+    /* Legacy aliases for the previous token names */
+    --bg-0: var(--bg);
+    --bg-1: var(--surface);
+    --bg-2: var(--surface);
+    --bg-3: var(--subtle);
+    --bg-4: var(--subtle);
+    --line-1: var(--rule);
+    --line-2: var(--subtle);
+    --line-3: var(--subtle);
+    --text-1: var(--ink);
+    --text-2: var(--muted);
+    --text-3: var(--faint);
+    --accent: var(--ink);
+    --accent-strong: var(--ink);
+    --accent-dim: var(--subtle);
+    --err: var(--error);
+    --blue: var(--info);
+    --violet: var(--info);
+    --radius-sm: var(--radius-control);
+    --radius: var(--radius-surface);
+    --radius-lg: var(--radius-surface);
+    --shadow-1: none;
+    --shadow-2: none;
+    --font-sans: var(--font);
+    --font-mono: var(--font);
   }
 
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; min-height: 100vh; }
 
-  body {
-    font-family: var(--font-sans);
-    color: var(--text-1);
+  html {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font);
     font-size: 14px;
-    line-height: 1.45;
-    background-color: var(--bg-0);
+    line-height: 1.5;
+    font-variant-numeric: tabular-nums;
+    -webkit-text-size-adjust: 100%;
     -webkit-font-smoothing: antialiased;
-    text-rendering: optimizeLegibility;
   }
+  body { background: var(--bg); }
 
-  button, input, select { font: inherit; }
-  a:focus-visible, button:focus-visible, input:focus-visible,
-  .choices.is-focused .choices__inner {
-    outline: 2px solid var(--accent-strong);
-    outline-offset: 3px;
-  }
+  button, input, select { font: inherit; color: inherit; }
+  ::selection { background: color-mix(in oklab, var(--ink) 18%, transparent); }
+  ::placeholder { color: var(--faint); }
+  * { scrollbar-color: var(--subtle) transparent; }
+  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
   /* ===================================================================
      Header
      =================================================================== */
   header {
-    position: sticky; top: 0; z-index: 40;
-    padding: 0 24px; height: 62px;
-    display: flex; align-items: center; gap: 14px;
-    border-bottom: 1px solid var(--line-1);
-    background: rgba(10, 13, 19, 0.78);
-    backdrop-filter: saturate(160%) blur(16px);
-    -webkit-backdrop-filter: saturate(160%) blur(16px);
+    max-width: 1560px; margin: 0 auto;
+    padding: 20px 22px 4px;
+    display: flex; align-items: center; gap: 12px;
   }
-  header .logo {
-    width: 30px; height: 30px; display: grid; place-items: center;
-    filter: drop-shadow(0 0 10px rgba(240, 164, 60, 0.28));
+  header .brand {
+    display: flex; align-items: center; gap: 10px;
+    color: var(--ink); text-decoration: none; white-space: nowrap;
+    border-radius: var(--radius-control);
   }
-  header .logo svg { width: 30px; height: 30px; display: block; }
-  header .brand { display: flex; flex-direction: column; line-height: 1.1; }
-  header h1 {
-    margin: 0; font-size: 15px; font-weight: 800; letter-spacing: -0.02em;
-    color: var(--text-1);
-  }
-  header .sub {
-    color: var(--text-3); font-family: var(--font-mono);
-    font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
-  }
+  header .brand-mark { display: flex; width: 22px; height: 22px; flex: none; }
+  header .brand-mark svg { width: 100%; height: 100%; display: block; }
+  header h1 { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+  header .sub { color: var(--faint); font-size: 15px; }
   header .spacer { flex: 1; }
   .live {
-    display: inline-flex; align-items: center; gap: 7px;
-    font-family: var(--font-mono); font-size: 11px; color: var(--text-2);
-    padding: 5px 11px; border-radius: 999px;
-    background: var(--bg-2); border: 1px solid var(--line-2);
+    display: inline-flex; align-items: center; gap: 8px;
+    color: var(--muted); white-space: nowrap;
   }
-  .live .dot {
-    width: 7px; height: 7px; border-radius: 50%;
-    background: var(--ok); box-shadow: 0 0 0 0 rgba(62,207,142,0.6);
-    animation: pulse 2.4s var(--ease) infinite;
-  }
-  @keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(62,207,142,0.55); }
-    70% { box-shadow: 0 0 0 7px rgba(62,207,142,0); }
-    100% { box-shadow: 0 0 0 0 rgba(62,207,142,0); }
-  }
+  .live .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); flex: none; }
   header .back {
-    color: var(--text-2); font-size: 13px; font-weight: 600;
-    text-decoration: none; padding: 7px 14px; border-radius: var(--radius-sm);
-    background: var(--bg-2); border: 1px solid var(--line-2);
-    transition: color 140ms var(--ease), border-color 140ms var(--ease);
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 7px 14px; border: 0; border-radius: var(--radius-control);
+    background: var(--subtle); color: var(--ink);
+    font-size: 13px; text-decoration: none; white-space: nowrap; cursor: pointer;
+    transition: background-color 150ms var(--ease), opacity 150ms var(--ease);
   }
-  header .back:hover { color: var(--accent-strong); border-color: var(--accent); }
+  header .back:hover { background: color-mix(in oklab, var(--subtle), var(--ink) 8%); }
 
   /* ===================================================================
      Layout
      =================================================================== */
   main {
     position: relative; z-index: 1;
-    padding: 22px;
+    padding: 16px 22px 48px;
     max-width: 1560px; margin: 0 auto;
-    display: grid; gap: 18px;
+    display: grid; gap: 16px;
     grid-template-columns: 290px 1fr;
     align-items: start;
   }
-  .stack { display: grid; gap: 18px; min-width: 0; }
+  .stack { display: grid; gap: 16px; min-width: 0; }
 
   .section-head {
     display: flex; align-items: baseline; gap: 12px;
-    margin: 6px 2px 0;
+    margin: 12px 2px 0;
   }
-  .section-head .t {
-    font-size: 12px; font-weight: 700; color: var(--text-1);
-    letter-spacing: 0.02em;
-  }
-  .section-head .d {
-    font-size: 11px; color: var(--text-3); font-family: var(--font-mono);
-  }
+  .section-head .t { font-size: 15px; font-weight: 700; color: var(--ink); letter-spacing: -0.01em; }
+  .section-head .d { font-size: 13px; color: var(--faint); }
 
   /* ===================================================================
-     Cards
+     Cards — tone only, no borders or shadows
      =================================================================== */
   .card {
-    background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
-    border: 1px solid var(--line-1);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-1);
+    background: var(--surface);
+    border-radius: var(--radius-surface);
     overflow: hidden;
   }
-  .panel { padding: 18px; position: sticky; top: 80px; }
-  .chart { padding: 12px 14px 8px; }
+  .panel { padding: 20px; position: sticky; top: 16px; }
+  .chart { padding: 16px 18px 10px; }
   .chart .head {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 10px; padding: 4px 4px 12px;
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 10px; padding: 2px 2px 12px;
   }
-  .chart .head .ttl { font-size: 13px; font-weight: 700; color: var(--text-1); }
-  .chart .head .meta { font-size: 11px; color: var(--text-3); font-family: var(--font-mono); }
+  .chart .head .ttl { font-size: 14px; font-weight: 700; color: var(--ink); white-space: nowrap; }
+  .chart .head .meta { font-size: 12px; color: var(--faint); text-align: right; min-width: 0; }
   .plot { width: 100%; }
 
   h2 {
-    margin: 0 0 12px 0; font-size: 11px; color: var(--text-3);
-    text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700;
-    font-family: var(--font-mono);
+    margin: 0 0 4px 0; font-size: 15px; color: var(--ink);
+    font-weight: 700; letter-spacing: -0.01em;
   }
 
-  .grid { display: grid; gap: 18px; }
+  .grid { display: grid; gap: 16px; }
   .g2 { grid-template-columns: 1fr 1fr; }
   .g3 { grid-template-columns: 1fr 1fr 1fr; }
 
   /* ===================================================================
      KPI tiles
      =================================================================== */
-  .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; }
+  .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
   .kpi {
-    position: relative; padding: 15px 16px 12px;
-    background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
-    border: 1px solid var(--line-1); border-radius: var(--radius);
-    box-shadow: var(--shadow-1);
-    transition: transform 220ms var(--ease), border-color 220ms var(--ease);
-    overflow: hidden;
+    position: relative; padding: 16px 16px 14px;
+    background: var(--surface); border-radius: var(--radius-surface);
+    overflow: hidden; min-width: 0;
   }
-  .kpi:hover { transform: translateY(-2px); border-color: var(--line-2); }
-  .kpi::before {
-    content: ''; position: absolute; top: 0; left: 16px; right: 16px; height: 2px;
-    background: linear-gradient(90deg, var(--accent), transparent); opacity: 0.5;
-  }
-  .kpi .lbl {
-    font-size: 10px; color: var(--text-3); text-transform: uppercase;
-    letter-spacing: 0.13em; font-weight: 600; font-family: var(--font-mono);
-  }
+  .kpi .lbl { font-size: 13px; color: var(--muted); }
   .kpi .val {
-    font-size: 23px; font-weight: 700; margin-top: 8px;
-    font-family: var(--font-mono); letter-spacing: -0.02em; color: var(--text-1);
-    display: flex; align-items: baseline; gap: 5px; line-height: 1;
+    font-size: 24px; font-weight: 700; margin-top: 8px;
+    letter-spacing: -0.02em; color: var(--ink);
+    display: flex; align-items: baseline; gap: 6px; line-height: 1;
   }
-  .kpi .val .u { font-size: 13px; color: var(--accent); font-weight: 600; }
-  .kpi .foot { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; height: 26px; }
-  .kpi .spark { width: 96px; height: 26px; display: block; }
+  .kpi .val .u { font-size: 13px; color: var(--faint); font-weight: 400; letter-spacing: 0; }
+  .kpi .foot {
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 8px;
+    margin-top: 10px; min-height: 26px;
+    font-size: 12px; line-height: 1.35; color: var(--faint);
+  }
+  .kpi .foot > span:last-child { flex: 0 1 96px; min-width: 0; display: flex; justify-content: flex-end; }
+  .kpi .foot > span:last-child:empty { display: none; }
+  .kpi .spark { width: 100%; max-width: 96px; height: 26px; display: block; }
   .delta {
-    display: inline-flex; align-items: center; gap: 3px;
-    font-size: 11px; font-weight: 700; font-family: var(--font-mono);
-    padding: 2px 7px; border-radius: 999px;
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 12px; white-space: nowrap;
   }
-  .delta.up { color: var(--ok); background: var(--ok-dim); }
-  .delta.down { color: var(--err); background: var(--err-dim); }
-  .delta.flat { color: var(--text-3); background: var(--bg-3); }
-  .delta.up.inv { color: var(--err); background: var(--err-dim); }
-  .delta.down.inv { color: var(--ok); background: var(--ok-dim); }
+  .delta.up { color: var(--ok); }
+  .delta.down { color: var(--error); }
+  .delta.flat { color: var(--faint); }
+  .delta.up.inv { color: var(--error); }
+  .delta.down.inv { color: var(--ok); }
 
   /* ===================================================================
      Filters
      =================================================================== */
-  .filters fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+  .filters fieldset { border: 0; padding: 0; margin: 16px 0 0; min-width: 0; }
   .filter-toggle { display: none; }
   .filters label, .filters legend {
-    display: block; font-size: 10px; color: var(--text-3);
-    font-family: var(--font-mono); letter-spacing: 0.1em;
-    text-transform: uppercase; margin: 15px 0 6px;
+    display: block; padding: 0; font-size: 13px; color: var(--muted);
+    margin: 16px 0 6px;
   }
+  .filters legend { margin-top: 0; }
   .filters input[type="date"] {
-    width: 100%; padding: 8px 10px; background: var(--bg-0);
-    border: 1px solid var(--line-2); border-radius: var(--radius-sm);
-    color: var(--text-1); font-family: var(--font-mono); font-size: 12px;
-    color-scheme: dark;
+    width: 100%; min-width: 0; padding: 8px 8px; background: var(--bg);
+    border: 0; border-radius: var(--radius-control);
+    color: var(--ink); font-size: 12px;
   }
-  .filters input[type="date"]:focus {
-    outline: none; border-color: rgba(240, 164, 60, 0.4);
-    box-shadow: 0 0 0 3px var(--accent-dim);
-  }
+  .filters input[type="date"]:focus-visible { outline: 2px solid var(--ink); outline-offset: 0; }
   .filters .row { display: flex; gap: 8px; }
   .filters .row > * { flex: 1; }
 
   .btn {
-    width: 100%; margin-top: 16px; padding: 10px;
-    border: 1px solid transparent; border-radius: var(--radius-sm);
-    cursor: pointer; font: inherit; font-weight: 700; font-size: 13px;
-    color: #181006;
-    background: linear-gradient(180deg, var(--accent-strong), var(--accent));
-    box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 6px 20px rgba(240,164,60,0.22);
-    transition: box-shadow 160ms var(--ease), transform 60ms var(--ease);
+    width: 100%; margin-top: 20px; padding: 10px;
+    border: 0; border-radius: var(--radius-control);
+    cursor: pointer; font: inherit; font-weight: 700; font-size: 14px;
+    background: var(--ink); color: var(--surface);
+    transition: opacity 150ms var(--ease), background-color 150ms var(--ease);
   }
-  .btn:hover { box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 8px 26px rgba(240,164,60,0.4); }
-  .btn:active { transform: translateY(1px); }
-  .btn:disabled { cursor: wait; opacity: 0.65; transform: none; }
+  .btn:hover { opacity: 0.85; }
+  .btn:active { opacity: 0.75; }
+  .btn:disabled { cursor: wait; opacity: 0.55; }
   .btn.secondary {
-    margin-top: 8px; background: var(--bg-2); color: var(--text-1);
-    border-color: var(--line-2); box-shadow: none;
+    margin-top: 8px; background: var(--subtle); color: var(--ink); font-weight: 400;
   }
-  .btn.secondary:hover { background: var(--bg-3); }
+  .btn.secondary:hover { opacity: 1; background: color-mix(in oklab, var(--subtle), var(--ink) 8%); }
+  .btn.secondary:disabled { opacity: 0.55; }
 
   /* ===================================================================
      Segmented control (time range + chart toggles)
      =================================================================== */
   .seg {
     display: inline-flex; padding: 3px; gap: 2px;
-    background: var(--bg-0); border: 1px solid var(--line-1);
-    border-radius: 10px;
+    background: var(--bg); border-radius: var(--radius-control);
   }
   .seg button {
-    background: transparent; border: 0; color: var(--text-3);
-    padding: 6px 13px; font: inherit; font-weight: 600; font-size: 12px;
-    cursor: pointer; border-radius: 7px;
+    background: transparent; border: 0; color: var(--muted);
+    padding: 6px 12px; font: inherit; font-size: 13px;
+    cursor: pointer; border-radius: 6px;
     transition: color 150ms var(--ease), background-color 150ms var(--ease);
   }
-  .seg button:hover { color: var(--text-1); }
-  .seg button.active { color: var(--accent-strong); background: var(--accent-dim); }
-  .seg button:disabled { cursor: wait; opacity: 0.65; }
-  .seg.sm button { padding: 4px 10px; font-size: 11px; }
+  .seg button:hover { color: var(--ink); }
+  .seg button.active { color: var(--ink); background: var(--subtle); }
+  .seg button:disabled { cursor: wait; }
+  .seg.sm button { padding: 4px 10px; font-size: 12px; }
 
   /* ===================================================================
      Fleet uptime — single aggregate timeline
      =================================================================== */
-  .sla { padding: 6px 6px 4px; }
+  .sla { padding: 4px 2px 6px; }
   .sla-single { display: flex; align-items: center; gap: 22px; }
-  .sla-figure { flex: none; min-width: 116px; }
+  .sla-figure { flex: none; min-width: 124px; }
   .sla-figure .big {
-    font-family: var(--font-mono); font-size: 32px; font-weight: 700;
-    letter-spacing: -0.02em; line-height: 1; font-variant-numeric: tabular-nums;
+    font-size: 32px; font-weight: 700;
+    letter-spacing: -0.02em; line-height: 1;
   }
   .sla-figure .cap {
-    margin-top: 6px; font-size: 10px; color: var(--text-3);
-    font-family: var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase;
-    display: flex; align-items: center; gap: 7px;
+    margin-top: 8px; font-size: 13px; color: var(--muted);
+    display: flex; align-items: center; gap: 8px;
   }
-  .sla-figure .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .sla-figure .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
   .sla-wrap { flex: 1; min-width: 0; }
   .sla-cells { display: flex; gap: 2px; height: 38px; align-items: stretch; overflow: hidden; }
   .sla-cell {
-    flex: 1 1 0; min-width: 1px; border-radius: 2px; background: var(--bg-3);
-    transition: transform 120ms var(--ease), filter 120ms var(--ease);
+    flex: 1 1 0; min-width: 1px; border-radius: 2px; background: var(--subtle);
+    transition: opacity 120ms var(--ease);
   }
-  .sla-cell:hover { transform: scaleY(1.12); filter: brightness(1.25); }
+  .sla-cell:hover { opacity: 0.7; }
   .sla-cell.ok   { background: var(--ok); }
   .sla-cell.warn { background: var(--warn); }
-  .sla-cell.err  { background: var(--err); }
-  .sla-cell.none { background: var(--bg-3); }
+  .sla-cell.err  { background: var(--error); }
+  .sla-cell.none { background: var(--subtle); }
   .sla-axis {
-    display: flex; justify-content: space-between; margin-top: 7px;
-    font-size: 10px; color: var(--text-3); font-family: var(--font-mono);
+    display: flex; justify-content: space-between; margin-top: 8px;
+    font-size: 12px; color: var(--faint);
   }
 
   /* ===================================================================
      Tables
      =================================================================== */
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { padding: 9px 10px; text-align: left; border-bottom: 1px solid var(--line-1); }
-  th {
-    color: var(--text-3); font-weight: 600; font-size: 10px;
-    font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em;
-  }
-  tbody tr { transition: background-color 120ms var(--ease); }
-  tbody tr:hover { background: var(--bg-3); }
-  tbody tr:last-child td { border-bottom: none; }
-  td { color: var(--text-2); }
-  td.num { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--font-mono); font-size: 12px; }
+  th, td { padding: 9px 8px; text-align: left; }
+  th { color: var(--faint); font-weight: 400; font-size: 12px; white-space: nowrap; }
+  td { color: var(--ink); border-top: 1px solid var(--rule); }
+  th.num, td.num { text-align: right; }
+  td.num { white-space: nowrap; }
+  td.hl { font-weight: 700; }
+  /* Long route/mint names: one line, full text in the title tooltip. */
+  td.trunc { width: 100%; max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  td .sep { color: var(--faint); }
+  tbody tr td { transition: background-color 120ms var(--ease); }
+  tbody tr:hover td { background: color-mix(in oklab, var(--surface), var(--ink) 3%); }
   .pill {
-    display: inline-block; padding: 1px 8px; border-radius: 999px;
-    font-size: 10px; font-weight: 700; font-family: var(--font-mono);
-    text-transform: uppercase; letter-spacing: 0.04em;
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 12px; white-space: nowrap; color: var(--muted);
   }
-  .pill.network { color: var(--blue); background: rgba(91,157,217,0.14); }
-  .pill.timeout { color: var(--warn); background: var(--warn-dim); }
-  .pill.mint { color: var(--accent); background: var(--accent-dim); }
-  .pill.liquidity { color: var(--violet); background: rgba(167,139,250,0.16); }
-  .pill.fee, .pill.ssl, .pill.config { color: var(--err); background: var(--err-dim); }
-  .pill.internal, .pill.unknown { color: var(--text-2); background: var(--bg-3); }
+  .pill::before {
+    content: ''; width: 7px; height: 7px; border-radius: 50%;
+    background: currentColor; flex: none;
+  }
+  .pill.network, .pill.timeout, .pill.ssl { color: var(--error); }
+  .pill.mint, .pill.fee, .pill.rate_limit { color: var(--warn); }
+  .pill.liquidity, .pill.config { color: var(--info); }
+  .pill.internal, .pill.unknown { color: var(--muted); }
 
   /* ===================================================================
      Skeleton + empty states
      =================================================================== */
   .skel {
-    position: relative; overflow: hidden; border-radius: var(--radius-sm);
-    background: var(--bg-3);
+    border-radius: var(--radius-control);
+    background: var(--subtle);
+    animation: skel-pulse 1.6s ease-in-out infinite;
   }
-  .skel::after {
-    content: ''; position: absolute; inset: 0;
-    transform: translateX(-100%);
-    background: linear-gradient(90deg, transparent, rgba(148,163,184,0.10), transparent);
-    animation: shimmer 1.4s infinite;
-  }
-  @keyframes shimmer { 100% { transform: translateX(100%); } }
+  @keyframes skel-pulse { 50% { opacity: 0.55; } }
   .empty {
     display: grid; place-items: center; text-align: center;
-    color: var(--text-3); font-size: 12px; font-family: var(--font-mono);
+    color: var(--faint); font-size: 13px;
     height: 100%; min-height: 120px; gap: 6px; padding: 18px;
   }
-  .empty svg { width: 26px; height: 26px; opacity: 0.4; }
+  .empty svg { width: 24px; height: 24px; opacity: 0.6; }
 
   /* ===================================================================
-     Choices.js dark overrides
+     Choices.js overrides — same flat tokens
      =================================================================== */
-  .choices { margin-bottom: 0; }
+  /* TX-02's contextual forms space out "://"; keep URLs literal. */
+  .choices, .plot, table { font-variant-ligatures: none; }
+  .choices { margin-bottom: 0; font-size: 13px; }
   .choices__inner {
-    background: var(--bg-0) !important; border: 1px solid var(--line-2) !important;
-    border-radius: var(--radius-sm) !important; min-height: 36px;
-    color: var(--text-1); font-size: 12px;
+    background: var(--bg) !important; border: 0 !important;
+    border-radius: var(--radius-control) !important; min-height: 38px;
+    color: var(--ink); font-size: 13px;
   }
+  .choices.is-focused .choices__inner,
+  .choices.is-open .choices__inner { outline: 2px solid var(--ink); outline-offset: 0; }
   .choices__list--dropdown, .choices__list[aria-expanded] {
-    background: var(--bg-2) !important; border: 1px solid var(--line-2) !important;
-    border-radius: var(--radius-sm) !important; box-shadow: var(--shadow-2);
+    background: var(--surface) !important;
+    border: 1px solid var(--subtle) !important;
+    border-radius: var(--radius-control) !important;
+    margin-top: 6px !important; box-shadow: none; overflow: hidden;
   }
-  .choices__list--dropdown .choices__item, .choices__list[aria-expanded] .choices__item { color: var(--text-2); font-size: 12px; }
+  .choices__list--dropdown .choices__item, .choices__list[aria-expanded] .choices__item {
+    color: var(--muted); font-size: 13px;
+  }
+  .choices__list--dropdown .choices__item--selectable,
+  .choices__list[aria-expanded] .choices__item--selectable { padding-right: 10px !important; overflow-wrap: anywhere; word-break: normal !important; }
+  .choices__list--dropdown .choices__item--selectable::after,
+  .choices__list[aria-expanded] .choices__item--selectable::after { display: none; }
   .choices__list--dropdown .choices__item--selectable.is-highlighted,
-  .choices__list[aria-expanded] .choices__item--selectable.is-highlighted { background: var(--bg-3) !important; color: var(--text-1); }
+  .choices__list[aria-expanded] .choices__item--selectable.is-highlighted {
+    background: var(--subtle) !important; color: var(--ink);
+  }
   .choices__list--multiple .choices__item {
-    background: var(--accent-dim) !important; border: 1px solid rgba(240,164,60,0.35) !important;
-    color: var(--accent-strong) !important; font-weight: 600; font-size: 11px; border-radius: 6px !important;
+    background: var(--subtle) !important; border: 0 !important;
+    color: var(--ink) !important; font-weight: 400; font-size: 12px;
+    border-radius: 6px !important; padding: 3px 8px;
+    display: inline-flex; align-items: center; max-width: 100%;
+    overflow-wrap: anywhere; word-break: normal;
   }
-  .choices__input { background: transparent !important; color: var(--text-1) !important; font-size: 12px; }
+  .choices__list--multiple .choices__item.is-highlighted {
+    background: color-mix(in oklab, var(--subtle), var(--ink) 10%) !important;
+  }
+  .choices__input { background: transparent !important; color: var(--ink) !important; font-size: 13px; }
   .choices[data-type*="select-multiple"] .choices__button {
-    border-left-color: rgba(240,164,60,0.4);
-    filter: invert(70%) sepia(50%) saturate(400%) hue-rotate(340deg);
+    position: relative; display: inline-block; flex: none;
+    width: 16px; height: 16px; margin: 0 -4px 0 6px; padding: 0;
+    border: 0; border-radius: 4px; background: none; opacity: 0.6;
   }
-  .choices__placeholder { color: var(--text-3); opacity: 1; }
+  .choices[data-type*="select-multiple"] .choices__button::before {
+    content: ''; position: absolute; inset: 0; background: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.5 1.5l7 7M8.5 1.5l-7 7' stroke='black' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E") center / 8px no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.5 1.5l7 7M8.5 1.5l-7 7' stroke='black' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E") center / 8px no-repeat;
+  }
+  .choices[data-type*="select-multiple"] .choices__button:hover { opacity: 1; }
+  .choices[data-type*="select-multiple"] .choices__button:focus-visible {
+    opacity: 1; outline: 2px solid var(--ink); outline-offset: 1px;
+  }
+  .choices__placeholder { color: var(--faint); opacity: 1; }
 
   /* ===================================================================
      Motion
      =================================================================== */
-  .rise { opacity: 0; transform: translateY(8px); animation: rise 520ms var(--ease) forwards; }
-  @keyframes rise { to { opacity: 1; transform: none; } }
-
-  @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
-  }
+  .rise { opacity: 0; animation: rise 300ms var(--ease) forwards; }
+  @keyframes rise { to { opacity: 1; } }
 
   @media (max-width: 1180px) {
     main { grid-template-columns: 1fr; }
     .panel { position: static; padding: 0; }
     .filter-toggle {
-      width: 100%; padding: 15px 18px;
+      width: 100%; padding: 16px 20px;
       display: flex; align-items: center; justify-content: space-between; gap: 12px;
-      border: 0; background: transparent; color: var(--text-1); cursor: pointer;
-      font-family: var(--font-mono); font-size: 11px; font-weight: 700;
-      letter-spacing: 0.12em; text-transform: uppercase;
+      border: 0; border-radius: var(--radius-surface);
+      background: transparent; color: var(--ink); cursor: pointer;
+      font-size: 14px; font-weight: 700;
     }
-    .filter-toggle-meta { color: var(--accent-strong); font-size: 10px; }
-    .filter-toggle-icon { color: var(--text-3); transition: transform 150ms var(--ease); }
-    .filter-fields { display: none; padding: 4px 18px 18px; border-top: 1px solid var(--line-1); }
+    .filter-toggle:focus-visible { outline-offset: -2px; }
+    .filter-toggle-meta { margin-left: auto; color: var(--muted); font-size: 13px; font-weight: 400; }
+    .filter-toggle-icon { color: var(--faint); transition: transform 150ms var(--ease); }
+    .filter-fields { display: none; padding: 4px 20px 20px; border-top: 1px solid var(--rule); }
     .filters.is-open .filter-fields { display: block; }
     .filters.is-open .filter-toggle-icon { transform: rotate(180deg); }
     .filter-fields > h2 { display: none; }
@@ -420,38 +447,36 @@
     .g2, .g3 { grid-template-columns: 1fr; }
   }
   @media (max-width: 860px) {
-    header {
-      height: auto; min-height: 62px; padding: 10px 16px;
-      flex-wrap: wrap;
-    }
+    header { padding: 16px 16px 4px; flex-wrap: wrap; }
     #range-seg { order: 3; width: 100%; }
     #range-seg button { flex: 1; padding-inline: 8px; }
-    main { padding: 14px; }
+    main { padding: 14px 14px 40px; }
     .sla-single { align-items: flex-start; }
   }
   @media (max-width: 620px) {
     .kpis { grid-template-columns: repeat(2, 1fr); }
-    header .live { display: none; }
+    header .live, header .sub { display: none; }
     .sla-single { flex-direction: column; gap: 14px; }
     .sla-figure { min-width: 0; }
     .sla-cells { gap: 1px; }
-    .chart { padding-inline: 10px; }
+    .chart { padding-inline: 12px; }
     .section-head { flex-direction: column; gap: 2px; }
   }
-  .data-status { max-width: 1560px; margin: 18px auto 0; padding: 0 24px; color: var(--text-2); font: 11px var(--font-mono); }
-  :focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 3px; }
-  button:disabled { opacity: .6; cursor: wait; }
+  .data-status { max-width: 1560px; margin: 8px auto 0; padding: 0 22px; color: var(--faint); font-size: 13px; }
+  button:disabled { cursor: wait; }
   .plot { min-width: 0; }
   main > *, .grid > * { min-width: 0; }
   @media (max-width: 760px) {
-    header { height: auto; padding: 16px; gap: 10px; flex-wrap: wrap; }
+    header { gap: 10px; flex-wrap: wrap; }
     #range-seg { order: 5; flex-basis: 100%; justify-content: center; }
-    header .back { padding: 8px 10px; font-size: 11px; }
-    main { padding: 16px; }
+    header .back { padding: 7px 10px; font-size: 12px; }
+    main { padding: 16px 16px 40px; }
     .data-status { padding: 0 16px; line-height: 1.6; }
-    .kpi .val { font-size: 26px; overflow-wrap: anywhere; }
+    .kpi .val { font-size: 24px; overflow-wrap: anywhere; }
   }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+  .icon { width: 1em; height: 1em; flex: none; vertical-align: -0.125em; }
+  header .back { display: inline-flex; align-items: center; gap: 8px; }
 </style>
 </head>
 <body>
@@ -463,19 +488,11 @@
 </svg>
 
 <header>
-  <div class="logo" aria-hidden="true">
-    <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="24" cy="24" r="17" stroke="#f0a43c" stroke-width="2" opacity="0.4"/>
-      <path d="M13 24 H19 L21.5 16.5 L25 31.5 L27.5 24 H35" stroke="#ffc46b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="24" cy="7" r="3.6" fill="#3ecf8e"/>
-      <circle cx="9.3" cy="32.5" r="3.6" fill="#f0a43c"/>
-      <circle cx="38.7" cy="32.5" r="3.6" fill="#f0a43c"/>
-    </svg>
-  </div>
-  <div class="brand">
-    <h1>Cashu Mint Auditor</h1>
-    <span class="sub">Analytics Console</span>
-  </div>
+  <a href="/" class="brand">
+    <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v11c0 4-4 6.6-9 8-5-1.4-9-4-9-8z" fill="var(--ink)"/><path d="M7.5 15.5v-7l4.5 4.5 4.5-4.5v7" fill="none" stroke="var(--surface)" stroke-width="2" stroke-linejoin="round"/></svg></span>
+    <h1>Internet Mint Finder</h1>
+    <span class="sub">Analytics</span>
+  </a>
   <div class="spacer"></div>
   <div class="seg" id="range-seg" role="group" aria-label="Time range">
     <button type="button" data-days="1" aria-pressed="false">24h</button>
@@ -485,7 +502,7 @@
     <button type="button" data-days="0" aria-pressed="false">All</button>
   </div>
   <button id="refresh" class="back" type="button">Refresh</button>
-  <a href="/" class="back">← Console</a>
+  <a href="/" class="back"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 8H3.5M7.5 4L3.5 8l4 4"/></svg>Directory</a>
 </header>
 
 <div id="data-status" class="data-status" role="status" aria-live="polite">Loading analytics…</div>
@@ -689,40 +706,91 @@ function getJSON(path, extra) {
 }
 
 //===================== Plotly theming =====================
-const AXIS = {
-  gridcolor: "rgba(148,163,184,0.08)",
-  zerolinecolor: "rgba(148,163,184,0.16)",
-  tickfont: { color: "#8593a8", family: "JetBrains Mono, monospace", size: 10 },
-  linecolor: "rgba(148,163,184,0.16)",
-};
+// Chart colours come from the page's CSS custom properties, read at render
+// time (see readTheme, called before every renderAll pass) so both the light
+// and dark themes work. Plotly cannot resolve var(), so it gets the computed
+// hex values.
+const FONT = "TX-02, ui-monospace, monospace";
+function cssVar(name, fallback) {
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return v || fallback;
+}
+// Parse "#rgb", "#rrggbb" or "rgb(r,g,b)" into [r, g, b].
+function hexRGB(color) {
+  const rgb = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i.exec(color);
+  if (rgb) return [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])];
+  const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(color);
+  if (!m) return null;
+  let h = m[1];
+  if (h.length === 3) h = h.split("").map(c => c + c).join("");
+  return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16));
+}
+// Flat translucent version of a token colour (for area fills / links).
+function withAlpha(color, a) {
+  const rgb = hexRGB(color);
+  return rgb ? `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})` : color;
+}
+// Solid blend of two token colours: k = 0 gives a, k = 1 gives b.
+function mix(a, b, k) {
+  const x = hexRGB(a), y = hexRGB(b);
+  if (!x || !y) return a;
+  const c = x.map((v, i) => Math.round(v + (y[i] - v) * k));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+let C = {}, PALETTE = [];
+function readTheme() {
+  const t = {
+    ink: cssVar("--ink", "#141413"), muted: cssVar("--muted", "#5c5a55"),
+    faint: cssVar("--faint", "#68655e"), rule: cssVar("--rule", "#ecebe6"),
+    subtle: cssVar("--subtle", "#e9e7e1"), surface: cssVar("--surface", "#ffffff"),
+    ok: cssVar("--ok", "#2b7a3d"), warn: cssVar("--warn", "#8a5a00"),
+    err: cssVar("--error", "#b9330c"), info: cssVar("--info", "#2f5f9e"),
+  };
+  C = {
+    ...t,
+    accent: t.ink, accentFill: withAlpha(t.ink, 0.08),
+    okFill: withAlpha(t.ok, 0.12), errFill: withAlpha(t.err, 0.12),
+    blue: t.info, blueFill: withAlpha(t.info, 0.12),
+  };
+  // Lead series in ink, then muted neutrals and the info blue.
+  PALETTE = [
+    t.ink, t.info, t.muted, mix(t.info, t.surface, 0.5),
+    t.faint, mix(t.info, t.ink, 0.45), mix(t.muted, t.surface, 0.45), mix(t.info, t.surface, 0.72),
+  ];
+}
+readTheme();
 // Plotly writes inferred axis types and internal fields back into the layout
 // object it is handed. Sharing one nested `xaxis`/`yaxis` object across charts
 // therefore leaks state between tiles (e.g. a `type:"linear"` inferred for a
 // scatter silently turns a later horizontal bar chart's categorical axis
-// numeric, dropping every label and bar). Keep only scalars here and build
-// fresh nested axis objects per render with `baseLayout`.
+// numeric, dropping every label and bar). `axisStyle()` returns a brand-new
+// object on every call; build fresh nested axis objects per render with
+// `baseLayout` and never share them.
+function axisStyle() {
+  return {
+    gridcolor: C.rule,
+    zerolinecolor: C.subtle,
+    linecolor: C.subtle,
+    tickfont: { color: C.faint, family: FONT, size: 11 },
+  };
+}
 function baseLayout({ xaxis = {}, yaxis = {}, ...rest } = {}) {
   return {
     paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
-    font: { color: "#9aa7bc", family: "Archivo, system-ui, sans-serif", size: 11 },
+    font: { color: C.muted, family: FONT, size: 11 },
     margin: { l: 52, r: 18, t: 14, b: 38 },
-    hoverlabel: { bgcolor: "#1b2330", bordercolor: "rgba(148,163,184,0.28)",
-                  font: { color: "#f2f6fc", family: "JetBrains Mono, monospace", size: 11 } },
+    hoverlabel: { bgcolor: C.surface, bordercolor: C.subtle,
+                  font: { color: C.ink, family: FONT, size: 12 } },
     transition: { duration: 350, easing: "cubic-in-out" },
     ...rest,
-    xaxis: { ...AXIS, ...xaxis },
-    yaxis: { ...AXIS, ...yaxis },
+    xaxis: { ...axisStyle(), ...xaxis },
+    yaxis: { ...axisStyle(), ...yaxis },
   };
 }
+function legendStyle(extra = {}) {
+  return { orientation: "h", y: 1.14, ...extra, font: { color: C.muted, family: FONT, size: 11, ...(extra.font || {}) } };
+}
 const config = { displaylogo: false, responsive: true, displayModeBar: false };
-const C = {
-  accent: "#f0a43c", accentFill: "rgba(240,164,60,0.14)",
-  ok: "#3ecf8e", okFill: "rgba(62,207,142,0.14)",
-  err: "#f2555a", errFill: "rgba(242,85,90,0.14)",
-  blue: "#5b9dd9", blueFill: "rgba(91,157,217,0.14)",
-  violet: "#a78bfa", warn: "#eec33f",
-};
-const PALETTE = ["#f0a43c","#3ecf8e","#5b9dd9","#a78bfa","#eec33f","#f2555a","#56c9d6","#e879a6"];
 
 function emptyState(el, msg) {
   // Purge any live Plotly state before clobbering the DOM. Overwriting the
@@ -739,10 +807,12 @@ function deltaChip(pct, invert) {
   if (pct == null) return `<span class="delta flat">—</span>`;
   const up = pct >= 0;
   const cls = (up ? "up" : "down") + (invert ? " inv" : "");
-  const arrow = up ? "▲" : "▼";
+  const arrow = `<svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${up ? "M8 13V3.5M4 7.5l4-4 4 4" : "M8 3v9.5M4 8.5l4 4 4-4"}"/></svg>`;
   return `<span class="delta ${cls}">${arrow} ${Math.abs(pct).toFixed(0)}%</span>`;
 }
-function sparkSVG(values, color) {
+// A plain trend line in the muted ink; styled with CSS variables so it
+// follows the theme without a re-render.
+function sparkSVG(values, color = "var(--muted)") {
   const w = 96, h = 26;
   if (!values || values.length < 2) return "";
   const max = Math.max(...values), min = Math.min(...values);
@@ -753,14 +823,8 @@ function sparkSVG(values, color) {
     return [x, y];
   });
   const line = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
-  const area = line + ` L${w} ${h} L0 ${h} Z`;
-  const id = "g" + Math.random().toString(36).slice(2, 8);
-  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-    <defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="${color}" stop-opacity="0.35"/>
-      <stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
-    <path d="${area}" fill="url(#${id})"/>
-    <path d="${line}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">
+    <path d="${line}" style="fill:none;stroke:${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
   </svg>`;
 }
 function countUp(el, target, opts) {
@@ -782,12 +846,12 @@ function countUp(el, target, opts) {
 }
 
 const KPI_DEFS = [
-  { key: "sats",  lbl: "Sats swapped", unit: "sat", color: C.accent, compact: true },
-  { key: "succ",  lbl: "Success rate", unit: "%", color: C.ok },
-  { key: "p95",   lbl: "p95 latency",  unit: "ms", color: C.blue, compact: true },
-  { key: "fees",  lbl: "Fees paid",    unit: "sat", color: C.violet, compact: true },
-  { key: "tvl",   lbl: "Value locked", unit: "sat", color: C.warn, compact: true },
-  { key: "don",   lbl: "Donations",    unit: "sat", color: C.ok, compact: true },
+  { key: "sats",  lbl: "Sats swapped", unit: "sat", compact: true },
+  { key: "succ",  lbl: "Success rate", unit: "%" },
+  { key: "p95",   lbl: "p95 latency",  unit: "ms", compact: true },
+  { key: "fees",  lbl: "Fees paid",    unit: "sat", compact: true },
+  { key: "tvl",   lbl: "Value locked", unit: "sat", compact: true },
+  { key: "don",   lbl: "Donations",    unit: "sat", compact: true },
 ];
 function buildKpiSkeletons() {
   $("kpis").innerHTML = KPI_DEFS.map(d => `
@@ -822,11 +886,11 @@ async function renderKPIs() {
     $("kd-don").textContent = "Working capital received";
 
     $("ks-sats").textContent = "";
-    $("ks-succ").innerHTML = sparkSVG(swapsTs.filter(r => r.swaps > 0).map(r => (r.swaps - r.errors) / r.swaps), C.ok);
+    $("ks-succ").innerHTML = sparkSVG(swapsTs.filter(r => r.swaps > 0).map(r => (r.swaps - r.errors) / r.swaps));
     $("ks-p95").textContent = "";
     $("ks-fees").textContent = "";
-    $("ks-tvl").innerHTML  = sparkSVG(tvl.total || [], C.warn);
-    $("ks-don").innerHTML  = sparkSVG(donTs.map(r => r.amount), C.ok);
+    $("ks-tvl").innerHTML  = sparkSVG(tvl.total || []);
+    $("ks-don").innerHTML  = sparkSVG(donTs.map(r => r.amount));
   } catch (e) {
     console.error(e);
     KPI_DEFS.forEach(d => {
@@ -840,7 +904,7 @@ async function renderKPIs() {
 }
 
 //===================== Fleet uptime (single aggregate timeline) =====================
-const STATE_COLOR = { ok: "var(--ok)", warn: "var(--warn)", err: "var(--err)", none: "var(--text-3)" };
+const STATE_COLOR = { ok: "var(--ok)", warn: "var(--warn)", err: "var(--error)", none: "var(--faint)" };
 // Per-bucket fleet state from the pooled failure rate across all mints.
 function bucketClass(checks, failures) {
   if (checks <= 0) return "none";
@@ -908,11 +972,12 @@ async function renderCatDonut() {
     Plotly.react(el, [{
       labels: rows.map(r => r.category), values: rows.map(r => r.count),
       type: "pie", hole: 0.62, sort: true, direction: "clockwise",
-      marker: { colors: PALETTE, line: { color: "#0f131c", width: 2 } },
-      textfont: { color: "#f2f6fc", family: "JetBrains Mono, monospace", size: 11 },
+      marker: { colors: PALETTE, line: { color: C.surface, width: 2 } },
+      // No fixed colour: Plotly picks a contrasting colour per slice.
+      textfont: { family: FONT, size: 11 },
       hovertemplate: "%{label}: %{value} (%{percent})<extra></extra>",
     }], baseLayout({ margin: { l: 10, r: 10, t: 10, b: 10 },
-          showlegend: true, legend: { font: { color: "#9aa7bc", size: 10 }, orientation: "v" } }), config);
+          showlegend: true, legend: { orientation: "v", font: { color: C.muted, family: FONT, size: 11 } } }), config);
   } catch (e) { console.error(e); emptyState(el, "Failed to load"); }
 }
 async function renderBlame() {
@@ -923,7 +988,7 @@ async function renderBlame() {
     Plotly.react(el, [{
       x: rows.map(r => r.failures), y: rows.map(r => r.mint.replace(/^https?:\/\//,"")),
       type: "bar", orientation: "h",
-      marker: { color: C.err, line: { color: "rgba(10,13,19,0.6)", width: 0.5 } },
+      marker: { color: C.err },
       customdata: rows.map(r => r.top_category),
       hovertemplate: "%{y}<br>%{x} failures · %{customdata}<extra></extra>",
     }], baseLayout({ bargap: 0.3, margin: { l: 150, r: 16, t: 10, b: 34 },
@@ -941,15 +1006,16 @@ async function renderTVL() {
     const traces = d.mints.map((m, i) => ({
       x: d.buckets, y: m.values, name: m.mint.replace(/^https?:\/\//,""),
       type: "scatter", mode: "lines", stackgroup: "tvl",
-      line: { width: 0.5, color: PALETTE[i % PALETTE.length] },
-      fillcolor: PALETTE[i % PALETTE.length] + "55",
+      line: { width: 1.5, color: PALETTE[i % PALETTE.length] },
+      // Flat, low-alpha fill; the lines carry the series identity.
+      fillcolor: withAlpha(PALETTE[i % PALETTE.length], 0.12),
       hovertemplate: "%{fullData.name}: %{y} sats<extra></extra>",
     }));
     Plotly.react(el, traces, baseLayout({
       xaxis: { type: "date" },
       yaxis: { title: "sats" },
       showlegend: d.mints.length <= 8,
-      legend: { orientation: "h", y: 1.12, font: { color: "#9aa7bc", size: 9 } } }), config);
+      legend: legendStyle({ y: 1.12, font: { size: 10 } }) }), config);
   } catch (e) { console.error(e); emptyState(el, "Failed to load"); }
 }
 // Collapse a→b and b→a corridors into one net direction, keep the largest N,
@@ -1008,18 +1074,20 @@ async function renderFlow() {
       type: "sankey", arrangement: "snap",
       node: {
         label: f.labels, pad: 18, thickness: 16,
-        color: f.net.map(n => n >= 0 ? C.accent : C.blue),
-        line: { color: "rgba(10,13,19,0.6)", width: 0.5 },
+        color: f.net.map(n => n >= 0 ? C.ink : C.info),
+        line: { width: 0 },
       },
       link: {
         source: f.links.map(l => l.source), target: f.links.map(l => l.target),
         value: f.links.map(l => l.value),
         customdata: f.links.map(l => l.fee),
-        color: "rgba(240,164,60,0.20)",
+        color: withAlpha(C.muted, 0.2),
         hovertemplate: "%{source.label} → %{target.label}<br>%{value} sats net · fee %{customdata}<extra></extra>",
       },
+      // Plain node labels: no halo/text-shadow.
+      textfont: { color: C.ink, family: FONT, size: 11, shadow: "none" },
     }], baseLayout({ margin: { l: 8, r: 8, t: 10, b: 8 },
-          font: { color: "#9aa7bc", family: "JetBrains Mono, monospace", size: 10 } }), config);
+          font: { color: C.muted, family: FONT, size: 11 } }), config);
     meta.textContent = f.dropped
       ? `top ${f.links.length} net corridors · ${compact(f.droppedValue)} sats in ${f.dropped} smaller`
       : `${f.links.length} net corridors`;
@@ -1072,18 +1140,18 @@ async function renderDonations() {
     const s = buildDonationSeries(rows, donationUnit());
     Plotly.react(el, [
       { x: s.x, y: s.bar, type: "bar", name: "Received",
-        marker: { color: C.ok, line: { color: "rgba(10,13,19,0.6)", width: 0.5 } },
+        marker: { color: C.ink },
         hovertemplate: "%{x}<br>%{y} sats<extra></extra>" },
       { x: s.x, y: s.cum, type: "scatter", mode: "lines+markers", name: "Cumulative",
-        yaxis: "y2", line: { color: C.accent, width: 2 }, marker: { size: 5, color: C.accent },
+        yaxis: "y2", line: { color: C.info, width: 2 }, marker: { size: 5, color: C.info },
         hovertemplate: "%{x}<br>%{y} sats cumulative<extra></extra>" },
     ], baseLayout({
       bargap: 0.2,
       xaxis: { type: "date" },
       yaxis: { title: "sats / bucket" },
-      yaxis2: { title: "cumulative sats", overlaying: "y", side: "right", showgrid: false, ...AXIS },
+      yaxis2: { ...axisStyle(), title: "cumulative sats", overlaying: "y", side: "right", showgrid: false },
       showlegend: true,
-      legend: { orientation: "h", y: 1.14, font: { color: "#9aa7bc" } },
+      legend: legendStyle(),
       margin: { l: 52, r: 62, t: 14, b: 38 },
       hovermode: "x unified",
     }), config);
@@ -1097,11 +1165,11 @@ async function renderFees() {
     if (!rows.length) { tbody.innerHTML = `<tr><td colspan="5"><div class="empty">No routed swaps</div></td></tr>`; return; }
     tbody.innerHTML = rows.map(r => `
       <tr>
-        <td title="${r.from} → ${r.to}">${r.from} <span style="color:var(--text-3)">→</span> ${r.to}</td>
+        <td class="trunc" title="${r.from} → ${r.to}">${r.from} <span class="sep"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h9.5M8.5 4l4 4-4 4"/></svg></span> ${r.to}</td>
         <td class="num">${fmt.format(r.swaps)}</td>
         <td class="num">${compact(r.total_amount)}</td>
         <td class="num">${compact(r.total_fee)}</td>
-        <td class="num" style="color:var(--accent-strong)">${(r.fee_pct*100).toFixed(2)}%</td>
+        <td class="num hl">${(r.fee_pct*100).toFixed(2)}%</td>
       </tr>`).join("");
   } catch (e) { console.error(e); tbody.innerHTML = `<tr><td colspan="5"><div class="empty">Failed to load</div></td></tr>`; }
 }
@@ -1118,7 +1186,7 @@ async function renderScatter() {
       type: "scatter", mode: "markers", hoverinfo: "text",
       marker: { size: rows.map(r => Math.max(7, Math.min(22, Math.sqrt(r.attempts)*2))),
                 color: rows.map(r => r.error_rate), colorscale: [[0, C.ok],[0.5, C.warn],[1, C.err]],
-                opacity: 0.85, line: { color: "rgba(10,13,19,0.9)", width: 1 } },
+                opacity: 0.85, line: { color: C.surface, width: 1 } },
     }], baseLayout({
           xaxis: { title: "Error rate (%)" },
           yaxis: { title: "Avg latency (ms)" } }), config);
@@ -1132,11 +1200,11 @@ async function renderTop5() {
     tbody.innerHTML = rows.map((r, i) => `
       <tr>
         <td class="num">#${i+1}</td>
-        <td title="${r.mint}">${r.mint.replace(/^https?:\/\//, "")}</td>
+        <td class="trunc" title="${r.mint}">${r.mint.replace(/^https?:\/\//, "")}</td>
         <td class="num">${fmt.format(r.attempts)}</td>
         <td class="num">${(r.error_rate*100).toFixed(1)}</td>
         <td class="num">${Math.round(r.avg_latency_ms)}</td>
-        <td class="num" style="color:var(--accent-strong)">${r.score.toFixed(3)}</td>
+        <td class="num hl">${r.score.toFixed(3)}</td>
       </tr>`).join("");
   } catch (e) { console.error(e); }
 }
@@ -1148,11 +1216,11 @@ async function renderTSSwaps() {
     const x = rows.map(r => r.bucket);
     Plotly.react(el, [
       { x, y: rows.map(r => r.swaps), name: "Swaps", type: "scatter", mode: "lines",
-        line: { color: C.accent, width: 2.4, shape: "spline" }, fill: "tozeroy", fillcolor: C.accentFill },
+        line: { color: C.ink, width: 2, shape: "spline" }, fill: "tozeroy", fillcolor: C.accentFill },
       { x, y: rows.map(r => r.errors), name: "Errors", type: "scatter", mode: "lines",
         line: { color: C.err, width: 2, shape: "spline" } },
     ], baseLayout({ xaxis: { type: "date" },
-         legend: { orientation: "h", y: 1.14, font: { color: "#9aa7bc" } } }), config);
+         legend: legendStyle() }), config);
   } catch (e) { console.error(e); emptyState(el, "Failed to load"); }
 }
 async function renderTSLatency() {
@@ -1162,7 +1230,7 @@ async function renderTSLatency() {
     if (!rows.length) { emptyState(el, "No successful swaps in range"); return; }
     Plotly.react(el, [
       { x: rows.map(r => r.bucket), y: rows.map(r => r.avg_ms), type: "scatter", mode: "lines",
-        line: { color: C.ok, width: 2.4, shape: "spline" }, fill: "tozeroy", fillcolor: C.okFill, name: "Avg ms" },
+        line: { color: C.ink, width: 2, shape: "spline" }, fill: "tozeroy", fillcolor: C.accentFill, name: "Avg ms" },
     ], baseLayout({ xaxis: { type: "date" },
          yaxis: { title: "ms" } }), config);
   } catch (e) { console.error(e); emptyState(el, "Failed to load"); }
@@ -1174,7 +1242,7 @@ async function renderHist() {
     if (!h.edges.length) { emptyState(el, "No successful swaps in range"); return; }
     const x = h.edges.slice(0, -1).map((e, i) => (e + h.edges[i+1]) / 2);
     Plotly.react(el, [
-      { x, y: h.counts, type: "bar", marker: { color: C.blue, line: { color: "rgba(10,13,19,0.6)", width: 0.5 } }, opacity: 0.9 },
+      { x, y: h.counts, type: "bar", marker: { color: C.ink, line: { color: C.surface, width: 1 } }, opacity: 0.9 },
     ], baseLayout({ bargap: 0.06,
          xaxis: { title: "ms" } }), config);
   } catch (e) { console.error(e); emptyState(el, "Failed to load"); }
@@ -1186,7 +1254,7 @@ async function renderErrors() {
     if (!rows.length) { emptyState(el, "No errors — all clear"); return; }
     Plotly.react(el, [
       { x: rows.map(r => r.count), y: rows.map(r => r.label), type: "bar", orientation: "h",
-        marker: { color: C.err, line: { color: "rgba(10,13,19,0.6)", width: 0.5 } }, opacity: 0.9 },
+        marker: { color: C.err }, opacity: 0.9 },
     ], baseLayout({ bargap: 0.06, margin: { l: 160, r: 18, t: 14, b: 38 },
          xaxis: { title: "count" },
          yaxis: { type: "category", automargin: true, autorange: "reversed" } }), config);
@@ -1209,6 +1277,7 @@ async function renderAll() {
         return;
       }
       requests.clear(); failedRequests.clear();
+      readTheme();
       $("data-status").textContent = "Updating analytics…";
       await Promise.allSettled([
         renderKPIs(), renderSLA(), renderStages(), renderCatDonut(), renderBlame(),
@@ -1309,7 +1378,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     $("refresh").addEventListener("click", () => location.reload());
     return;
   }
-  await initFilters();
+  // Give TX-02 a moment to load so Plotly measures labels in the right font.
+  const fontReady = document.fonts && document.fonts.load
+    ? Promise.race([document.fonts.load('14px "TX-02"').catch(() => {}), new Promise(r => setTimeout(r, 1500))])
+    : Promise.resolve();
+  await Promise.all([initFilters(), fontReady]);
   $("refresh").addEventListener("click", renderAll);
   setRange(30); paintRangeToggle(); paintScatterToggle();
 

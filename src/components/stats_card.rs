@@ -9,7 +9,7 @@ pub fn StatsCard() -> impl IntoView {
     let stats = Resource::new(move || tick.get(), |_| async move { get_stats().await });
 
     view! {
-        <div class="kpi-grid rise rise-1">
+        <div class="kpi-grid">
             <Transition fallback=move || {
                 view! {
                     {(0..4)

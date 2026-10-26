@@ -1,4 +1,5 @@
 use crate::api::get_auditors;
+use crate::components::hallmarks::StampKey;
 use crate::format::{absolute_time, relative_time, short_pubkey};
 use crate::hooks::use_poll;
 use crate::types::AuditorRead;
@@ -15,9 +16,8 @@ pub fn AuditorsPage() -> impl IntoView {
     view! {
         <Title text="Auditors — Internet Mint Finder"/>
         <div class="shell">
-            <div class="page-head rise">
+            <div class="page-head">
                 <div>
-                    <div class="eyebrow"><span class="eyebrow-line"></span>"Vantage points"</div>
                     <h1 class="page-title">"Independent auditors."</h1>
                     <p class="page-subtitle">
                         "Every auditor holds its own ecash, signs its own observations with its own Nostr key, "
@@ -25,12 +25,12 @@ pub fn AuditorsPage() -> impl IntoView {
                     </p>
                 </div>
             </div>
-            <div class="card rise rise-2">
+            <div class="card">
                 <Transition fallback=|| view! { <div class="loading-rows">{(0..2).map(|_| view! { <div class="skeleton skeleton-row"></div> }).collect_view()}</div> }>
                     {move || auditors.get().map(|result| match result {
                         Ok(list) => view! {
                             <div class="table-wrap" role="region" aria-label="Auditors" tabindex="0">
-                                <table class="data-table">
+                                <table class="data-table stack-table">
                                     <thead><tr>
                                         <th scope="col">"Auditor"</th><th scope="col">"Mirrors"</th>
                                         <th scope="col">"Software"</th><th scope="col" class="cell-right">"Cadence"</th>
@@ -61,25 +61,31 @@ fn AuditorRow(auditor: AuditorRead) -> impl IntoView {
         format!("~{} min", auditor.frequency_secs.div_ceil(60))
     };
     let npub = auditor.npub.clone();
+    let pubkey = auditor.pubkey.clone();
     let donate = auditor.donate.clone();
     let is_self = auditor.is_self;
     view! {
         <tr>
             <td>
-                <span class="mint-name">{name}{if is_self { " (this instance)" } else { "" }}</span>
-                <div class="mint-url" title=npub.clone()>{short_pubkey(&npub)}</div>
+                <div class="auditor-cell">
+                    <StampKey pubkey=pubkey/>
+                    <div>
+                        <span class="mint-name">{name}{if is_self { " (this instance)" } else { "" }}</span>
+                        <div class="mint-url" title=npub.clone()>{short_pubkey(&npub)}</div>
+                    </div>
+                </div>
             </td>
-            <td>
+            <td data-label="Mirrors">
                 {if auditor.urls.is_empty() { view! { <span class="text-dim">"—"</span> }.into_any() } else {
                     auditor.urls.iter().map(|u| view! { <div><a class="text-link" href=u.clone() rel="external noopener">{u.clone()}</a></div> }).collect_view().into_any()
                 }}
             </td>
-            <td class="text-dim">{auditor.software.clone()}</td>
-            <td class="cell-num">{cadence}</td>
-            <td class="cell-num text-dim">
+            <td class="text-dim" data-label="Software">{auditor.software.clone()}</td>
+            <td class="cell-num" data-label="Cadence">{cadence}</td>
+            <td class="cell-num text-dim" data-label="Last seen">
                 {match auditor.last_seen { Some(at) => view! { <span title=absolute_time(at)>{relative_time(at)}</span> }.into_any(), None => view! { <span>"—"</span> }.into_any() }}
             </td>
-            <td>
+            <td data-label="Fund">
                 {if is_self { view! { <a class="btn btn-primary btn-small" href="/receive">"Donate ecash"</a> }.into_any() }
                  else { match donate { Some(pr) => view! { <code class="mint-url" title=pr.clone()>{short_pubkey(&pr)}</code> }.into_any(), None => view! { <span class="text-dim">"—"</span> }.into_any() } }}
             </td>

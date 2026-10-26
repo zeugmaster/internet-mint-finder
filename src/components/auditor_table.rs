@@ -1,4 +1,5 @@
 use crate::components::badge::StateBadge;
+use crate::components::hallmarks::StampKey;
 use crate::format::{format_ms, relative_time, short_pubkey};
 use crate::types::AuditorMintView;
 use leptos::prelude::*;
@@ -9,7 +10,7 @@ use leptos::prelude::*;
 pub fn AuditorTable(views: Vec<AuditorMintView>) -> impl IntoView {
     view! {
         <div class="table-wrap" role="region" aria-label="Results per auditor" tabindex="0">
-            <table class="data-table">
+            <table class="data-table stack-table">
                 <thead><tr>
                     <th scope="col">"Auditor"</th><th scope="col">"State"</th>
                     <th scope="col" class="cell-right">"24h attempts"</th>
@@ -27,12 +28,12 @@ pub fn AuditorTable(views: Vec<AuditorMintView>) -> impl IntoView {
                         let error_title = v.metrics.last_error.clone().unwrap_or_default();
                         view! {
                             <tr>
-                                <td><span class="mint-name">{label}</span><div class="mint-url" title=v.auditor.npub.clone()>{short_pubkey(&v.auditor.npub)}</div></td>
-                                <td><StateBadge state=v.state/></td>
-                                <td class="cell-num">{v.metrics.attempts_24h}</td>
-                                <td class="cell-num">{rate}</td>
-                                <td class="cell-num">{settle}</td>
-                                <td class="cell-num text-dim" title=error_title>{last_error}</td>
+                                <td><div class="auditor-cell"><StampKey pubkey=v.auditor.pubkey.clone()/><div><span class="mint-name">{label}</span><div class="mint-url" title=v.auditor.npub.clone()>{short_pubkey(&v.auditor.npub)}</div></div></div></td>
+                                <td data-label="State"><StateBadge state=v.state/></td>
+                                <td class="cell-num" data-label="24h attempts">{v.metrics.attempts_24h}</td>
+                                <td class="cell-num" data-label="24h success">{rate}</td>
+                                <td class="cell-num" data-label="Avg settle">{settle}</td>
+                                <td class="cell-num text-dim" data-label="Last error" title=error_title>{last_error}</td>
                             </tr>
                         }
                     }).collect_view()}

@@ -1,8 +1,7 @@
 use crate::api::get_swaps;
 use crate::components::badge::CategoryPill;
-use crate::format::{
-    absolute_time, format_ms, format_sats, relative_time, short_pubkey, short_url,
-};
+use crate::components::icons::{ArrowRight, Chevron};
+use crate::format::{absolute_time, format_ms, format_sats, relative_time, short_url};
 use crate::hooks::use_poll;
 use crate::types::{MintState, PaginationParams, SwapEventRead};
 use leptos::prelude::*;
@@ -105,7 +104,7 @@ pub fn SwapItem(swap: SwapEventRead) -> impl IntoView {
                         <span>"·"</span>
                         <span>{time_str.clone()}</span>
                     </Show>
-                    {via.map(|pk| view! { <span>"·"</span><span title=pk.clone()>{format!("via {}", short_pubkey(&pk))}</span> })}
+                    {via.map(|pk| view! { <span>"·"</span><span title=pk.clone()>{format!("via {}", pk.get(..4).unwrap_or(&pk))}</span> })}
                 </div>
                 <div class="flex items-baseline gap-2">
                     <span class="feed-amount">{format!("{} sat", format_sats(swap.amount))}</span>
@@ -114,11 +113,11 @@ pub fn SwapItem(swap: SwapEventRead) -> impl IntoView {
             </div>
             <div class="feed-route">
                 <a class="hop" href=format!("/mints/{}", swap.from_id) title=swap.from_url.clone()>{short_url(&swap.from_url)}</a>
-                <span class="arrow">"→"</span>
+                <span class="arrow"><ArrowRight/></span>
                 <a class="hop" href=format!("/mints/{}", swap.to_id) title=swap.to_url.clone()>{short_url(&swap.to_url)}</a>
             </div>
             <Show when=move || has_error>
-                <details class="feed-error"><summary>"View error details"</summary>
+                <details class="feed-error"><summary><Chevron/>"View error details"</summary>
                     {category.clone().map(|c| view! { <CategoryPill category=c/> })}
                     <span class="feed-error-text">{error.clone().unwrap_or_default()}</span>
                 </details>

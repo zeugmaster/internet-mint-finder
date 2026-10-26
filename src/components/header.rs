@@ -1,17 +1,15 @@
-use crate::api::check_connection;
+use crate::api::{check_connection, get_auditors};
 use crate::hooks::use_poll;
-use crate::types::AppConfig;
+use crate::types::{AppConfig, AuditorRead};
+use chrono::Utc;
 use leptos::prelude::*;
 use leptos_router::hooks::use_location;
 
-/// The "Circuit" brand mark: three mints orbiting a live heartbeat. Inlined as
-/// raw SVG so it scales crisply and inherits no font styling.
-const BRAND_MARK_SVG: &str = r##"<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cashu Auditor">
-  <circle cx="24" cy="24" r="17" stroke="#f0a43c" stroke-width="2" opacity="0.4"/>
-  <path d="M13 24 H19 L21.5 16.5 L25 31.5 L27.5 24 H35" stroke="#ffc46b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="24" cy="7" r="3.6" fill="#3ecf8e"/>
-  <circle cx="9.3" cy="32.5" r="3.6" fill="#f0a43c"/>
-  <circle cx="38.7" cy="32.5" r="3.6" fill="#f0a43c"/>
+/// The brand mark: an assay hallmark, a shield punch struck with an M. Inlined
+/// as raw SVG in the ink colors so it follows the theme.
+const BRAND_MARK_SVG: &str = r##"<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <path d="M3 3h18v11c0 4-4 6.6-9 8-5-1.4-9-4-9-8z" fill="var(--ink)"/>
+  <path d="M7.5 15.5v-7l4.5 4.5 4.5-4.5v7" fill="none" stroke="var(--surface)" stroke-width="2" stroke-linejoin="round"/>
 </svg>"##;
 
 #[component]
@@ -20,6 +18,7 @@ pub fn Header() -> impl IntoView {
     let location = use_location();
     let tick = use_poll(15);
     let connection = Resource::new(move || tick.get(), |_| check_connection());
+    let auditors = Resource::new(move || tick.get(), |_| get_auditors());
 
     let active = move |path: &'static str| {
         let current = location.pathname.get();
@@ -54,7 +53,7 @@ pub fn Header() -> impl IntoView {
 
                 <nav class="site-nav" aria-label="Main navigation">
                     <a href="/" class="nav-link" aria-current=move || active("/")>
-                        "Dashboard"
+                        "Directory"
                     </a>
                     <a
                         href="/receive"
@@ -75,14 +74,33 @@ pub fn Header() -> impl IntoView {
                     <Transition fallback=|| view! { <span>"Connecting…"</span> }>
                         {move || connection.get().map(|result| {
                             let connected = result.is_ok();
+                            let label = match auditors.get() {
+                                Some(Ok(list)) if connected => live_label(&list),
+                                _ if connected => "Connected".to_string(),
+                                _ => "Reconnecting…".to_string(),
+                            };
                             view! {
                                 <span class=if connected { "connection-dot connected" } else { "connection-dot disconnected" }></span>
-                                <span>{if connected { "Connected" } else { "Reconnecting…" }}</span>
+                                <span title="This instance plus peers seen publishing in the last 24 hours">{label}</span>
                             }
                         })}
                     </Transition>
                 </div>
             </div>
         </header>
+    }
+}
+
+/// "3 auditors live": this instance plus every peer seen in the last 24 h.
+fn live_label(list: &[AuditorRead]) -> String {
+    let cutoff = Utc::now() - chrono::Duration::hours(24);
+    let live = list
+        .iter()
+        .filter(|a| a.is_self || a.last_seen.is_some_and(|at| at >= cutoff))
+        .count();
+    if live == 1 {
+        "1 auditor live".to_string()
+    } else {
+        format!("{live} auditors live")
     }
 }

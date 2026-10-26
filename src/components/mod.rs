@@ -1,7 +1,9 @@
 pub mod auditor_table;
 pub mod badge;
 pub mod button;
+pub mod hallmarks;
 pub mod header;
+pub mod icons;
 pub mod input;
 pub mod mint_list;
 pub mod reviews;

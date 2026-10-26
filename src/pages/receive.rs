@@ -17,9 +17,8 @@ pub fn ReceivePage() -> impl IntoView {
     view! {
         <Title text="Donate — Internet Mint Finder"/>
         <div class="shell">
-            <div class="page-head rise">
+            <div class="page-head">
                 <div>
-                    <div class="eyebrow"><span class="eyebrow-line"></span>"Community funded"</div>
                     <h1 class="page-title">"Keep the audits moving."</h1>
                     <p class="page-subtitle">
                         "Donations are working capital: every sat you contribute keeps the "
@@ -33,13 +32,12 @@ pub fn ReceivePage() -> impl IntoView {
             <TokenDonationResult/>
 
             <div class="donate-grid">
-                <section class="rise rise-1">
-                    <h2 class="section-title">"Scan with your wallet"</h2>
+                <section>
                     <DonatePanel mint_filter=mint_filter/>
                 </section>
 
-                <section class="rise rise-2">
-                    <h2 class="section-title">"Or paste a Cashu token"</h2>
+                <section>
+                    <h2 class="section-title">"Paste a Cashu token"</h2>
                     <TokenPanel/>
                 </section>
             </div>
@@ -107,7 +105,7 @@ fn DonationAcks(mint_filter: Signal<Option<String>>) -> impl IntoView {
                         };
                         view! {
                             <div class="ack-banner">
-                                <span class="check">"✓"</span>
+                                <svg class="check" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg>
                                 <span class="amount">
                                     {format!("+{} sat", format_sats(donation.amount))}
                                 </span>
@@ -184,6 +182,17 @@ fn DonatePanel(mint_filter: Signal<Option<String>>) -> impl IntoView {
     let copying = RwSignal::new(false);
 
     view! {
+        // Named by what the panel can actually do on this instance.
+        <Suspense fallback=|| view! { <h2 class="section-title">"Scan with your wallet"</h2> }>
+            {move || request.get().map(|res| {
+                let unavailable = matches!(&res, Ok(info) if !info.transport_available);
+                view! {
+                    <h2 class="section-title">
+                        {if unavailable { "Payment requests" } else { "Scan with your wallet" }}
+                    </h2>
+                }
+            })}
+        </Suspense>
         <div class="card card-pad">
             <Suspense fallback=|| {
                 view! {
@@ -199,9 +208,8 @@ fn DonatePanel(mint_filter: Signal<Option<String>>) -> impl IntoView {
                         .map(|res| match res {
                             Ok(info) if !info.transport_available => view! {
                                 <div class="empty-state">
-                                    <h3>"Donate with a token"</h3>
-                                    <p>"Payment requests are unavailable on this instance. Paste ecash from your wallet to fund the auditor."</p>
-                                    <a href="#token" class="text-link">"Go to token donation →"</a>
+                                    <h3>"Not offered on this instance"</h3>
+                                    <p>"This auditor does not publish NUT-18 payment requests. A pasted token funds it the same way."</p>
                                 </div>
                             }.into_any(),
                             Ok(info) => {

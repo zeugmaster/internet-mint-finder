@@ -15,7 +15,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         cache::ResponseCache,
         http::api_router,
         state::AppState,
-        storage::{AuditorDatabase, SwapEvent},
+        storage::{Auditor, AuditorDatabase, SwapEvent},
     };
     use cdk_cashu_auditor::types::MintState;
     use chrono::{Duration, Utc};
@@ -95,10 +95,52 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         db.insert_swap(&swap).await?;
     }
+    // Two synthetic peer auditors, so each mint shows several hallmarks.
+    let peers = ["3f".repeat(32), "a9".repeat(32)];
+    for (peer, name) in peers.iter().zip(["Harbor auditor", "Ridge auditor"]) {
+        db.upsert_auditor(&Auditor {
+            pubkey: peer.clone(),
+            name: name.into(),
+            urls: vec![format!(
+                "https://{}.example",
+                name.split(' ').next().unwrap_or("peer").to_lowercase()
+            )],
+            donate: None,
+            software: "imf 0.1.0".into(),
+            frequency_secs: 600,
+            contact: None,
+            announced_at: Some(Utc::now() - Duration::hours(6)),
+            last_seen: Utc::now() - Duration::minutes(4),
+        })
+        .await?;
+    }
+    for i in 0..60 {
+        let peer = &peers[i % 2];
+        let from = &mints[(i * 3) % 7];
+        let to = &mints[(i * 3 + 2) % 7];
+        let mut swap = SwapEvent::success(
+            from,
+            to,
+            30 + i as u64 % 50,
+            1,
+            900.0 + (i % 9) as f64 * 310.0,
+        );
+        swap.created_at = Utc::now() - Duration::minutes(i as i64 * 19 + 4);
+        swap.auditor_pubkey = peer.clone();
+        swap.event_id = Some(format!("{i:064x}"));
+        if i % 7 == 3 {
+            swap.state = MintState::Error;
+            swap.error = Some("Lightning payment failed: no route found.".into());
+            swap.category = Some("network".into());
+            swap.failed_mint_id = Some(to.id);
+            swap.fee = 0;
+        }
+        db.insert_swap(&swap).await?;
+    }
     let state = AppState {
         leptos_options: get_configuration(Some("Cargo.toml"))?.leptos_options,
         wallet_repository: wallets,
-        app_name: "Cashu Auditor · Preview".into(),
+        app_name: "Internet Mint Finder · Preview".into(),
         auditor_db: db,
         auditor_config: AuditorConfig::default(),
         cache: Arc::new(ResponseCache::new()),

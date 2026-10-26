@@ -7,7 +7,7 @@
 
 use crate::server::classify::resolve_category;
 use crate::server::error::AuditorError;
-use crate::types::{MintRead, MintState, MintUptime, MintUptimeBar, SwapEventRead};
+use crate::types::{AuditorMark, MintRead, MintState, MintUptime, MintUptimeBar, SwapEventRead};
 use chrono::{DateTime, Utc};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
@@ -226,6 +226,7 @@ impl From<Mint> for MintRead {
             auditors_24h: 0,
             auditors_ok_24h: 0,
             success_rate_24h: None,
+            auditor_marks: Vec::new(),
         }
     }
 }
@@ -319,6 +320,8 @@ pub struct DirectoryStats {
     pub auditors_ok_24h: u64,
     pub attempts_24h: u64,
     pub successes_24h: u64,
+    /// Each auditor's own verdict, local (empty pubkey) first.
+    pub marks: Vec<AuditorMark>,
 }
 
 /// A peer auditor as last announced (kind 10172) and last seen publishing.
@@ -1969,6 +1972,37 @@ impl AuditorDatabase {
                     params![id, cutoff],
                     |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
                 )?;
+            let mut stmt = conn.prepare(
+                "WITH attributable AS (
+                    SELECT auditor_pubkey, state, created_at,
+                           ROW_NUMBER() OVER (PARTITION BY auditor_pubkey
+                                              ORDER BY created_at DESC, id DESC) AS rn
+                    FROM swaps
+                    WHERE (from_id = ?1 OR to_id = ?1) AND created_at >= ?2
+                      AND (state = 'OK' OR failed_mint_id IS NULL OR failed_mint_id = ?1))
+                 SELECT auditor_pubkey,
+                        MAX(CASE WHEN rn = 1 THEN state END),
+                        MAX(CASE WHEN rn = 1 THEN created_at END),
+                        SUM(CASE WHEN state <> 'OK' THEN 1 ELSE 0 END)
+                 FROM attributable GROUP BY auditor_pubkey ORDER BY auditor_pubkey",
+            )?;
+            let marks = stmt
+                .query_map(params![id, cutoff], |row| {
+                    let latest: String = row.get(1)?;
+                    let at: String = row.get(2)?;
+                    let failures: i64 = row.get(3)?;
+                    let state = match (latest.as_str(), failures) {
+                        ("OK", 0) => MintState::Ok,
+                        ("OK", _) => MintState::Warn,
+                        _ => MintState::Error,
+                    };
+                    Ok(AuditorMark {
+                        pubkey: row.get(0)?,
+                        state,
+                        at: str_to_dt(&at),
+                    })
+                })?
+                .collect::<Result<Vec<_>, _>>()?;
             Ok(DirectoryStats {
                 review_count: review_count.max(0) as u64,
                 review_avg,
@@ -1977,6 +2011,7 @@ impl AuditorDatabase {
                 auditors_ok_24h: auditors_ok.max(0) as u64,
                 attempts_24h: attempts.max(0) as u64,
                 successes_24h: successes.max(0) as u64,
+                marks,
             })
         })
         .await
@@ -2299,6 +2334,63 @@ mod tests {
 
         // A second peer copy of the same event id is rejected by the unique index.
         assert!(db.insert_swap(&peer).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn directory_marks_keep_each_auditors_own_verdict() {
+        let db = AuditorDatabase::open_in_memory().unwrap();
+        for url in ["https://a.example", "https://b.example"] {
+            db.record_donation(url, 100, "token").await.unwrap();
+        }
+        let a = db
+            .get_mint_by_url("https://a.example")
+            .await
+            .unwrap()
+            .unwrap();
+        let b = db
+            .get_mint_by_url("https://b.example")
+            .await
+            .unwrap()
+            .unwrap();
+        let peer_ok = "11".repeat(32);
+        let peer_mixed = "22".repeat(32);
+        let peer_failing = "33".repeat(32);
+        let at = |mins: i64| Utc::now() - chrono::Duration::minutes(mins);
+        let swap = |pubkey: &str, state: MintState, failed: Option<u64>, mins: i64| {
+            let mut s = sample_swap(&a, &b, 10, state);
+            s.auditor_pubkey = pubkey.to_string();
+            s.failed_mint_id = failed;
+            s.created_at = at(mins);
+            s.event_id = (!pubkey.is_empty()).then(|| format!("{pubkey}{mins}"));
+            s
+        };
+        for s in [
+            swap("", MintState::Ok, None, 5),
+            swap(&peer_ok, MintState::Ok, None, 30),
+            swap(&peer_mixed, MintState::Error, Some(a.id), 60),
+            swap(&peer_mixed, MintState::Ok, None, 10),
+            swap(&peer_failing, MintState::Ok, None, 90),
+            swap(&peer_failing, MintState::Error, None, 20),
+            // Blamed on the other mint, so it says nothing about `a`.
+            swap(&peer_ok, MintState::Error, Some(b.id), 1),
+            // Older than 24 h.
+            swap(&peer_ok, MintState::Error, Some(a.id), 25 * 60),
+        ] {
+            db.insert_swap(&s).await.unwrap();
+        }
+
+        let marks = db.directory_stats(a.id, &a.url, None).await.unwrap().marks;
+        let summary: Vec<(&str, MintState)> =
+            marks.iter().map(|m| (m.pubkey.as_str(), m.state)).collect();
+        assert_eq!(
+            summary,
+            vec![
+                ("", MintState::Ok),
+                (peer_ok.as_str(), MintState::Ok),
+                (peer_mixed.as_str(), MintState::Warn),
+                (peer_failing.as_str(), MintState::Error),
+            ]
+        );
     }
 
     #[tokio::test]

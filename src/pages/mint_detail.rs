@@ -4,6 +4,8 @@ use crate::api::{
 };
 use crate::components::auditor_table::AuditorTable;
 use crate::components::badge::{CategoryPill, StateBadge};
+use crate::components::hallmarks::Hallmarks;
+use crate::components::icons::ArrowLeft;
 use crate::components::reviews::{AnnouncementCard, ReviewsPanel};
 use crate::components::swap_list::SwapItem;
 use crate::format::{absolute_time, format_ms, format_sats, relative_time, short_url};
@@ -71,7 +73,7 @@ pub fn MintDetailPage() -> impl IntoView {
 
     view! {
         <div class="shell">
-            <a href="/" class="back-link rise">"← Back to console"</a>
+            <a href="/" class="back-link"><ArrowLeft/>"Directory"</a>
 
             <Transition fallback=|| {
                 view! {
@@ -92,7 +94,6 @@ pub fn MintDetailPage() -> impl IntoView {
                                 view! {
                                     <Title text="Mint not found — Internet Mint Finder"/>
                                     <div class="card card-pad empty-state">
-                                        <span class="glyph">"◌"</span>
                                         "This mint is not tracked by the auditor."
                                     </div>
                                 }
@@ -111,8 +112,17 @@ pub fn MintDetailPage() -> impl IntoView {
             </Transition>
 
             <div class="grid-main mt-6">
-                <section class="rise rise-3">
-                    <h2 class="section-title">"Swap history"</h2>
+                <section>
+                    <h2 class="section-title">"Vantage points"</h2>
+                    <div class="card">
+                        <Transition fallback=move || view! { <div class="skeleton skeleton-row"></div> }>
+                            {move || views.get().map(|res| match res {
+                                Ok(views) => view! { <AuditorTable views/> }.into_any(),
+                                Err(e) => view! { <div class="empty-state">{format!("Failed to load auditors: {e}")}</div> }.into_any(),
+                            })}
+                        </Transition>
+                    </div>
+                    <h2 class="section-title mt-6">"Swap history"</h2>
                     <div class="card">
                         <div class="feed">
                             <Transition fallback=move || {
@@ -130,7 +140,6 @@ pub fn MintDetailPage() -> impl IntoView {
                                                 if data.is_empty() {
                                                     view! {
                                                         <div class="empty-state">
-                                                            <span class="glyph">"⇄"</span>
                                                             "No swaps recorded for this mint yet. "
                                                             "Audits begin once it holds funds."
                                                         </div>
@@ -158,17 +167,8 @@ pub fn MintDetailPage() -> impl IntoView {
                     </div>
                 </section>
 
-                <section class="rise rise-4">
-                    <h2 class="section-title">"Vantage points"</h2>
-                    <div class="card">
-                        <Transition fallback=move || view! { <div class="skeleton skeleton-row"></div> }>
-                            {move || views.get().map(|res| match res {
-                                Ok(views) => view! { <AuditorTable views/> }.into_any(),
-                                Err(e) => view! { <div class="empty-state">{format!("Failed to load auditors: {e}")}</div> }.into_any(),
-                            })}
-                        </Transition>
-                    </div>
-                    <h2 class="section-title mt-6">"On Nostr"</h2>
+                <section>
+                    <h2 class="section-title">"On Nostr"</h2>
                     <Transition fallback=move || view! { <div class="skeleton skeleton-row"></div> }>
                         {move || announcement.get().map(|res| match res {
                             Ok(a) => view! { <AnnouncementCard announcement=a/> }.into_any(),
@@ -196,7 +196,6 @@ pub fn MintDetailPage() -> impl IntoView {
                                             if data.is_empty() {
                                                 view! {
                                                     <div class="empty-state">
-                                                        <span class="glyph">"♡"</span>
                                                         "No donations yet. Be the first to fund "
                                                         "audits of this mint."
                                                     </div>
@@ -346,7 +345,7 @@ fn MintDetail(
             let pill = category.map(|c| view! { <CategoryPill category=c/> });
             Some(
                 view! {
-                    <div class="incident rise">
+                    <div class="incident">
                         <div class="incident-head">
                             <span class="incident-title">"Most recent failure"</span>
                             {pill}
@@ -362,15 +361,17 @@ fn MintDetail(
     };
 
     let donate_href = format!("/receive?mint={}", urlencode(&mint.url));
+    let marks = mint.auditor_marks.clone();
 
     view! {
         <Title text=page_title/>
 
-        <div class="detail-head rise">
+        <div class="detail-head">
             <h1 class="page-title">{display_name}</h1>
             <StateBadge state=mint.state/>
+            {(!marks.is_empty()).then(|| view! { <Hallmarks marks=marks.clone()/> })}
         </div>
-        <p class="mono text-dim rise" style="font-size: 13px;">
+        <p class="detail-url">
             <a href=mint.url.clone() rel="external noopener" target="_blank">
                 {mint.url.clone()}
             </a>
@@ -381,7 +382,7 @@ fn MintDetail(
             <div class="callout mt-4" role="status">"Audit metrics are temporarily unavailable. Retrying automatically."</div>
         </Show>
 
-        <div class="stat-chips rise rise-1">
+        <div class="stat-chips">
             <div class="stat-chip">
                 <div class="label">{success_label}</div>
                 <div class="value">{success_value}</div>
@@ -423,7 +424,7 @@ fn MintDetail(
 
         <UptimePanel uptime=uptime/>
 
-        <div class="card card-pad rise rise-3">
+        <div class="card card-pad">
             <div class="flex justify-between items-center flex-wrap gap-4">
                 <dl class="kv-list">
                     <Show when={
@@ -574,7 +575,7 @@ fn UptimePanel(uptime: Option<MintUptime>) -> impl IntoView {
     );
 
     view! {
-        <div class="card card-pad uptime-card rise rise-2">
+        <div class="card card-pad uptime-card">
             <div class="uptime-head">
                 <div>
                     <div class="section-title compact">"Observed uptime"</div>

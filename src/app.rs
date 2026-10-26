@@ -11,6 +11,11 @@ use leptos_router::{
     ParamSegment, StaticSegment,
 };
 
+/// Runs before first paint: the saved theme, else the system setting. The
+/// footer toggle is handled here too, by delegation, so it works before (and
+/// without) hydration.
+const THEME_SCRIPT: &str = r#"(function(){var d=document.documentElement;d.dataset.theme=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.addEventListener('click',function(e){if(!e.target.closest('[data-theme-toggle]'))return;var next=d.dataset.theme==='dark'?'light':'dark';d.dataset.theme=next;localStorage.setItem('theme',next);});})();"#;
+
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
         <!DOCTYPE html>
@@ -18,8 +23,10 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
             <head>
                 <meta charset="utf-8"/>
                 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-                <meta name="color-scheme" content="dark"/>
-                <meta name="theme-color" content="#0a0d13"/>
+                <meta name="color-scheme" content="light dark"/>
+                <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f3f2ee"/>
+                <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#121211"/>
+                <script inner_html=THEME_SCRIPT></script>
                 <meta
                     name="description"
                     content="Continuous, real-money audits of Cashu mints: uptime, latency, fees, and failures, measured by actually moving ecash."
@@ -31,12 +38,6 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
                 <MetaTags/>
                 <script src="/nostr-tools.js" defer></script>
                 <script src="/review.js" defer></script>
-                <link rel="preconnect" href="https://fonts.googleapis.com"/>
-                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""/>
-                <link
-                    href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
-                    rel="stylesheet"
-                />
             </head>
             <body>
                 <App/>
@@ -81,13 +82,12 @@ pub fn App() -> impl IntoView {
 fn NotFound() -> impl IntoView {
     view! {
         <Title text="Page not found — Internet Mint Finder"/>
-        <div class="shell shell-narrow text-center">
-            <div class="card card-pad empty-state" style="margin-top: 48px;">
-                <span class="glyph">"∅"</span>
-                <h1 class="page-title" style="font-size: 22px;">"Page not found"</h1>
-                <p class="mt-2">"The page you are looking for does not exist."</p>
+        <div class="shell shell-narrow">
+            <div class="card card-pad empty-state">
+                <h1 class="page-title">"Page not found"</h1>
+                <p>"The page you are looking for does not exist."</p>
                 <div class="mt-6">
-                    <a href="/" class="btn btn-primary">"Back to console"</a>
+                    <a href="/" class="btn btn-primary">"Back to the directory"</a>
                 </div>
             </div>
         </div>
@@ -126,6 +126,10 @@ fn Footer() -> impl IntoView {
                     " · NUT-18 donations · "
                     <a href="/auditors">"auditors"</a>
                 </span>
+                <button type="button" class="btn btn-secondary btn-small theme-toggle" data-theme-toggle="">
+                    <span class="when-dark">"Use light mode"</span>
+                    <span class="when-light">"Use dark mode"</span>
+                </button>
             </div>
         </footer>
     }

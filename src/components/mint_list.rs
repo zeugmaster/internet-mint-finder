@@ -1,5 +1,7 @@
 use crate::api::search_mints;
 use crate::components::badge::StateBadge;
+use crate::components::hallmarks::Hallmarks;
+use crate::components::icons::{ArrowLeft, ArrowRight};
 use crate::format::{absolute_time, format_sats, relative_time, short_url};
 use crate::hooks::use_poll;
 use crate::types::{MintRead, MintState};
@@ -70,7 +72,7 @@ pub fn MintList() -> impl IntoView {
                                     <caption class="sr-only">"Tracked mints and their latest audit results"</caption>
                                     <thead><tr>
                                         <th scope="col">"Mint"</th><th scope="col">"Status"</th>
-                                        <th scope="col" class="cell-center">"Auditors (24h)"</th>
+                                        <th scope="col">"Hallmarks"</th>
                                         <th scope="col" class="cell-right">"Success (24h)"</th>
                                         <th scope="col" class="cell-right">"Reviews"</th>
                                         <th scope="col" class="cell-right">"Balance"</th>
@@ -83,17 +85,17 @@ pub fn MintList() -> impl IntoView {
                                 <div class="empty-state">
                                     <h3>"No mints to show"</h3>
                                     <p>"Try a different search or status. Mints appear from NIP-87 announcements on Nostr or from a donation of their ecash."</p>
-                                    <a href="/receive" class="text-link">"Add a mint with ecash →"</a>
+                                    <a href="/receive" class="text-link">"Add a mint with ecash"</a>
                                 </div>
                             </Show>
                             <div class="panel-footer">
                                 <span>{format!("{} {}", total, if total == 1 { "mint" } else { "mints" })}</span>
                                 <div class="pagination">
                                     <button type="button" class="btn btn-ghost btn-small" disabled=move || page.get() == 0
-                                        on:click=move |_| page.update(|p| *p = p.saturating_sub(1))>"← Previous"</button>
+                                        on:click=move |_| page.update(|p| *p = p.saturating_sub(1))><ArrowLeft/>"Previous"</button>
                                     <span class="page-number">{move || format!("{} / {}", page.get() + 1, total.div_ceil(20).max(1))}</span>
                                     <button type="button" class="btn btn-ghost btn-small" disabled=!has_next
-                                        on:click=move |_| page.update(|p| *p = p.saturating_add(1))>"Next →"</button>
+                                        on:click=move |_| page.update(|p| *p = p.saturating_add(1))>"Next"<ArrowRight/></button>
                                 </div>
                             </div>
                         }.into_any()
@@ -123,22 +125,12 @@ fn MintRow(mint: MintRead) -> impl IntoView {
     let target = mint.sum_donations.max(1);
     let fill_pct = ((mint.balance as f64 / target as f64) * 100.0).min(100.0);
 
-    let err_class = if mint.auditors_ok_24h < mint.auditors_24h {
-        "err-count some"
-    } else {
-        "err-count none"
-    };
-
     let navigate = leptos_router::hooks::use_navigate();
     let row_href = detail_href.clone();
     let unfunded = mint.sum_donations == 0;
     let peer_only = unfunded && mint.auditors_24h > 0;
     let fund_href = format!("/receive?mint={}", urlencode(&mint.url));
-    let auditors_cell = if mint.auditors_24h > 0 {
-        format!("{} / {} OK", mint.auditors_ok_24h, mint.auditors_24h)
-    } else {
-        String::new()
-    };
+    let marks = mint.auditor_marks.clone();
     let success_cell = mint
         .success_rate_24h
         .map(|r| format!("{:.0}%", r * 100.0))
@@ -172,11 +164,11 @@ fn MintRow(mint: MintRead) -> impl IntoView {
                     <div class="mint-url" title="Known from peer auditors; donate from this mint to audit it here too">"observed via peers"</div>
                 </Show>
             </td>
-            <td class="cell-center">
-                {if auditors_cell.is_empty() {
-                    view! { <a class="text-link" href=fund_href.clone() on:click=|ev| ev.stop_propagation()>"fund an audit →"</a> }.into_any()
+            <td>
+                {if marks.is_empty() {
+                    view! { <a class="text-link" href=fund_href.clone() on:click=|ev| ev.stop_propagation()>"fund an audit"</a> }.into_any()
                 } else {
-                    view! { <span class=err_class>{auditors_cell.clone()}</span> }.into_any()
+                    view! { <Hallmarks marks=marks.clone()/> }.into_any()
                 }}
             </td>
             <td class="cell-num">{success_cell}</td>

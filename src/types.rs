@@ -11,6 +11,18 @@ pub enum MintState {
     Unknown,
 }
 
+/// One auditor's latest 24 h verdict on a mint, shown as its hallmark.
+/// `Ok`: its latest attributable attempt settled and none failed in 24 h.
+/// `Warn`: the latest settled, but an earlier one in 24 h failed.
+/// `Error`: its latest attributable attempt failed.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct AuditorMark {
+    /// Hex pubkey; empty for this instance when it has no Nostr key.
+    pub pubkey: String,
+    pub state: MintState,
+    pub at: DateTime<Utc>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PaginationParams {
     #[serde(default)]
@@ -67,6 +79,9 @@ pub struct MintRead {
     pub auditors_ok_24h: u64,
     #[serde(default)]
     pub success_rate_24h: Option<f64>,
+    /// Every auditor's own 24 h verdict, this instance first.
+    #[serde(default)]
+    pub auditor_marks: Vec<AuditorMark>,
 }
 
 /// A NIP-87 announcement as shown on the mint page.

@@ -194,6 +194,19 @@ pub async fn with_balance(state: &AppState, mint: Mint) -> MintRead {
             read.auditors_ok_24h = stats.auditors_ok_24h;
             read.success_rate_24h = (stats.attempts_24h > 0)
                 .then(|| stats.successes_24h as f64 / stats.attempts_24h as f64);
+            // Local rows carry an empty pubkey until published; name them by
+            // this instance's key so the hallmark matches the auditors list.
+            let self_hex = state.nostr.self_pubkey_hex().unwrap_or_default();
+            read.auditor_marks = stats
+                .marks
+                .into_iter()
+                .map(|mut mark| {
+                    if mark.pubkey.is_empty() {
+                        mark.pubkey = self_hex.clone();
+                    }
+                    mark
+                })
+                .collect();
         }
         Err(error) => tracing::warn!(mint = %read.url, %error, "directory stats unavailable"),
     }
@@ -525,6 +538,26 @@ pub async fn list_auditors(state: &AppState) -> Result<Vec<AuditorRead>, Auditor
             frequency_secs: a.frequency_secs,
             contact: a.contact,
             last_seen: Some(a.last_seen),
+            is_self: false,
+        });
+    }
+    // Configured peers are ingested before (or without) announcing
+    // themselves; list them anyway so every hallmark has a row.
+    for key in &state.nostr.auditors {
+        let hex = key.to_hex();
+        if list.iter().any(|a| a.pubkey == hex) {
+            continue;
+        }
+        list.push(AuditorRead {
+            npub: npub_of(&hex),
+            pubkey: hex,
+            name: String::new(),
+            urls: Vec::new(),
+            donate: None,
+            software: String::new(),
+            frequency_secs: 0,
+            contact: None,
+            last_seen: None,
             is_self: false,
         });
     }

@@ -1,0 +1,653 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-26T16:13:52+00:00",
+  "title": "Design System: Internet Mint Finder",
+  "extensions": {
+    "colorMeta": {
+      "bg": {
+        "role": "neutral",
+        "displayName": "Paper Ground",
+        "canonical": "#f3f2ee",
+        "oklch": "oklch(96.1% 0.005 95)",
+        "theme": "light",
+        "cssVar": "--bg",
+        "tonalRamp": [
+          "#0b0b0a",
+          "#252524",
+          "#424240",
+          "#62615e",
+          "#83827f",
+          "#a6a5a2",
+          "#c9c9c7",
+          "#efeeed"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Sheet",
+        "canonical": "#ffffff",
+        "oklch": "oklch(100.0% 0.000 90)",
+        "theme": "light",
+        "cssVar": "--surface",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "subtle": {
+        "role": "neutral",
+        "displayName": "Tray",
+        "canonical": "#e9e7e1",
+        "oklch": "oklch(92.8% 0.008 91)",
+        "theme": "light",
+        "cssVar": "--subtle",
+        "tonalRamp": [
+          "#0b0b0a",
+          "#262523",
+          "#43423f",
+          "#63615d",
+          "#84827d",
+          "#a6a5a1",
+          "#cac9c6",
+          "#efeeed"
+        ]
+      },
+      "ink": {
+        "role": "primary",
+        "displayName": "Assay Ink",
+        "canonical": "#141413",
+        "oklch": "oklch(19.1% 0.002 107)",
+        "theme": "light",
+        "cssVar": "--ink",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252524",
+          "#424241",
+          "#616160",
+          "#828281",
+          "#a5a5a4",
+          "#c9c9c8",
+          "#eeeeee"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted Graphite",
+        "canonical": "#5c5a55",
+        "oklch": "oklch(46.8% 0.008 89)",
+        "theme": "light",
+        "cssVar": "--muted",
+        "tonalRamp": [
+          "#0b0b0a",
+          "#262523",
+          "#43423f",
+          "#63615c",
+          "#84827d",
+          "#a6a5a1",
+          "#cac9c6",
+          "#efeeed"
+        ]
+      },
+      "faint": {
+        "role": "neutral",
+        "displayName": "Faint Graphite",
+        "canonical": "#68655e",
+        "oklch": "oklch(50.7% 0.011 88)",
+        "theme": "light",
+        "cssVar": "--faint",
+        "tonalRamp": [
+          "#0c0b0a",
+          "#262522",
+          "#44423d",
+          "#64615b",
+          "#85827c",
+          "#a7a5a0",
+          "#cac9c5",
+          "#efeeec"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Rule",
+        "canonical": "#ecebe6",
+        "oklch": "oklch(93.9% 0.007 97)",
+        "theme": "light",
+        "cssVar": "--rule",
+        "tonalRamp": [
+          "#0b0b0a",
+          "#252523",
+          "#43423f",
+          "#62615d",
+          "#83827e",
+          "#a6a5a2",
+          "#cac9c7",
+          "#efeeed"
+        ]
+      },
+      "ok": {
+        "role": "tertiary",
+        "displayName": "Settled Green",
+        "canonical": "#2b7a3d",
+        "oklch": "oklch(51.6% 0.121 148)",
+        "theme": "light",
+        "cssVar": "--ok",
+        "tonalRamp": [
+          "#030f04",
+          "#0d2d14",
+          "#1d4e27",
+          "#2e723c",
+          "#51945c",
+          "#81b488",
+          "#b0d4b4",
+          "#e0f5e2"
+        ]
+      },
+      "warn": {
+        "role": "tertiary",
+        "displayName": "Partial Amber",
+        "canonical": "#8a5a00",
+        "oklch": "oklch(50.8% 0.108 73)",
+        "theme": "light",
+        "cssVar": "--warn",
+        "tonalRamp": [
+          "#130901",
+          "#342103",
+          "#593b0a",
+          "#825713",
+          "#a5793b",
+          "#c29e71",
+          "#dec5a5",
+          "#fbecd9"
+        ]
+      },
+      "error": {
+        "role": "tertiary",
+        "displayName": "Voided Rust",
+        "canonical": "#b9330c",
+        "oklch": "oklch(52.3% 0.176 35)",
+        "theme": "light",
+        "cssVar": "--error",
+        "tonalRamp": [
+          "#1b0301",
+          "#451004",
+          "#75210b",
+          "#a83314",
+          "#cf583b",
+          "#e68870",
+          "#fbb6a4",
+          "#ffe4d9"
+        ]
+      },
+      "info": {
+        "role": "tertiary",
+        "displayName": "Category Blue",
+        "canonical": "#2f5f9e",
+        "oklch": "oklch(48.4% 0.114 256)",
+        "theme": "light",
+        "cssVar": "--info",
+        "tonalRamp": [
+          "#040b18",
+          "#12253f",
+          "#24436b",
+          "#38629a",
+          "#5884bf",
+          "#85a7d6",
+          "#b2cbed",
+          "#e1f0ff"
+        ]
+      },
+      "bg-dark": {
+        "role": "neutral",
+        "displayName": "Paper Ground (dark)",
+        "canonical": "#121211",
+        "oklch": "oklch(18.2% 0.002 107)",
+        "theme": "dark",
+        "cssVar": "--bg",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252524",
+          "#424241",
+          "#616160",
+          "#828281",
+          "#a5a5a4",
+          "#c9c9c8",
+          "#eeeeee"
+        ]
+      },
+      "surface-dark": {
+        "role": "neutral",
+        "displayName": "Sheet (dark)",
+        "canonical": "#1d1d1b",
+        "oklch": "oklch(23.0% 0.004 107)",
+        "theme": "dark",
+        "cssVar": "--surface",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252524",
+          "#424240",
+          "#61615f",
+          "#828280",
+          "#a5a5a3",
+          "#c9c9c8",
+          "#eeeeee"
+        ]
+      },
+      "subtle-dark": {
+        "role": "neutral",
+        "displayName": "Tray (dark)",
+        "canonical": "#2a2a27",
+        "oklch": "oklch(28.4% 0.005 107)",
+        "theme": "dark",
+        "cssVar": "--subtle",
+        "tonalRamp": [
+          "#0b0b0a",
+          "#252524",
+          "#424240",
+          "#61615e",
+          "#82827f",
+          "#a5a5a3",
+          "#c9c9c7",
+          "#eeeeed"
+        ]
+      },
+      "ink-dark": {
+        "role": "primary",
+        "displayName": "Assay Ink (dark)",
+        "canonical": "#f1f0eb",
+        "oklch": "oklch(95.5% 0.007 97)",
+        "theme": "dark",
+        "cssVar": "--ink",
+        "tonalRamp": [
+          "#0b0b0a",
+          "#252523",
+          "#43423f",
+          "#62615d",
+          "#83827e",
+          "#a6a5a2",
+          "#c9c9c7",
+          "#efeeed"
+        ]
+      },
+      "muted-dark": {
+        "role": "neutral",
+        "displayName": "Muted Graphite (dark)",
+        "canonical": "#a9a79f",
+        "oklch": "oklch(72.8% 0.012 95)",
+        "theme": "dark",
+        "cssVar": "--muted",
+        "tonalRamp": [
+          "#0b0b0a",
+          "#262522",
+          "#43423d",
+          "#63615b",
+          "#84827b",
+          "#a6a5a0",
+          "#cac9c5",
+          "#efeeec"
+        ]
+      },
+      "faint-dark": {
+        "role": "neutral",
+        "displayName": "Faint Graphite (dark)",
+        "canonical": "#8a887f",
+        "oklch": "oklch(62.6% 0.013 97)",
+        "theme": "dark",
+        "cssVar": "--faint",
+        "tonalRamp": [
+          "#0c0b09",
+          "#262522",
+          "#43423d",
+          "#63615a",
+          "#84827a",
+          "#a6a59f",
+          "#cac9c4",
+          "#efeeec"
+        ]
+      },
+      "rule-dark": {
+        "role": "neutral",
+        "displayName": "Rule (dark)",
+        "canonical": "#262624",
+        "oklch": "oklch(26.8% 0.004 107)",
+        "theme": "dark",
+        "cssVar": "--rule",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252524",
+          "#424241",
+          "#61615f",
+          "#828280",
+          "#a5a5a3",
+          "#c9c9c8",
+          "#eeeeee"
+        ]
+      },
+      "ok-dark": {
+        "role": "tertiary",
+        "displayName": "Settled Green (dark)",
+        "canonical": "#78c98c",
+        "oklch": "oklch(76.8% 0.118 151)",
+        "theme": "dark",
+        "cssVar": "--ok",
+        "tonalRamp": [
+          "#020f05",
+          "#0c2d16",
+          "#1a4e2a",
+          "#2a7240",
+          "#4e9461",
+          "#7fb48b",
+          "#afd4b6",
+          "#e0f5e4"
+        ]
+      },
+      "warn-dark": {
+        "role": "tertiary",
+        "displayName": "Partial Amber (dark)",
+        "canonical": "#e6b45a",
+        "oklch": "oklch(79.8% 0.122 80)",
+        "theme": "dark",
+        "cssVar": "--warn",
+        "tonalRamp": [
+          "#120900",
+          "#342100",
+          "#593c00",
+          "#815900",
+          "#a47a28",
+          "#c1a067",
+          "#ddc69e",
+          "#faedd6"
+        ]
+      },
+      "error-dark": {
+        "role": "tertiary",
+        "displayName": "Voided Rust (dark)",
+        "canonical": "#ff8a63",
+        "oklch": "oklch(75.4% 0.152 39)",
+        "theme": "dark",
+        "cssVar": "--error",
+        "tonalRamp": [
+          "#190501",
+          "#411506",
+          "#6e2910",
+          "#9f3f1c",
+          "#c56140",
+          "#dd8e73",
+          "#f4baa6",
+          "#ffe6da"
+        ]
+      },
+      "info-dark": {
+        "role": "tertiary",
+        "displayName": "Category Blue (dark)",
+        "canonical": "#8db4ec",
+        "oklch": "oklch(76.3% 0.091 257)",
+        "theme": "dark",
+        "cssVar": "--info",
+        "tonalRamp": [
+          "#050b16",
+          "#17253a",
+          "#2c4363",
+          "#43628f",
+          "#6384b3",
+          "#8ca7cd",
+          "#b8cbe6",
+          "#e4efff"
+        ]
+      }
+    },
+    "themes": {
+      "light": {
+        "selector": ":root",
+        "note": "Default when the visitor's system is light."
+      },
+      "dark": {
+        "selector": ":root[data-theme='dark']",
+        "note": "Set before first paint from localStorage or prefers-color-scheme; footer toggle switches."
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "One page title per page; 22px under 760px."
+      },
+      "figure": {
+        "displayName": "Figure",
+        "purpose": "KPI and uptime values; 20px under 760px. Units at 15px regular, muted."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Section heads, card and step titles, mint names. Weight alone separates it from body."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Running text; 70 to 75ch caps on subtitles and explainers."
+      },
+      "table": {
+        "displayName": "Table",
+        "purpose": "Data table cells."
+      },
+      "small": {
+        "displayName": "Small",
+        "purpose": "Metadata, hints, table headers, footer, small buttons, segmented options."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Category chips, tooltips, chart axes, stacked-table labels."
+      },
+      "stamp": {
+        "displayName": "Stamp",
+        "purpose": "Hallmark labels only."
+      }
+    },
+    "fonts": [
+      {
+        "family": "TX-02",
+        "files": [
+          "/fonts/tx-02-regular.otf",
+          "/fonts/tx-02-italic.otf",
+          "/fonts/tx-02-bold.otf",
+          "/fonts/tx-02-bold-italic.otf"
+        ],
+        "weights": [
+          400,
+          700
+        ],
+        "display": "swap"
+      }
+    ],
+    "shadows": [
+      {
+        "name": "hallmark-ring",
+        "value": "inset 0 0 0 1px var(--subtle)",
+        "purpose": "Idle hallmark edge. Not elevation; the only shadow in the system."
+      },
+      {
+        "name": "hallmark-ring-signal",
+        "value": "inset 0 0 0 1.5px var(--warn | --error)",
+        "purpose": "Partial and voided hallmark edge."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease",
+        "value": "150ms ease",
+        "purpose": "Colour, background and opacity transitions on links, buttons, rows, tooltips."
+      },
+      {
+        "name": "meter",
+        "value": "width 400ms ease",
+        "purpose": "Balance meter fill."
+      },
+      {
+        "name": "breathe",
+        "value": "opacity 1 to 0.5, 1.4s ease-in-out infinite",
+        "purpose": "Loading skeletons."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "animation and transition none",
+        "purpose": "Applied globally under prefers-reduced-motion: reduce."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "phone",
+        "value": "max-width: 760px",
+        "purpose": "Tables restack, nav wraps, padding drops to 16px, hallmark tips pin to the bottom edge."
+      },
+      {
+        "name": "donate-split",
+        "value": "min-width: 900px"
+      },
+      {
+        "name": "overview-split",
+        "value": "min-width: 1100px",
+        "purpose": "Directory plus a 380px feed column."
+      }
+    ],
+    "layout": {
+      "shellMaxWidth": "1240px",
+      "shellPadding": "24px 24px 56px (16px 16px 40px on phone)",
+      "gridGap": "16px",
+      "cardPadding": "20px 24px"
+    },
+    "rootCss": ":host{--bg:#f3f2ee;--surface:#ffffff;--subtle:#e9e7e1;--ink:#141413;--muted:#5c5a55;--faint:#68655e;--rule:#ecebe6;--ok:#2b7a3d;--warn:#8a5a00;--error:#b9330c;--info:#2f5f9e;--font:'TX-02',ui-monospace,'SF Mono',Menlo,monospace;--radius-control:8px;--radius-surface:16px;--ease:150ms ease;font-family:var(--font);font-size:15px;line-height:1.5;font-variant-numeric:tabular-nums;color:var(--ink)} "
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Inverted ink; the one main action per view.",
+      "html": "<button class=\"ds-btn ds-btn-primary\">Donate ecash</button>",
+      "css": ".ds-btn{font-family:var(--font, 'TX-02', ui-monospace, Menlo, monospace);display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border:0;border-radius:var(--radius-control,8px);font-size:15px;cursor:pointer;white-space:nowrap;transition:background-color 150ms ease,color 150ms ease,opacity 150ms ease}.ds-btn-primary{background:var(--ink,#141413);color:var(--surface,#fff);font-weight:700}.ds-btn-primary:hover{opacity:.85}.ds-btn-primary:active{opacity:.75}.ds-btn:focus-visible{outline:2px solid var(--ink,#141413);outline-offset:2px}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "Tray-grey default button for every other action.",
+      "html": "<button class=\"ds-btn2\">Analytics</button>",
+      "css": ".ds-btn2{font-family:var(--font, 'TX-02', ui-monospace, Menlo, monospace);display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border:0;border-radius:var(--radius-control,8px);background:var(--subtle,#e9e7e1);color:var(--ink,#141413);font-size:15px;cursor:pointer;transition:background-color 150ms ease}.ds-btn2:hover{background:color-mix(in oklab,var(--subtle,#e9e7e1),var(--ink,#141413) 8%)}.ds-btn2:focus-visible{outline:2px solid var(--ink,#141413);outline-offset:2px}"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Quiet muted action that gains the tray on hover.",
+      "html": "<button class=\"ds-btn-ghost\"><svg viewBox=\"0 0 16 16\" width=\"15\" height=\"15\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M13 8H3.5M7.5 4L3.5 8l4 4\"/></svg>Previous</button>",
+      "css": ".ds-btn-ghost{font-family:var(--font, 'TX-02', ui-monospace, Menlo, monospace);display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border:0;border-radius:var(--radius-control,8px);background:transparent;color:var(--muted,#5c5a55);font-size:13px;cursor:pointer;transition:background-color 150ms ease,color 150ms ease}.ds-btn-ghost:hover{background:var(--subtle,#e9e7e1);color:var(--ink,#141413)}.ds-btn-ghost:focus-visible{outline:2px solid var(--ink,#141413);outline-offset:2px}"
+    },
+    {
+      "name": "Search Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Recessed paper field inside a sheet, ink outline on focus.",
+      "html": "<label class=\"ds-search\"><svg viewBox=\"0 0 16 16\" width=\"15\" height=\"15\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" aria-hidden=\"true\"><circle cx=\"7\" cy=\"7\" r=\"4.5\"/><path d=\"M10.5 10.5L14 14\"/></svg><input placeholder=\"Find a mint…\" aria-label=\"Find a mint\"></label>",
+      "css": ".ds-search{font-family:var(--font, 'TX-02', ui-monospace, Menlo, monospace);display:flex;align-items:center;gap:10px;padding:0 14px;border-radius:var(--radius-control,8px);background:var(--bg,#f3f2ee);color:var(--faint,#68655e)}.ds-search:focus-within{outline:2px solid var(--ink,#141413)}.ds-search input{flex:1;min-width:0;padding:10px 0;border:0;background:transparent;color:var(--ink,#141413);font:inherit;font-size:15px;outline:none}.ds-search input::placeholder{color:var(--faint,#68655e)}"
+    },
+    {
+      "name": "Navigation",
+      "kind": "nav",
+      "refersTo": "nav-link",
+      "description": "Flat text links; the current page sits on the tray.",
+      "html": "<nav class=\"ds-nav\"><a href=\"#\" aria-current=\"page\">Directory</a><a href=\"#\">Donate</a><a href=\"#\">Auditors</a><a href=\"#\">Analytics</a></nav>",
+      "css": ".ds-nav{font-family:var(--font, 'TX-02', ui-monospace, Menlo, monospace);display:flex;gap:4px;font-size:15px}.ds-nav a{padding:7px 12px;border-radius:var(--radius-control,8px);color:var(--muted,#5c5a55);text-decoration:none;transition:color 150ms ease,background-color 150ms ease}.ds-nav a:hover{color:var(--ink,#141413)}.ds-nav a[aria-current=page]{background:var(--subtle,#e9e7e1);color:var(--ink,#141413)}.ds-nav a:focus-visible{outline:2px solid var(--ink,#141413);outline-offset:2px}"
+    },
+    {
+      "name": "Status and Category Chips",
+      "kind": "chip",
+      "refersTo": "category-chip",
+      "description": "Dot-and-word health badge; tray chip coloured by error class.",
+      "html": "<span class=\"ds-badge ds-ok\"><i></i>Healthy</span> <span class=\"ds-badge ds-warn\"><i></i>Degraded</span> <span class=\"ds-cat ds-cat-err\">network</span> <span class=\"ds-cat ds-cat-info\">liquidity</span>",
+      "css": ".ds-badge{font-family:var(--font, 'TX-02', ui-monospace, Menlo, monospace);display:inline-flex;align-items:center;gap:7px;font-size:15px;color:var(--muted,#5c5a55)}.ds-badge i{width:7px;height:7px;border-radius:50%;background:currentColor}.ds-ok{color:var(--ok,#2b7a3d)}.ds-warn{color:var(--warn,#8a5a00)}.ds-cat{font-family:var(--font, 'TX-02', ui-monospace, Menlo, monospace);display:inline-flex;padding:2px 8px;border-radius:6px;background:var(--subtle,#e9e7e1);color:var(--muted,#5c5a55);font-size:12px}.ds-cat-err{color:var(--error,#b9330c)}.ds-cat-info{color:var(--info,#2f5f9e)}"
+    },
+    {
+      "name": "Stat Surface",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Flat sheet at 16px radius holding one figure.",
+      "html": "<div class=\"ds-kpi\"><div class=\"ds-kpi-l\">Volume audited</div><div class=\"ds-kpi-v\">7038<span>sat</span></div><div class=\"ds-kpi-s\">+7038 sat / 24h</div></div>",
+      "css": ".ds-kpi{font-family:var(--font, 'TX-02', ui-monospace, Menlo, monospace);padding:18px 20px;border-radius:var(--radius-surface,16px);background:var(--surface,#fff);font-size:15px;line-height:1.5;font-variant-numeric:tabular-nums;max-width:280px}.ds-kpi-l{color:var(--muted,#5c5a55)}.ds-kpi-v{margin-top:2px;font-size:24px;font-weight:700;letter-spacing:-.02em;color:var(--ink,#141413)}.ds-kpi-v span{margin-left:6px;font-size:15px;font-weight:400;color:var(--muted,#5c5a55)}.ds-kpi-s{font-size:13px;color:var(--faint,#68655e)}"
+    },
+    {
+      "name": "Hallmarks",
+      "kind": "custom",
+      "refersTo": "hallmark-struck",
+      "description": "Signature: one stamp per auditor, struck, partial, voided or no verdict, each naming its auditor on hover and focus.",
+      "html": "<span class=\"ds-hm-row\"><button class=\"ds-hm ds-struck\" data-tip=\"Auditor 3f3f…: settled 2m ago\">3f</button><button class=\"ds-hm ds-partial\" data-tip=\"Auditor a9a9…: settled after a failure 4m ago\">a9</button><button class=\"ds-hm ds-voided\" data-tip=\"This instance: failed 1m ago\">loc</button><button class=\"ds-hm\" data-tip=\"Auditor 7c7c…: no verdict\">7c</button></span>",
+      "css": ".ds-hm-row{display:inline-flex;gap:5px;padding-top:36px}.ds-hm{font-family:var(--font, 'TX-02', ui-monospace, Menlo, monospace);position:relative;display:inline-grid;place-items:center;min-width:28px;height:21px;padding:0 5px;border:0;border-radius:5px;background:transparent;font-size:11px;font-weight:700;line-height:1;color:var(--faint,#68655e);box-shadow:inset 0 0 0 1px var(--subtle,#e9e7e1);cursor:help}.ds-struck{background:var(--ink,#141413);color:var(--surface,#fff);box-shadow:none}.ds-partial{color:var(--warn,#8a5a00);box-shadow:inset 0 0 0 1.5px var(--warn,#8a5a00)}.ds-voided{color:var(--error,#b9330c);box-shadow:inset 0 0 0 1.5px var(--error,#b9330c);text-decoration:line-through}.ds-hm::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;padding:6px 10px;border-radius:6px;background:var(--ink,#141413);color:var(--surface,#fff);font-size:12px;font-weight:400;text-decoration:none;white-space:nowrap;pointer-events:none;opacity:0;transform:translateX(-50%);transition:opacity 150ms ease}.ds-hm:hover::after,.ds-hm:focus-visible::after{opacity:1}.ds-hm:focus-visible{outline:2px solid var(--ink,#141413);outline-offset:2px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Assay Register",
+    "overview": "A flat, quiet ledger in one monospaced voice. Every surface is a tonal sheet laid on a warm paper ground; nothing glows, floats or gradates. The page reads like a register an assay office keeps: names, figures and outcomes in rows, and beside each mint a short line of hallmarks, one stamp struck by each independent auditor. The stamps are the only ornament, and they carry evidence.\n\nThe system ships in light and dark with the same structure and equal standing; the theme follows the visitor's setting before first paint and a footer toggle overrides it. Density is calm-operational: 15px base text, 16px gutters, generous card padding (20px 24px), tables with hairline row rules. Colour is withheld from chrome entirely; ink, three greys and tonal steps do all the hierarchy work, and hue appears only where the system is reporting health.\n\nThe world refuses the crypto-dashboard default: glowing dark panels, gradient KPIs, glass, and a single merged score.",
+    "keyCharacteristics": [
+      "One typeface (TX-02) for every role, tabular figures throughout.",
+      "Warm neutral ramps, mirrored for light and dark.",
+      "Tonal layering instead of borders or shadows: page, sheet, tray.",
+      "Inverted-ink primary action; everything else is tray-grey or ghost.",
+      "Colour only for health: ok, warn, error, plus info for neutral error categories.",
+      "Per-auditor hallmark stamps as the signature."
+    ],
+    "rules": [
+      {
+        "name": "The Health-Only Rule",
+        "body": "Hue appears only when the system reports a health state or an error category. Navigation, buttons, headings and surfaces stay ink and grey.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tint, Not Fill Rule",
+        "body": "Health-tinted surfaces (incident panel, error callout, donation acknowledgement) are the signal colour mixed 10 to 12% into the sheet, never a saturated block.",
+        "section": "colors"
+      },
+      {
+        "name": "The Paper QR Rule",
+        "body": "The donation QR always sits on a pure white frame (#ffffff, 12px radius, 14px padding) in both themes so scanners read it.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Voice Rule",
+        "body": "TX-02 sets every string, headings included. Tabular numerals are on globally so figures align in columns and while values refresh.",
+        "section": "typography"
+      },
+      {
+        "name": "The Sentence Case Rule",
+        "body": "No uppercase labels and no wide tracking; letter-spacing only tightens (-0.01em to -0.02em) on bold sizes.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tonal Stack Rule",
+        "body": "Ground, sheet, tray, recess. A new layer is a new tone from this stack, never a shadow or an outline.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Inset Ring Exception",
+        "body": "The only box-shadow in the system is the 1 to 1.5px inset ring that outlines an idle, partial or voided hallmark. It draws the stamp's edge; it is not elevation and must not spread to other components.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do set every string in TX-02 with tabular numerals.",
+      "Do build depth from the tonal stack: paper ground, sheet at 16px radius, tray controls at 8px, recessed paper inputs.",
+      "Do reserve the inverted-ink fill for the one primary action and the struck hallmark.",
+      "Do use hue only for health states and error categories, and tint health surfaces at 10 to 12% into the sheet.",
+      "Do ship every change in both light and dark, using the token pairs.",
+      "Do show each auditor's own stamp; add a stamp key wherever auditors are listed.",
+      "Do keep motion to 150ms colour and opacity transitions, and none under reduced motion."
+    ],
+    "donts": [
+      "Don't add drop shadows, gradients, glass or blur to any surface; the hallmark's inset ring is the only shadow in the system.",
+      "Don't outline cards or controls with borders; hairline rules belong only between rows inside a surface.",
+      "Don't colour navigation, headings, buttons or surfaces with a brand hue.",
+      "Don't merge auditor stamps into one score or badge.",
+      "Don't introduce a second typeface, uppercase labels or wide letter-spacing."
+    ]
+  }
+}
