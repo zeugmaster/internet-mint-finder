@@ -47,7 +47,7 @@ pub fn ReviewList(data: MintReviews) -> impl IntoView {
     view! {
         {if total == 0 {
             view! {
-                <p class="reviews-empty">"No reviews yet. Reviews are signed with a Nostr key; yours would be the first."</p>
+                <p class="reviews-empty">"No reviews yet."</p>
             }.into_any()
         } else {
             view! {
@@ -112,7 +112,7 @@ fn ReviewCompose(context: ReviewContext) -> impl IntoView {
             <summary>
                 <span>
                     <span class="review-compose-title">"Used this mint?"</span>
-                    <span class="review-compose-hint">"Rate it with your Nostr key. Reviews go straight to the relays; this server never receives them."</span>
+                    <span class="review-compose-hint">"Rate it with your Nostr key. Your review is posted to Nostr, not to this site."</span>
                 </span>
                 <span class="btn">
                     <span class="when-closed">"Write a review"</span>
@@ -121,12 +121,12 @@ fn ReviewCompose(context: ReviewContext) -> impl IntoView {
             </summary>
             <div class="review-compose-body">
                 <div class="field" data-signer="out">
-                    <label class="field-label" for="review-nsec">"Sign in to review"</label>
+                    <label class="field-label" for="review-nsec">"Your Nostr key (nsec)"</label>
                     <div class="flex gap-2">
                         <input id="review-nsec" type="password" class="field-input" placeholder="nsec1…" autocomplete="off" spellcheck="false"/>
                         <button type="button" id="review-signin" class="btn">"Sign in"</button>
                     </div>
-                    <p class="field-hint">"Your key stays in this browser and only signs reviews. A NIP-07 extension (Alby, nos2x) works without signing in."</p>
+                    <p class="field-hint">"It stays in this browser and is only used to sign reviews. With a Nostr extension like Alby or nos2x, you can skip this."</p>
                 </div>
                 <p class="field-hint" data-signer="in" hidden=true>
                     "Signed in as " <span id="review-npub" class="mono"></span> " · "
@@ -148,9 +148,9 @@ fn ReviewCompose(context: ReviewContext) -> impl IntoView {
                         <label class="field-label" for="review-content">"Your experience"</label>
                         <textarea id="review-content" name="content" class="field-textarea" rows="3" maxlength="1000" disabled=!can_review></textarea>
                     </div>
-                    <button type="submit" class="btn btn-primary" disabled=!can_review>"Sign with Nostr and publish"</button>
+                    <button type="submit" class="btn btn-primary" disabled=!can_review>"Post review"</button>
                     <p id="review-status" class="field-hint mt-2">
-                        {if can_review { "Signed in your browser and sent to the relays; this server never receives it." } else { "The mint's key is not known yet (no NUT-06 probe answered), so a review cannot be addressed to it." }}
+                        {if can_review { "" } else { "Reviews open once this mint shares its public key, which it hasn't yet." }}
                     </p>
                 </form>
             </div>

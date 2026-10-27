@@ -610,7 +610,7 @@
   <div class="page-head">
     <div>
       <h1 class="page-title">Analytics</h1>
-      <p class="page-subtitle">Every audit swap and health probe, charted.</p>
+      <p class="page-subtitle">Every test payment and health check, across all mints.</p>
       <p id="data-status" class="data-status" role="status" aria-live="polite">Loading analytics…</p>
     </div>
     <div class="page-tools">
@@ -676,11 +676,11 @@
     <div class="kpis" id="kpis"></div>
 
     <!-- Reliability -->
-    <div class="section-head"><span class="t">Reliability</span><span class="d">health probes · SLA</span></div>
+    <div class="section-head"><span class="t">Reliability</span><span class="d">uptime and failures</span></div>
     <div class="grid g2">
       <div class="card chart" style="grid-column: 1 / -1;">
         <div class="head">
-          <span class="ttl">Fleet uptime</span>
+          <span class="ttl">Uptime</span>
           <span class="meta" id="sla-meta"></span>
         </div>
         <div id="sla" class="sla"></div>
@@ -688,28 +688,28 @@
     </div>
     <div class="grid g3">
       <div class="card chart">
-        <div class="head"><span class="ttl">Failure stage funnel</span></div>
+        <div class="head"><span class="ttl">Where payments fail</span></div>
         <div id="stages" class="plot" style="height:280px;"></div>
       </div>
       <div class="card chart">
-        <div class="head"><span class="ttl">Error categories</span></div>
+        <div class="head"><span class="ttl">Error types</span></div>
         <div id="cat-donut" class="plot" style="height:280px;"></div>
       </div>
       <div class="card chart">
-        <div class="head"><span class="ttl">Blamed mints</span></div>
+        <div class="head"><span class="ttl">Mints causing failures</span></div>
         <div id="blame" class="plot" style="height:280px;"></div>
       </div>
     </div>
 
     <!-- Money flow -->
-    <div class="section-head"><span class="t">Money flow</span><span class="d">balances · routes · fees</span></div>
+    <div class="section-head"><span class="t">Money</span><span class="d">balances, routes and fees</span></div>
     <div class="grid g2">
       <div class="card chart">
-        <div class="head"><span class="ttl">Total value locked</span><span class="meta">stacked by mint</span></div>
+        <div class="head"><span class="ttl">Ecash held by this auditor</span><span class="meta">per mint</span></div>
         <div id="tvl" class="plot" style="height:300px;"></div>
       </div>
       <div class="card chart">
-        <div class="head"><span class="ttl">Sats flow between mints</span><span class="meta" id="flow-meta"></span></div>
+        <div class="head"><span class="ttl">Net flow between mints</span><span class="meta" id="flow-meta"></span></div>
         <div id="flow" class="plot" style="height:300px;"></div>
       </div>
     </div>
@@ -719,10 +719,10 @@
         <div id="donations" class="plot" style="height:260px;"></div>
       </div>
       <div class="card chart">
-        <div class="head"><span class="ttl">Priciest fee corridors</span><span class="meta">effective fee %</span></div>
+        <div class="head"><span class="ttl">Highest fees by route</span><span class="meta">fee as a share of the amount</span></div>
         <div style="padding:4px;">
           <table id="fees">
-            <thead><tr><th>Route</th><th class="num">Swaps</th><th class="num">Routed</th><th class="num">Fee</th><th class="num">Fee %</th></tr></thead>
+            <thead><tr><th>Route</th><th class="num">Payments</th><th class="num">Sent</th><th class="num">Fee</th><th class="num">Fee %</th></tr></thead>
             <tbody><tr><td colspan="5"><div class="skel" style="height:120px"></div></td></tr></tbody>
           </table>
         </div>
@@ -730,11 +730,11 @@
     </div>
 
     <!-- Performance -->
-    <div class="section-head"><span class="t">Performance</span><span class="d">latency · throughput · errors</span></div>
+    <div class="section-head"><span class="t">Speed</span><span class="d">payment times and errors</span></div>
     <div class="grid g2">
       <div class="card chart">
         <div class="head">
-          <span class="ttl">Latency vs error rate</span>
+          <span class="ttl">Payment time vs. error rate</span>
           <div class="seg sm" id="scatter-seg" role="group" aria-label="Group mint performance by direction">
             <button type="button" data-v="from_url" class="active" aria-pressed="true">From</button>
             <button type="button" data-v="to_url" aria-pressed="false">To</button>
@@ -743,10 +743,10 @@
         <div id="scatter" class="plot" style="height:320px;"></div>
       </div>
       <div class="card chart">
-        <div class="head"><span class="ttl">Best mint performance</span></div>
+        <div class="head"><span class="ttl">Mint performance</span></div>
         <div style="padding:4px;">
           <table id="top5">
-            <thead><tr><th class="num">#</th><th>Mint</th><th class="num">Attempts</th><th class="num">Err %</th><th class="num">Avg ms</th><th class="num">Score</th></tr></thead>
+            <thead><tr><th class="num">#</th><th>Mint</th><th class="num">Payments</th><th class="num">Errors</th><th class="num">Avg ms</th><th class="num">Score</th></tr></thead>
             <tbody><tr><td colspan="6"><div class="skel" style="height:120px"></div></td></tr></tbody>
           </table>
         </div>
@@ -754,17 +754,17 @@
     </div>
     <div class="grid g2">
       <div class="card chart">
-        <div class="head"><span class="ttl">Swaps vs errors</span></div>
+        <div class="head"><span class="ttl">Payments and errors</span></div>
         <div id="ts-swaps" class="plot" style="height:280px;"></div>
       </div>
       <div class="card chart">
-        <div class="head"><span class="ttl">Average latency</span></div>
+        <div class="head"><span class="ttl">Average payment time</span></div>
         <div id="ts-latency" class="plot" style="height:280px;"></div>
       </div>
     </div>
     <div class="grid g2">
       <div class="card chart">
-        <div class="head"><span class="ttl">Latency distribution</span></div>
+        <div class="head"><span class="ttl">Payment times</span></div>
         <div id="hist" class="plot" style="height:280px;"></div>
       </div>
       <div class="card chart">
@@ -985,11 +985,11 @@ function countUp(el, target, opts) {
 }
 
 const KPI_DEFS = [
-  { key: "sats",  lbl: "Sats swapped", unit: "sat", compact: true },
+  { key: "sats",  lbl: "Sats moved", unit: "sat", compact: true },
   { key: "succ",  lbl: "Success rate", unit: "%" },
-  { key: "p95",   lbl: "p95 latency",  unit: "ms", compact: true },
+  { key: "p95",   lbl: "p95 payment time",  unit: "ms", compact: true },
   { key: "fees",  lbl: "Fees paid",    unit: "sat", compact: true },
-  { key: "tvl",   lbl: "Value locked", unit: "sat", compact: true },
+  { key: "tvl",   lbl: "Ecash held", unit: "sat", compact: true },
   { key: "don",   lbl: "Donations",    unit: "sat", compact: true },
 ];
 function buildKpiSkeletons() {
@@ -1017,12 +1017,12 @@ async function renderKPIs() {
     set("tvl", (tvl.total && tvl.total.length) ? tvl.total[tvl.total.length - 1] : 0, { compact: true });
     set("don", k.total_donations, { compact: true });
 
-    $("kd-sats").textContent = "Successful settlements";
-    $("kd-succ").innerHTML = `<span class="delta flat">${compact(k.total_swaps)} swaps</span>`;
-    $("kd-p95").innerHTML  = `<span class="delta flat">${compact(k.total_errors)} errs</span>`;
-    $("kd-fees").textContent = "Recorded routing fees";
+    $("kd-sats").textContent = "In successful payments";
+    $("kd-succ").innerHTML = `<span class="delta flat">${compact(k.total_swaps)} payments</span>`;
+    $("kd-p95").innerHTML  = `<span class="delta flat">${compact(k.total_errors)} errors</span>`;
+    $("kd-fees").textContent = "Lightning routing fees";
     $("kd-tvl").innerHTML  = "";
-    $("kd-don").textContent = "Working capital received";
+    $("kd-don").textContent = "Received to date";
 
     $("ks-sats").textContent = "";
     $("ks-succ").innerHTML = sparkSVG(swapsTs.filter(r => r.swaps > 0).map(r => (r.swaps - r.errors) / r.swaps));
@@ -1036,7 +1036,7 @@ async function renderKPIs() {
       const el = $("kv-" + d.key);
       if (el._animation) cancelAnimationFrame(el._animation);
       el.textContent = "—";
-      $("kd-" + d.key).textContent = "Unable to load";
+      $("kd-" + d.key).textContent = "Couldn't load";
       $("ks-" + d.key).textContent = "";
     });
   }
@@ -1054,7 +1054,7 @@ async function renderSLA() {
   const el = $("sla");
   try {
     const g = await getJSON("/api/uptime/grid");
-    if (!g.rows.length || !g.buckets.length) { emptyState(el, "No health probes recorded yet"); $("sla-meta").textContent = ""; return; }
+    if (!g.rows.length || !g.buckets.length) { emptyState(el, "No health checks yet"); $("sla-meta").textContent = ""; return; }
 
     // Pool every mint's checks into one cell per bucket — per-mint detail
     // lives in each mint's own page.
@@ -1066,7 +1066,7 @@ async function renderSLA() {
     const last = [...agg].reverse().find(a => a.checks > 0) || { checks: 0, failures: 0 };
     const curCls = bucketClass(last.checks, last.failures);
 
-    $("sla-meta").textContent = `${g.rows.length} mints · ${compact(totalChecks)} probes`;
+    $("sla-meta").textContent = `${g.rows.length} mints, ${compact(totalChecks)} checks`;
     const cells = agg.map((a, i) => {
       const cls = bucketClass(a.checks, a.failures);
       const tip = a.checks ? `${g.buckets[i]}\n${a.checks} checks · ${a.failures} failed · ${((a.checks-a.failures)/a.checks*100).toFixed(1)}%` : `${g.buckets[i]}\nno data`;
@@ -1077,14 +1077,14 @@ async function renderSLA() {
     el.innerHTML = `<div class="sla-single">
       <div class="sla-figure">
         <div class="big">${pct}%</div>
-        <div class="cap"><span class="dot" style="background:${STATE_COLOR[curCls]}"></span>fleet uptime</div>
+        <div class="cap"><span class="dot" style="background:${STATE_COLOR[curCls]}"></span>across all mints</div>
       </div>
       <div class="sla-wrap">
         <div class="sla-cells">${cells}</div>
         <div class="sla-axis"><span>${g.buckets[0]}</span><span>${g.buckets[g.buckets.length-1]}</span></div>
       </div>
     </div>`;
-  } catch (e) { console.error(e); emptyState(el, "Failed to load uptime"); }
+  } catch (e) { console.error(e); emptyState(el, "Couldn't load uptime"); }
 }
 
 //===================== Reliability charts =====================
@@ -1092,7 +1092,7 @@ async function renderStages() {
   const el = $("stages");
   try {
     const rows = await getJSON("/api/failure-stages");
-    if (!rows.length) { emptyState(el, "No failures — all clear"); return; }
+    if (!rows.length) { emptyState(el, "No failures in this range"); return; }
     Plotly.react(el, [{
       x: rows.map(r => r.count), y: rows.map(r => r.stage),
       type: "bar", orientation: "h",
@@ -1101,13 +1101,13 @@ async function renderStages() {
     }], baseLayout({ bargap: 0.35, margin: { l: 130, r: 16, t: 10, b: 34 },
           xaxis: { title: "failures" },
           yaxis: { type: "category", automargin: true, autorange: "reversed" } }), config);
-  } catch (e) { console.error(e); emptyState(el, "Failed to load"); }
+  } catch (e) { console.error(e); emptyState(el, "Couldn't load this chart"); }
 }
 async function renderCatDonut() {
   const el = $("cat-donut");
   try {
     const rows = await getJSON("/api/errors/category");
-    if (!rows.length) { emptyState(el, "No errors — all clear"); return; }
+    if (!rows.length) { emptyState(el, "No errors in this range"); return; }
     Plotly.react(el, [{
       labels: rows.map(r => r.category), values: rows.map(r => r.count),
       type: "pie", hole: 0.62, sort: true, direction: "clockwise",
@@ -1117,13 +1117,13 @@ async function renderCatDonut() {
       hovertemplate: "%{label}: %{value} (%{percent})<extra></extra>",
     }], baseLayout({ margin: { l: 10, r: 10, t: 10, b: 10 },
           showlegend: true, legend: { orientation: "v", font: { color: C.muted, family: FONT, size: 12 } } }), config);
-  } catch (e) { console.error(e); emptyState(el, "Failed to load"); }
+  } catch (e) { console.error(e); emptyState(el, "Couldn't load this chart"); }
 }
 async function renderBlame() {
   const el = $("blame");
   try {
     const rows = await getJSON("/api/blame", { limit: 8 });
-    if (!rows.length) { emptyState(el, "No attributable failures"); return; }
+    if (!rows.length) { emptyState(el, "No failures traced to a mint"); return; }
     Plotly.react(el, [{
       x: rows.map(r => r.failures), y: rows.map(r => r.mint.replace(/^https?:\/\//,"")),
       type: "bar", orientation: "h",
@@ -1133,7 +1133,7 @@ async function renderBlame() {
     }], baseLayout({ bargap: 0.3, margin: { l: 150, r: 16, t: 10, b: 34 },
           xaxis: { title: "failures" },
           yaxis: { type: "category", automargin: true, autorange: "reversed" } }), config);
-  } catch (e) { console.error(e); emptyState(el, "Failed to load"); }
+  } catch (e) { console.error(e); emptyState(el, "Couldn't load this chart"); }
 }
 
 //===================== Money charts =====================
@@ -1141,7 +1141,7 @@ async function renderTVL() {
   const el = $("tvl");
   try {
     const d = await getJSON("/api/tvl");
-    if (!d.buckets.length) { emptyState(el, "No balance snapshots yet"); return; }
+    if (!d.buckets.length) { emptyState(el, "No balance history yet"); return; }
     const traces = d.mints.map((m, i) => ({
       x: d.buckets, y: m.values, name: m.mint.replace(/^https?:\/\//,""),
       type: "scatter", mode: "lines", stackgroup: "tvl",
@@ -1155,7 +1155,7 @@ async function renderTVL() {
       yaxis: { title: "sats" },
       showlegend: d.mints.length <= 8,
       legend: legendStyle({ y: 1.12, font: { size: 12 } }) }), config);
-  } catch (e) { console.error(e); emptyState(el, "Failed to load"); }
+  } catch (e) { console.error(e); emptyState(el, "Couldn't load this chart"); }
 }
 // Collapse a→b and b→a corridors into one net direction, keep the largest N,
 // and order nodes by throughput. The raw graph is full of back-and-forth
@@ -1206,7 +1206,7 @@ async function renderFlow() {
   const el = $("flow"), meta = $("flow-meta");
   try {
     const d = await getJSON("/api/flow");
-    if (!d.links.length) { emptyState(el, "No completed swaps to chart"); meta.textContent = ""; return; }
+    if (!d.links.length) { emptyState(el, "No completed payments yet"); meta.textContent = ""; return; }
     const f = buildFlow(d, 12);
     if (!f.links.length) { emptyState(el, "No net flow in this range"); meta.textContent = ""; return; }
     Plotly.react(el, [{
@@ -1228,9 +1228,9 @@ async function renderFlow() {
     }], baseLayout({ margin: { l: 8, r: 8, t: 10, b: 8 },
           font: { color: C.muted, family: FONT, size: 13 } }), config);
     meta.textContent = f.dropped
-      ? `top ${f.links.length} net corridors · ${compact(f.droppedValue)} sats in ${f.dropped} smaller`
-      : `${f.links.length} net corridors`;
-  } catch (e) { console.error(e); emptyState(el, "Failed to load"); meta.textContent = ""; }
+      ? `top ${f.links.length} routes; ${compact(f.droppedValue)} sats in ${f.dropped} more not shown`
+      : `${f.links.length} routes`;
+  } catch (e) { console.error(e); emptyState(el, "Couldn't load this chart"); meta.textContent = ""; }
 }
 
 // The donations API only buckets days with activity. Rebuild the full bucket
@@ -1275,7 +1275,7 @@ async function renderDonations() {
   const el = $("donations"), meta = $("donations-meta");
   try {
     const rows = await getJSON("/api/donations/timeseries");
-    if (!rows.length) { emptyState(el, "No donations recorded"); meta.textContent = ""; return; }
+    if (!rows.length) { emptyState(el, "No donations yet"); meta.textContent = ""; return; }
     const s = buildDonationSeries(rows, donationUnit());
     Plotly.react(el, [
       { x: s.x, y: s.bar, type: "bar", name: "Received",
@@ -1295,13 +1295,13 @@ async function renderDonations() {
       hovermode: "x unified",
     }), config);
     meta.textContent = `${s.events} donation${s.events === 1 ? "" : "s"} · ${compact(s.total)} sats`;
-  } catch (e) { console.error(e); emptyState(el, "Failed to load"); meta.textContent = ""; }
+  } catch (e) { console.error(e); emptyState(el, "Couldn't load this chart"); meta.textContent = ""; }
 }
 async function renderFees() {
   const tbody = document.querySelector("#fees tbody");
   try {
     const rows = await getJSON("/api/fees", { limit: 10 });
-    if (!rows.length) { tbody.innerHTML = `<tr><td colspan="5"><div class="empty">No routed swaps</div></td></tr>`; return; }
+    if (!rows.length) { tbody.innerHTML = `<tr><td colspan="5"><div class="empty">No payments in this range</div></td></tr>`; return; }
     tbody.innerHTML = rows.map(r => `
       <tr>
         <td class="trunc" title="${r.from} → ${r.to}">${r.from} <span class="sep"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h9.5M8.5 4l4 4-4 4"/></svg></span> ${r.to}</td>
@@ -1318,18 +1318,18 @@ async function renderScatter() {
   const el = $("scatter");
   try {
     const rows = await getJSON("/api/scatter", { group_by: state.scatter_group });
-    if (!rows.length) { emptyState(el, "No swaps in range"); return; }
+    if (!rows.length) { emptyState(el, "No payments in this range"); return; }
     Plotly.react(el, [{
       x: rows.map(r => r.error_rate * 100), y: rows.map(r => r.avg_latency_ms),
-      text: rows.map(r => `${r.mint}<br>attempts: ${fmt.format(r.attempts)}<br>errors: ${fmt.format(r.errors)} (${(r.error_rate*100).toFixed(1)}%)<br>avg: ${Math.round(r.avg_latency_ms)} ms`),
+      text: rows.map(r => `${r.mint}<br>payments: ${fmt.format(r.attempts)}<br>errors: ${fmt.format(r.errors)} (${(r.error_rate*100).toFixed(1)}%)<br>avg: ${Math.round(r.avg_latency_ms)} ms`),
       type: "scatter", mode: "markers", hoverinfo: "text",
       marker: { size: rows.map(r => Math.max(7, Math.min(22, Math.sqrt(r.attempts)*2))),
                 color: rows.map(r => r.error_rate), colorscale: [[0, C.ok],[0.5, C.warn],[1, C.err]],
                 opacity: 0.85, line: { color: C.surface, width: 1 } },
     }], baseLayout({
           xaxis: { title: "Error rate (%)" },
-          yaxis: { title: "Avg latency (ms)" } }), config);
-  } catch (e) { console.error(e); emptyState(el, "Failed to load"); }
+          yaxis: { title: "Avg payment time (ms)" } }), config);
+  } catch (e) { console.error(e); emptyState(el, "Couldn't load this chart"); }
 }
 async function renderTop5() {
   const tbody = document.querySelector("#top5 tbody");
@@ -1351,53 +1351,53 @@ async function renderTSSwaps() {
   const el = $("ts-swaps");
   try {
     const rows = await getJSON("/api/timeseries/swaps");
-    if (!rows.length) { emptyState(el, "No swaps in range"); return; }
+    if (!rows.length) { emptyState(el, "No payments in this range"); return; }
     const x = rows.map(r => r.bucket);
     Plotly.react(el, [
-      { x, y: rows.map(r => r.swaps), name: "Swaps", type: "scatter", mode: "lines",
+      { x, y: rows.map(r => r.swaps), name: "Payments", type: "scatter", mode: "lines",
         line: { color: C.ink, width: 2, shape: "spline" }, fill: "tozeroy", fillcolor: C.accentFill },
       { x, y: rows.map(r => r.errors), name: "Errors", type: "scatter", mode: "lines",
         line: { color: C.err, width: 2, shape: "spline" } },
     ], baseLayout({ xaxis: { type: "date" },
          legend: legendStyle() }), config);
-  } catch (e) { console.error(e); emptyState(el, "Failed to load"); }
+  } catch (e) { console.error(e); emptyState(el, "Couldn't load this chart"); }
 }
 async function renderTSLatency() {
   const el = $("ts-latency");
   try {
     const rows = await getJSON("/api/timeseries/latency");
-    if (!rows.length) { emptyState(el, "No successful swaps in range"); return; }
+    if (!rows.length) { emptyState(el, "No successful payments in this range"); return; }
     Plotly.react(el, [
       { x: rows.map(r => r.bucket), y: rows.map(r => r.avg_ms), type: "scatter", mode: "lines",
         line: { color: C.ink, width: 2, shape: "spline" }, fill: "tozeroy", fillcolor: C.accentFill, name: "Avg ms" },
     ], baseLayout({ xaxis: { type: "date" },
          yaxis: { title: "ms" } }), config);
-  } catch (e) { console.error(e); emptyState(el, "Failed to load"); }
+  } catch (e) { console.error(e); emptyState(el, "Couldn't load this chart"); }
 }
 async function renderHist() {
   const el = $("hist");
   try {
     const h = await getJSON("/api/histogram/latency", { bins: 30 });
-    if (!h.edges.length) { emptyState(el, "No successful swaps in range"); return; }
+    if (!h.edges.length) { emptyState(el, "No successful payments in this range"); return; }
     const x = h.edges.slice(0, -1).map((e, i) => (e + h.edges[i+1]) / 2);
     Plotly.react(el, [
       { x, y: h.counts, type: "bar", marker: { color: C.ink, line: { color: C.surface, width: 1 } }, opacity: 0.9 },
     ], baseLayout({ bargap: 0.06,
          xaxis: { title: "ms" } }), config);
-  } catch (e) { console.error(e); emptyState(el, "Failed to load"); }
+  } catch (e) { console.error(e); emptyState(el, "Couldn't load this chart"); }
 }
 async function renderErrors() {
   const el = $("err-bar");
   try {
     const rows = await getJSON("/api/errors");
-    if (!rows.length) { emptyState(el, "No errors — all clear"); return; }
+    if (!rows.length) { emptyState(el, "No errors in this range"); return; }
     Plotly.react(el, [
       { x: rows.map(r => r.count), y: rows.map(r => r.label), type: "bar", orientation: "h",
         marker: { color: C.err }, opacity: 0.9 },
     ], baseLayout({ bargap: 0.06, margin: { l: 160, r: 18, t: 14, b: 38 },
          xaxis: { title: "count" },
          yaxis: { type: "category", automargin: true, autorange: "reversed" } }), config);
-  } catch (e) { console.error(e); emptyState(el, "Failed to load"); }
+  } catch (e) { console.error(e); emptyState(el, "Couldn't load this chart"); }
 }
 
 //===================== orchestration =====================
@@ -1417,7 +1417,7 @@ async function renderAll() {
       }
       requests.clear(); failedRequests.clear();
       readTheme();
-      $("data-status").textContent = "Updating analytics…";
+      $("data-status").textContent = "Updating…";
       await Promise.allSettled([
         renderKPIs(), renderSLA(), renderStages(), renderCatDonut(), renderBlame(),
         renderTVL(), renderFlow(), renderDonations(), renderFees(),
@@ -1426,7 +1426,7 @@ async function renderAll() {
       const stamp = new Date().toLocaleTimeString([], { timeZone: "UTC", hour12: false });
       $("data-status").textContent = failedRequests.size
         ? "Some data could not be loaded. Refresh to try again."
-        : `Updated ${stamp} UTC · Use Refresh for the latest measurements`;
+        : `Updated ${stamp} UTC`;
     } while (renderAgain);
   } finally {
     rendering = false;
@@ -1513,7 +1513,7 @@ function setFilterPanel(open) {
 document.addEventListener("DOMContentLoaded", async () => {
   buildKpiSkeletons();
   if (typeof Plotly === "undefined") {
-    $("data-status").textContent = "The chart library could not load. Check your connection, then refresh this page.";
+    $("data-status").textContent = "Charts couldn't load. Check your connection and refresh the page.";
     $("refresh").addEventListener("click", () => location.reload());
     return;
   }

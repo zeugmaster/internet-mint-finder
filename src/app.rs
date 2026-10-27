@@ -29,7 +29,7 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
                 <script inner_html=THEME_SCRIPT></script>
                 <meta
                     name="description"
-                    content="Continuous, real-money audits of Cashu mints: uptime, latency, fees, and failures, measured by actually moving ecash."
+                    content="Find a Cashu mint that works: uptime, user reviews and real test payments by independent auditors."
                 />
                 <link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
                 <AutoReload options=options.clone() />
@@ -85,9 +85,9 @@ fn NotFound() -> impl IntoView {
         <div class="shell shell-narrow">
             <div class="card card-pad empty-state">
                 <h1 class="page-title">"Page not found"</h1>
-                <p>"The page you are looking for does not exist."</p>
+                <p>"There's nothing at this address."</p>
                 <div class="mt-6">
-                    <a href="/" class="btn btn-primary">"Back to the directory"</a>
+                    <a href="/" class="btn btn-primary">"Go to the directory"</a>
                 </div>
             </div>
         </div>

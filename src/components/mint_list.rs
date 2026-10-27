@@ -18,7 +18,7 @@ const STATUS_TABS: [(Option<MintState>, &str); 5] = [
     (Some(MintState::Ok), "Healthy"),
     (Some(MintState::Warn), "Degraded"),
     (Some(MintState::Error), "Failing"),
-    (Some(MintState::Unknown), "Unchecked"),
+    (Some(MintState::Unknown), "Not checked"),
 ];
 
 /// The directory: one row per mint with its rating and plain status. Search,
@@ -103,7 +103,7 @@ pub fn MintList() -> impl IntoView {
         match (updated_at.get(), stale) {
             (Some(at), false) => format!("Updated {}", relative_time(at)),
             (Some(at), true) => {
-                format!("Couldn't refresh, retrying · updated {}", relative_time(at))
+                format!("Couldn't refresh. Showing results from {}, retrying.", relative_time(at))
             }
             (None, _) => String::new(),
         }
@@ -201,15 +201,15 @@ pub fn MintList() -> impl IntoView {
                                 view! {
                                     <div class="empty-state">
                                         <h3>"No mints match"</h3>
-                                        <p>"Nothing matches this search and status."</p>
-                                        <button type="button" class="btn btn-secondary mt-4" on:click=clear.clone()>"Clear search"</button>
+                                        <p>"Try another name, or clear the filters."</p>
+                                        <button type="button" class="btn btn-secondary mt-4" on:click=clear.clone()>"Clear filters"</button>
                                     </div>
                                 }.into_any()
                             } else {
                                 view! {
                                     <div class="empty-state">
                                         <h3>"No mints yet"</h3>
-                                        <p>"Mints appear once they are announced on Nostr, or when someone donates ecash from one."</p>
+                                        <p>"Mints show up here once they're listed on Nostr or someone donates ecash from one."</p>
                                         <a href="/receive" class="text-link">"Donate ecash"</a>
                                     </div>
                                 }.into_any()
@@ -336,7 +336,7 @@ pub fn CopyUrl(url: String) -> impl IntoView {
         <span class="sr-only" role="status">
             {move || match copied.get() {
                 Some(true) => "Copied",
-                Some(false) => "Couldn't copy. The full URL is in the button's tooltip.",
+                Some(false) => "Couldn't copy. Your browser blocked the clipboard.",
                 None => "",
             }}
         </span>

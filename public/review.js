@@ -45,11 +45,11 @@ document.addEventListener('click', (ev) => {
     const nsec = input.value.trim();
     let decoded = null;
     try { decoded = NostrTools.nip19.decode(nsec); } catch (_) { /* not bech32 */ }
-    if (!decoded || decoded.type !== 'nsec') { say('That is not an nsec.', false); return; }
-    try { localStorage.setItem(NSEC_KEY, nsec); } catch (_) { say('This browser blocks local storage.', false); return; }
+    if (!decoded || decoded.type !== 'nsec') { say('That isn’t an nsec key. It starts with nsec1.', false); return; }
+    try { localStorage.setItem(NSEC_KEY, nsec); } catch (_) { say('This browser won’t keep your key. Use a Nostr extension instead.', false); return; }
     input.value = '';
     render();
-    say('Signed in. Reviews are signed with this key in your browser.', true);
+    say('Signed in.', true);
   } else if (id === 'review-signout') {
     try { localStorage.removeItem(NSEC_KEY); } catch (_) { /* nothing stored */ }
     render();
@@ -68,7 +68,7 @@ document.addEventListener('submit', async (ev) => {
   ev.preventDefault();
   const sk = storedKey();
   if (!sk && !window.nostr) {
-    say('Sign in with your nsec above, install a NIP-07 extension (Alby, nos2x), or review this mint from Zeus or Boardwalk.', false);
+    say('Sign in with your nsec, use a Nostr extension like Alby, or review from a wallet such as Zeus or Boardwalk.', false);
     return;
   }
   const data = form.dataset;
@@ -86,16 +86,16 @@ document.addEventListener('submit', async (ev) => {
   };
   let event;
   try { event = sk ? NostrTools.finalizeEvent(unsigned, sk) : await window.nostr.signEvent(unsigned); }
-  catch (_) { say('Signing failed.', false); return; }
+  catch (_) { say('Couldn’t sign the review. Try again.', false); return; }
   const relays = (data.relays || '').split(',').filter(Boolean);
-  say('Publishing…', true);
+  say('Posting…', true);
   const results = await Promise.all(relays.map((url) => publish(url, event)));
   const ok = results.filter(Boolean).length;
   if (ok) {
-    say(`Published to ${ok} of ${relays.length} relays. It shows up here once ingested.`, true);
+    say('Posted. It shows up here once this site picks it up from Nostr.', true);
     form.reset();
   } else {
-    say('No relay accepted the review.', false);
+    say('Couldn’t post: no Nostr relay accepted it. Try again later.', false);
   }
 });
 

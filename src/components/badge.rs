@@ -9,7 +9,7 @@ pub fn StateBadge(state: MintState) -> impl IntoView {
         MintState::Ok => ("badge badge-ok", "Healthy"),
         MintState::Warn => ("badge badge-warn", "Degraded"),
         MintState::Error => ("badge badge-err", "Failing"),
-        MintState::Unknown => ("badge badge-muted", "Not checked yet"),
+        MintState::Unknown => ("badge badge-muted", "Not checked"),
     };
 
     view! {
@@ -26,9 +26,10 @@ pub fn category_label(slug: &str) -> &'static str {
         "mint" => "Mint error",
         "liquidity" => "Liquidity",
         "fee" => "Fee",
-        "ssl" => "TLS",
-        "config" => "Config",
-        "internal" => "Internal",
+        "ssl" => "Certificate",
+        "config" => "Configuration",
+        // The auditor's own fault (database, wallet), not the mint's.
+        "internal" => "Auditor error",
         _ => "Other",
     }
 }

@@ -13,8 +13,8 @@ pub fn HomePage() -> impl IntoView {
                 <div>
                     <h1 class="page-title">"Find a Cashu mint."</h1>
                     <p class="page-subtitle">
-                        "Every mint announced or reviewed on Nostr, with what independent auditors "
-                        "measured by moving real ecash through it."
+                        "Cashu mints found on Nostr. Independent auditors check that each one is online "
+                        "and send real payments through the ones they fund."
                     </p>
                 </div>
             </div>

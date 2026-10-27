@@ -18,13 +18,13 @@ pub fn SwapList() -> impl IntoView {
     view! {
         <div class="card">
             <div class="panel-toolbar feed-toolbar">
-                <div class="segmented" role="group" aria-label="Filter audit activity">
-                    <button type="button" aria-pressed=move || !issues_only.get() on:click=move |_| issues_only.set(false)>"All activity"</button>
-                    <button type="button" aria-pressed=move || issues_only.get() on:click=move |_| issues_only.set(true)>"Issues"</button>
+                <div class="segmented" role="group" aria-label="Filter test payments">
+                    <button type="button" aria-pressed=move || !issues_only.get() on:click=move |_| issues_only.set(false)>"All"</button>
+                    <button type="button" aria-pressed=move || issues_only.get() on:click=move |_| issues_only.set(true)>"Problems"</button>
                 </div>
-                <span class="toolbar-note">"10s refresh"</span>
+                <span class="toolbar-note">"Refreshes every 10 seconds"</span>
             </div>
-            <div class="feed" tabindex="0" role="region" aria-label="Recent audit activity">
+            <div class="feed" tabindex="0" role="region" aria-label="Recent test payments">
                 <Transition fallback=move || {
                     view! {
                         {(0..6)
@@ -41,8 +41,8 @@ pub fn SwapList() -> impl IntoView {
                                     if data.is_empty() {
                                         view! {
                                             <div class="empty-state">
-                                                <h3>{move || if issues_only.get() { "No recent issues" } else { "Waiting for the first audit" }}</h3>
-                                                <p>{move || if issues_only.get() { "No failures or warnings in the latest 50 attempts." } else { "Audits begin once two funded mints are ready to swap." }}</p>
+                                                <h3>{move || if issues_only.get() { "No recent problems" } else { "No test payments yet" }}</h3>
+                                                <p>{move || if issues_only.get() { "None of the latest 50 payments failed or warned." } else { "They start once at least two mints hold donated ecash." }}</p>
                                             </div>
                                         }
                                             .into_any()
@@ -56,7 +56,7 @@ pub fn SwapList() -> impl IntoView {
                                 Err(_) => {
                                     view! {
                                         <div class="empty-state">
-                                            <h3>"Activity is temporarily unavailable"</h3>
+                                            <h3>"Couldn't load test payments"</h3>
                                             <button type="button" class="btn btn-secondary mt-4" on:click=move |_| swaps.refetch()>"Try again"</button>
                                         </div>
                                     }
@@ -117,7 +117,7 @@ pub fn SwapItem(swap: SwapEventRead) -> impl IntoView {
                 <a class="hop" href=format!("/mints/{}", swap.to_id) title=swap.to_url.clone()>{short_url(&swap.to_url)}</a>
             </div>
             <Show when=move || has_error>
-                <details class="feed-error"><summary><Chevron/>"View error details"</summary>
+                <details class="feed-error"><summary><Chevron/>"Show error"</summary>
                     {category.clone().map(|c| view! { <CategoryPill category=c/> })}
                     <span class="feed-error-text">{error.clone().unwrap_or_default()}</span>
                 </details>

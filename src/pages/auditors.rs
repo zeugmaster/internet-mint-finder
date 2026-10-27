@@ -21,8 +21,9 @@ pub fn AuditorsPage() -> impl IntoView {
                 <div>
                     <h1 class="page-title">"Independent auditors."</h1>
                     <p class="page-subtitle">
-                        "Every auditor holds its own ecash, signs its own observations with its own Nostr key, "
-                        "and publishes them to relays. This site shows the union; results are never merged into one score."
+                        "Auditors are independent servers that hold ecash and test mints with real payments. "
+                        "Each one publishes its results under its own Nostr key; this site shows them side by side "
+                        "and never merges them into one score."
                     </p>
                 </div>
             </div>
@@ -33,46 +34,46 @@ pub fn AuditorsPage() -> impl IntoView {
                             <div class="table-wrap" role="region" aria-label="Auditors" tabindex="0">
                                 <table class="data-table stack-table">
                                     <thead><tr>
-                                        <th scope="col">"Auditor"</th><th scope="col">"Mirrors"</th>
-                                        <th scope="col">"Software"</th><th scope="col" class="cell-right">"Cadence"</th>
+                                        <th scope="col">"Auditor"</th><th scope="col">"Website"</th>
+                                        <th scope="col">"Software"</th><th scope="col" class="cell-right">"Tests every"</th>
                                         <th scope="col" class="cell-right">"Last seen"</th><th scope="col">"Fund"</th>
                                     </tr></thead>
                                     <tbody>{list.into_iter().map(|a| view! { <AuditorRow auditor=a/> }).collect_view()}</tbody>
                                 </table>
                             </div>
                         }.into_any(),
-                        Err(e) => view! { <div class="empty-state" role="alert"><h3>"Auditors are temporarily unavailable"</h3><p>{e.to_string()}</p></div> }.into_any(),
+                        Err(e) => view! { <div class="empty-state" role="alert" title=e.to_string()><h3>"Couldn't load auditors"</h3><p>"This retries every 15 seconds."</p></div> }.into_any(),
                     })}
                 </Transition>
             </div>
 
             <div class="grid-main mt-6">
                 <section>
-                    <div class="section-head"><h2>"Audit activity"</h2><span>"Latest 50 attempts"</span></div>
+                    <div class="section-head"><h2>"Recent test payments"</h2><span>"Latest 50"</span></div>
                     <SwapList/>
                 </section>
                 <section>
                     <h2 class="section-title">"How the audit works"</h2>
                     <ol class="steps-list">
                         <li class="step-card">
-                            <h3><span class="step-num">"1"</span>"A mint quote is created"</h3>
+                            <h3><span class="step-num">"1"</span>"One mint issues an invoice"</h3>
                             <p>
-                                "The auditor asks one mint for a Lightning invoice, exactly like "
-                                "a wallet topping up its balance would."
+                                "The auditor asks a mint for a Lightning invoice, just as your "
+                                "wallet does when you top up."
                             </p>
                         </li>
                         <li class="step-card">
                             <h3><span class="step-num">"2"</span>"Another mint pays it"</h3>
                             <p>
-                                "Real ecash on a second mint is melted to settle that invoice "
-                                "over Lightning. Each successful payment moves real sats."
+                                "The auditor spends ecash it holds on a second mint to pay that "
+                                "invoice over Lightning. Real sats move every time."
                             </p>
                         </li>
                         <li class="step-card">
-                            <h3><span class="step-num">"3"</span>"Every outcome is published"</h3>
+                            <h3><span class="step-num">"3"</span>"Every result is published"</h3>
                             <p>
-                                "Latency, fees, and failures are recorded verbatim and shown "
-                                "in the activity feed and the detailed analytics."
+                                "How long it took, the fee, and any error message are recorded "
+                                "word for word and shown here and on Analytics."
                             </p>
                         </li>
                     </ol>
@@ -109,13 +110,13 @@ fn AuditorRow(auditor: AuditorRead) -> impl IntoView {
                     </div>
                 </div>
             </td>
-            <td data-label="Mirrors">
+            <td data-label="Website">
                 {if auditor.urls.is_empty() { view! { <span class="text-dim">"—"</span> }.into_any() } else {
                     auditor.urls.iter().map(|u| view! { <div><a class="text-link" href=u.clone() rel="external noopener">{u.clone()}</a></div> }).collect_view().into_any()
                 }}
             </td>
             <td class="text-dim" data-label="Software">{auditor.software.clone()}</td>
-            <td class="cell-num" data-label="Cadence">{cadence}</td>
+            <td class="cell-num" data-label="Tests every">{cadence}</td>
             <td class="cell-num text-dim" data-label="Last seen">
                 {match auditor.last_seen { Some(at) => view! { <span title=absolute_time(at)>{relative_time(at)}</span> }.into_any(), None => view! { <span>"—"</span> }.into_any() }}
             </td>

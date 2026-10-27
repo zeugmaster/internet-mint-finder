@@ -19,11 +19,10 @@ pub fn ReceivePage() -> impl IntoView {
         <div class="shell">
             <div class="page-head">
                 <div>
-                    <h1 class="page-title">"Keep the audits moving."</h1>
+                    <h1 class="page-title">"Fund the audits."</h1>
                     <p class="page-subtitle">
-                        "Donations are working capital: every sat you contribute keeps the "
-                        "swap engine running against that mint. Donating ecash from a new "
-                        "mint automatically puts it under audit."
+                        "Donated ecash pays for the test payments. Ecash from a mint that "
+                        "isn't listed yet adds that mint to the audits."
                     </p>
                 </div>
             </div>
@@ -93,7 +92,7 @@ fn DonationAcks(mint_filter: Signal<Option<String>>) -> impl IntoView {
     view! {
         <Show when=move || !acks.get().is_empty()>
             <div class="flex flex-col gap-2 mb-6" role="status" aria-live="polite">
-                <p class="field-hint">"Recent donations to the auditor · includes other visitors"</p>
+                <p class="field-hint">"Donations from everyone, as they arrive"</p>
                 <For
                     each=move || acks.get()
                     key=|d| d.id
@@ -111,9 +110,9 @@ fn DonationAcks(mint_filter: Signal<Option<String>>) -> impl IntoView {
                                 </span>
                                 <span class="detail">
                                     {format!(
-                                        "received via {} on {}",
-                                        via,
-                                        short_url(&donation.mint_url)
+                                        "from {} via {}",
+                                        short_url(&donation.mint_url),
+                                        via
                                     )}
                                 </span>
                             </div>
@@ -156,13 +155,13 @@ fn TokenDonationResult() -> impl IntoView {
                                 .get("mint")
                                 .map(|m| short_url(&m))
                                 .unwrap_or_else(|| "the mint".to_string());
-                            format!("Donation confirmed: received {amount} sat for {mint}. Thank you!")
+                            format!("Received {amount} sat from {mint}. Thank you.")
                         }
                         _ => {
                             let message = params
                                 .get("message")
-                                .unwrap_or_else(|| "Could not receive the token.".to_string());
-                            format!("Donation failed: {message}")
+                                .unwrap_or_else(|| "The token couldn't be redeemed.".to_string());
+                            format!("Donation failed. {message}")
                         }
                     }
                 }}
@@ -188,7 +187,7 @@ fn DonatePanel(mint_filter: Signal<Option<String>>) -> impl IntoView {
                 let unavailable = matches!(&res, Ok(info) if !info.transport_available);
                 view! {
                     <h2 class="section-title">
-                        {if unavailable { "Payment requests" } else { "Scan with your wallet" }}
+                        {if unavailable { "Donate by QR code" } else { "Scan with your wallet" }}
                     </h2>
                 }
             })}
@@ -208,8 +207,8 @@ fn DonatePanel(mint_filter: Signal<Option<String>>) -> impl IntoView {
                         .map(|res| match res {
                             Ok(info) if !info.transport_available => view! {
                                 <div class="empty-state">
-                                    <h3>"Not offered on this instance"</h3>
-                                    <p>"This auditor does not publish NUT-18 payment requests. A pasted token funds it the same way."</p>
+                                    <h3>"QR donations aren't set up here"</h3>
+                                    <p>"Paste a token instead; it funds the audits the same way."</p>
                                 </div>
                             }.into_any(),
                             Ok(info) => {
@@ -223,7 +222,7 @@ fn DonatePanel(mint_filter: Signal<Option<String>>) -> impl IntoView {
                                             let result = wasm_bindgen_futures::JsFuture::from(
                                                 window().navigator().clipboard().write_text(&request)
                                             ).await;
-                                            copy_status.try_set(if result.is_ok() { "Payment request copied." } else { "Copy was blocked. Select and copy the request above." });
+                                            copy_status.try_set(if result.is_ok() { "Copied." } else { "Couldn't copy. Select the request above and copy it by hand." });
                                             copying.try_set(false);
                                         });
                                     }
@@ -255,8 +254,8 @@ fn DonatePanel(mint_filter: Signal<Option<String>>) -> impl IntoView {
                                         </Button>
                                         <p class="field-hint" role="status" aria-live="polite">{move || copy_status.get()}</p>
                                         <p class="field-hint">
-                                            "Scan with a wallet that supports Cashu payment requests. "
-                                            "Check your wallet for confirmation; recent donations appear above."
+                                            "Scan with a Cashu wallet that supports payment requests. "
+                                            "Your donation shows up at the top of this page."
                                         </p>
                                     </div>
                                 }
@@ -264,8 +263,8 @@ fn DonatePanel(mint_filter: Signal<Option<String>>) -> impl IntoView {
                             }
                             Err(e) => {
                                 view! {
-                                    <div class="callout callout-err">
-                                        {format!("Could not build payment request: {e}")}
+                                    <div class="callout callout-err" title=e.to_string()>
+                                        "Couldn't create a payment request. Paste a token instead."
                                     </div>
                                 }
                                     .into_any()
@@ -292,15 +291,15 @@ fn TokenPanel() -> impl IntoView {
                 Ok(res) => {
                     result_ok.set(res.success);
                     if res.success {
-                        result_msg.set(format!("Donation confirmed: {}. Thank you!", res.message));
+                        result_msg.set(format!("{}. Thank you.", res.message));
                         token.set(String::new());
                     } else {
-                        result_msg.set(format!("Donation failed: {}", res.message));
+                        result_msg.set(format!("Donation failed. {}", res.message));
                     }
                 }
-                Err(e) => {
+                Err(_) => {
                     result_ok.set(false);
-                    result_msg.set(format!("Donation failed: {e}"));
+                    result_msg.set("Donation failed. Check your connection and try again.".to_string());
                 }
             }
         }
@@ -315,7 +314,7 @@ fn TokenPanel() -> impl IntoView {
         let trimmed = token.get_untracked().trim().to_string();
         if trimmed.is_empty() {
             result_ok.set(false);
-            result_msg.set("Donation failed: Paste a Cashu token before donating.".to_string());
+            result_msg.set("Paste a Cashu token first.".to_string());
             return;
         }
 
@@ -334,12 +333,12 @@ fn TokenPanel() -> impl IntoView {
                         placeholder=Signal::stored("cashuB...".to_string())
                         value=token
                         description=Signal::stored(
-                            "Paste a Cashu token (any audited or new mint).".to_string(),
+                            "From any mint, listed or not.".to_string(),
                         )
                     />
 
                     <Button button_type="submit" disabled=is_busy class="btn-block".to_string()>
-                        {move || if is_busy.get() { "Confirming..." } else { "Confirm donation" }}
+                        {move || if is_busy.get() { "Donating…" } else { "Donate" }}
                     </Button>
                 </div>
 

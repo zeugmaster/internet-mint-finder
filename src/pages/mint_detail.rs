@@ -84,11 +84,11 @@ pub fn MintDetailPage() -> impl IntoView {
                         Ok(None) => view! {
                             <Title text="Mint not found — Internet Mint Finder"/>
                             <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">"Directory"</a></nav>
-                            <div class="empty-state">"This mint is not tracked by the auditor."</div>
+                            <div class="empty-state">"This mint isn't in the directory."</div>
                         }
                         .into_any(),
                         Err(e) => view! {
-                            <div class="callout callout-err">{format!("Failed to load mint: {e}")}</div>
+                            <div class="callout callout-err" title=e.to_string()>"Couldn't load this mint. Refresh the page to try again."</div>
                         }
                         .into_any(),
                     })
@@ -120,7 +120,7 @@ pub fn MintDetailPage() -> impl IntoView {
                                 <Transition fallback=|| view! { <div class="skeleton skeleton-row"></div> }>
                                     {move || reviews.get().map(|res| match res {
                                         Ok(data) => view! { <ReviewList data/> }.into_any(),
-                                        Err(e) => view! { <p class="section-empty">{format!("Couldn't load reviews: {e}")}</p> }.into_any(),
+                                        Err(e) => view! { <p class="section-empty" title=e.to_string()>"Couldn't load reviews. Refresh the page to try again."</p> }.into_any(),
                                     })}
                                 </Transition>
                             </div>
@@ -170,7 +170,7 @@ fn MintHead(mint: MintRead, metrics: Option<MintMetrics>, uptime: Option<MintUpt
             Some(view! {
                 <div class="incident">
                     <div class="incident-head">
-                        <span class="incident-title">"Most recent failure"</span>
+                        <span class="incident-title">"Latest failure"</span>
                         {pill}
                         <span class="incident-when mono">{when}</span>
                     </div>
@@ -200,7 +200,7 @@ fn MintHead(mint: MintRead, metrics: Option<MintMetrics>, uptime: Option<MintUpt
         </div>
         {incident}
         <Show when=move || !metrics_available>
-            <div class="callout mt-4" role="status">"Audit metrics are temporarily unavailable. Retrying automatically."</div>
+            <div class="callout mt-4" role="status">"Some audit data didn't load. Retrying every 15 seconds."</div>
         </Show>
     }
 }
@@ -255,7 +255,7 @@ fn AboutRows(mint: MintRead) -> impl IntoView {
                 {nuts.into_iter().map(|n| view! { <span class="tag">{format!("NUT-{n:02}")}</span> }).collect_view()}
             </div></dd>
         })}
-        <dt>"Last update"</dt>
+        <dt>"Info updated"</dt>
         <dd class="mono">{absolute_time(mint.updated_at)}</dd>
     }
 }
@@ -265,8 +265,8 @@ fn AboutRows(mint: MintRead) -> impl IntoView {
 #[component]
 fn AnnouncementRow(result: Result<Option<AnnouncementRead>, String>) -> impl IntoView {
     let value = match result {
-        Err(e) => format!("Couldn't check: {e}"),
-        Ok(None) => "No, not found on the relays this site reads".to_string(),
+        Err(_) => "Couldn't check right now".to_string(),
+        Ok(None) => "No announcement found".to_string(),
         Ok(Some(a)) => {
             let who = match a.verified {
                 Some(true) => "Yes, by the mint itself".to_string(),
@@ -286,7 +286,7 @@ fn UptimePanel(uptime: Option<MintUptime>) -> impl IntoView {
     let Some(uptime) = uptime else {
         return view! {
             <div class="card card-pad uptime-card">
-                <p class="text-dim">"Uptime is unavailable right now. Retrying automatically."</p>
+                <p class="text-dim">"Couldn't load uptime. Retrying every 15 seconds."</p>
             </div>
         }
         .into_any();
@@ -294,29 +294,29 @@ fn UptimePanel(uptime: Option<MintUptime>) -> impl IntoView {
     let value = uptime
         .uptime_percent
         .map(|percent| format!("{percent:.1}%"))
-        .unwrap_or_else(|| "No samples".to_string());
+        .unwrap_or_else(|| "No data".to_string());
     let latest = uptime.bars.iter().rev().find(|bar| bar.checks > 0).map(|bar| bar.state);
     let state = match (latest, uptime.current_up_since, uptime.last_checked_at) {
         (Some(MintState::Ok), Some(since), _) => format!("Up for {}", elapsed_since(since)),
-        (Some(MintState::Ok), None, _) => "Latest check reachable".to_string(),
-        (Some(MintState::Warn), _, _) => "Latest check degraded".to_string(),
-        (Some(MintState::Error), _, _) => "Latest check failed".to_string(),
-        (Some(MintState::Unknown), _, _) => "Latest check unavailable".to_string(),
-        (None, _, Some(_)) => "No checks in this window".to_string(),
+        (Some(MintState::Ok), None, _) => "Up now".to_string(),
+        (Some(MintState::Warn), _, _) => "Degraded at last check".to_string(),
+        (Some(MintState::Error), _, _) => "Down at last check".to_string(),
+        (Some(MintState::Unknown), _, _) => "No answer at last check".to_string(),
+        (None, _, Some(_)) => format!("No checks in {}h", uptime.window_hours),
         (None, _, None) => "No checks yet".to_string(),
     };
     let window = format!("{}h", uptime.window_hours);
     let checks = if uptime.checks == 0 {
         format!("No checks in the last {window}")
     } else {
-        format!("{} of {} checks passed in the last {window}", uptime.successes, uptime.checks)
+        format!("{} of {} checks passed", uptime.successes, uptime.checks)
     };
-    let last = uptime
-        .last_checked_at
-        .map(|ts| format!("last check {}", relative_time(ts)))
-        .unwrap_or_else(|| "awaiting the first check".to_string());
+    let last = match (uptime.checks, uptime.last_checked_at) {
+        (0, _) | (_, None) => String::new(),
+        (_, Some(ts)) => format!(", the last one {}", relative_time(ts)),
+    };
     let note = format!(
-        "{checks}, {last}. Each bar is {}; a failed payment marks it until a swap succeeds. Grey means no data, not downtime.",
+        "{checks}{last}. Each bar is {}; grey means no data, not downtime.",
         bar_span(uptime.bucket_minutes)
     );
     let label = format!("Observed uptime, last {window}: {value}. {checks}.");
@@ -341,18 +341,17 @@ fn UptimePanel(uptime: Option<MintUptime>) -> impl IntoView {
                     bars.into_iter()
                         .map(|bar| {
                             let (class, word) = match bar.state {
-                                MintState::Ok => ("uptime-bar ok", "OK"),
-                                MintState::Warn => ("uptime-bar warn", "WARN"),
-                                MintState::Error => ("uptime-bar err", "ERROR"),
-                                MintState::Unknown => ("uptime-bar unknown", "NO SAMPLE"),
+                                MintState::Ok => ("uptime-bar ok", "Up"),
+                                MintState::Warn => ("uptime-bar warn", "Degraded"),
+                                MintState::Error => ("uptime-bar err", "Down"),
+                                MintState::Unknown => ("uptime-bar unknown", "No data"),
                             };
                             let title = format!(
-                                "{} to {}: {} ({} checks, {} issues)",
+                                "{} to {}: {word} ({}, {})",
                                 absolute_time(bar.start_at),
                                 absolute_time(bar.end_at),
-                                word,
-                                bar.checks,
-                                bar.failures
+                                plural(bar.checks, "check", "checks"),
+                                plural(bar.failures, "failure", "failures"),
                             );
                             view! { <span class=class title=title aria-hidden="true"></span> }
                         })
@@ -406,6 +405,10 @@ fn elapsed_since(dt: DateTime<Utc>) -> String {
         3600..=86_399 => format!("{}h", secs / 3600),
         _ => format!("{}d", secs / 86_400),
     }
+}
+
+fn plural(n: u64, one: &str, many: &str) -> String {
+    format!("{n} {}", if n == 1 { one } else { many })
 }
 
 /// How long one uptime bar covers, as a phrase: "one hour", "2 hours".
