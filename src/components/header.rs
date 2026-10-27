@@ -6,10 +6,10 @@ use leptos::prelude::*;
 use leptos_router::hooks::use_location;
 
 /// The brand mark: an assay hallmark, a shield punch struck with an M. Inlined
-/// as raw SVG in the ink colors so it follows the theme.
+/// as raw SVG in the inverted colors so it follows the theme.
 const BRAND_MARK_SVG: &str = r##"<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-  <path d="M3 3h18v11c0 4-4 6.6-9 8-5-1.4-9-4-9-8z" fill="var(--ink)"/>
-  <path d="M7.5 15.5v-7l4.5 4.5 4.5-4.5v7" fill="none" stroke="var(--surface)" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M3 3h18v11c0 4-4 6.6-9 8-5-1.4-9-4-9-8z" fill="var(--inverted)"/>
+  <path d="M7.5 15.5v-7l4.5 4.5 4.5-4.5v7" fill="none" stroke="var(--on-inverted)" stroke-width="2" stroke-linejoin="round"/>
 </svg>"##;
 
 #[component]
@@ -70,14 +70,18 @@ pub fn Header() -> impl IntoView {
                     </a>
                 </nav>
 
-                <div class="header-status" role="status" aria-live="polite">
+                <div class="header-status">
                     <Transition fallback=|| view! { <span>"Connecting…"</span> }>
                         {move || connection.get().map(|result| {
                             let connected = result.is_ok();
                             let label = match auditors.get() {
-                                Some(Ok(list)) if connected => live_label(&list),
-                                _ if connected => "Connected".to_string(),
-                                _ => "Reconnecting…".to_string(),
+                                Some(Ok(list)) if connected => {
+                                    let n = live_count(&list);
+                                    // "auditors" drops out on phones: "3 live".
+                                    view! { {n}<span class="live-long">{if n == 1 { " auditor" } else { " auditors" }}</span>" live" }.into_any()
+                                }
+                                _ if connected => view! { "Connected" }.into_any(),
+                                _ => view! { "Reconnecting…" }.into_any(),
                             };
                             view! {
                                 <span class=if connected { "connection-dot connected" } else { "connection-dot disconnected" }></span>
@@ -91,16 +95,10 @@ pub fn Header() -> impl IntoView {
     }
 }
 
-/// "3 auditors live": this instance plus every peer seen in the last 24 h.
-fn live_label(list: &[AuditorRead]) -> String {
+/// Auditors live: this instance plus every peer seen in the last 24 h.
+fn live_count(list: &[AuditorRead]) -> usize {
     let cutoff = Utc::now() - chrono::Duration::hours(24);
-    let live = list
-        .iter()
+    list.iter()
         .filter(|a| a.is_self || a.last_seen.is_some_and(|at| at >= cutoff))
-        .count();
-    if live == 1 {
-        "1 auditor live".to_string()
-    } else {
-        format!("{live} auditors live")
-    }
+        .count()
 }

@@ -1,21 +1,19 @@
 use crate::types::MintState;
 use leptos::prelude::*;
 
-/// Pill badge with a glowing status dot for mint / swap health.
+/// Health as an Interfere badge: one word on a tinted ground, so the state
+/// never relies on colour alone.
 #[component]
 pub fn StateBadge(state: MintState) -> impl IntoView {
     let (class, label) = match state {
         MintState::Ok => ("badge badge-ok", "Healthy"),
         MintState::Warn => ("badge badge-warn", "Degraded"),
         MintState::Error => ("badge badge-err", "Failing"),
-        MintState::Unknown => ("badge badge-muted", "Pending"),
+        MintState::Unknown => ("badge badge-muted", "Not checked yet"),
     };
 
     view! {
-        <span class=class>
-            <span class="dot"></span>
-            {label}
-        </span>
+        <span class=class>{label}</span>
     }
 }
 

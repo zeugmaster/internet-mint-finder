@@ -24,8 +24,8 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
                 <meta charset="utf-8"/>
                 <meta name="viewport" content="width=device-width, initial-scale=1"/>
                 <meta name="color-scheme" content="light dark"/>
-                <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f3f2ee"/>
-                <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#121211"/>
+                <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6f6f6"/>
+                <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000"/>
                 <script inner_html=THEME_SCRIPT></script>
                 <meta
                     name="description"
@@ -102,34 +102,27 @@ fn Footer() -> impl IntoView {
     view! {
         <footer class="site-footer">
             <div class="site-footer-inner">
-                <span>
-                    "Audits run by moving real ecash between mints. "
-                    "Results are measurements, not endorsements. "
+                <div class="footer-notes">
+                    <p>"Audits run by moving real ecash between mints. Results are measurements, not endorsements."</p>
                     <Suspense fallback=|| ()>
                         {move || auditors.get().and_then(|r| r.ok()).map(|list| {
                             let mirrors: Vec<String> = list.into_iter().filter(|a| !a.is_self).flat_map(|a| a.urls).collect();
                             (!mirrors.is_empty()).then(|| view! {
-                                "Mirrors: "
-                                {mirrors.into_iter().map(|u| view! { <a href=u.clone() rel="external noopener">{u.clone()}</a>" " }).collect_view()}
+                                <p class="footer-mirrors">
+                                    "Mirrors: "
+                                    {mirrors.into_iter().map(|u| view! { <a href=u.clone() rel="external noopener">{u.clone()}</a> }).collect_view()}
+                                </p>
                             })
                         })}
                     </Suspense>
-                </span>
-                <span class="footer-meta">
-                    <a
-                        href="https://github.com/cashubtc/cdk"
-                        rel="external noopener"
-                        target="_blank"
-                    >
-                        "built on CDK"
-                    </a>
-                    " · NUT-18 donations · "
-                    <a href="/auditors">"auditors"</a>
-                </span>
-                <button type="button" class="btn btn-secondary btn-small theme-toggle" data-theme-toggle="">
-                    <span class="when-dark">"Use light mode"</span>
-                    <span class="when-light">"Use dark mode"</span>
-                </button>
+                </div>
+                <div class="footer-meta">
+                    <a href="https://github.com/cashubtc/cdk" rel="external noopener" target="_blank">"Built on CDK"</a>
+                    <button type="button" class="btn btn-small theme-toggle" data-theme-toggle="">
+                        <span class="when-dark">"Use light mode"</span>
+                        <span class="when-light">"Use dark mode"</span>
+                    </button>
+                </div>
             </div>
         </footer>
     }

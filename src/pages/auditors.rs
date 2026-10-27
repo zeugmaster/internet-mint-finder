@@ -1,5 +1,6 @@
 use crate::api::get_auditors;
 use crate::components::hallmarks::StampKey;
+use crate::components::swap_list::SwapList;
 use crate::format::{absolute_time, relative_time, short_pubkey};
 use crate::hooks::use_poll;
 use crate::types::AuditorRead;
@@ -43,6 +44,39 @@ pub fn AuditorsPage() -> impl IntoView {
                         Err(e) => view! { <div class="empty-state" role="alert"><h3>"Auditors are temporarily unavailable"</h3><p>{e.to_string()}</p></div> }.into_any(),
                     })}
                 </Transition>
+            </div>
+
+            <div class="grid-main mt-6">
+                <section>
+                    <div class="section-head"><h2>"Audit activity"</h2><span>"Latest 50 attempts"</span></div>
+                    <SwapList/>
+                </section>
+                <section>
+                    <h2 class="section-title">"How the audit works"</h2>
+                    <ol class="steps-list">
+                        <li class="step-card">
+                            <h3><span class="step-num">"1"</span>"A mint quote is created"</h3>
+                            <p>
+                                "The auditor asks one mint for a Lightning invoice, exactly like "
+                                "a wallet topping up its balance would."
+                            </p>
+                        </li>
+                        <li class="step-card">
+                            <h3><span class="step-num">"2"</span>"Another mint pays it"</h3>
+                            <p>
+                                "Real ecash on a second mint is melted to settle that invoice "
+                                "over Lightning. Each successful payment moves real sats."
+                            </p>
+                        </li>
+                        <li class="step-card">
+                            <h3><span class="step-num">"3"</span>"Every outcome is published"</h3>
+                            <p>
+                                "Latency, fees, and failures are recorded verbatim and shown "
+                                "in the activity feed and the detailed analytics."
+                            </p>
+                        </li>
+                    </ol>
+                </section>
             </div>
         </div>
     }

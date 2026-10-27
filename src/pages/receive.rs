@@ -197,7 +197,7 @@ fn DonatePanel(mint_filter: Signal<Option<String>>) -> impl IntoView {
             <Suspense fallback=|| {
                 view! {
                     <div class="qr-panel">
-                        <div class="skeleton" style="width: 248px; height: 248px;"></div>
+                        <div class="skeleton" style="width: 244px; height: 244px;"></div>
                         <div class="skeleton" style="width: 100%; height: 48px;"></div>
                     </div>
                 }

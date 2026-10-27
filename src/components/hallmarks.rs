@@ -40,7 +40,7 @@ pub fn Hallmarks(marks: Vec<AuditorMark>) -> impl IntoView {
                     let tip = format!("{who}: {verdict} {}", relative_time(mark.at));
                     view! {
                         // A button so keyboard and touch reach the tip; the
-                        // click must not trigger the directory row's link.
+                        // click must not trigger an enclosing link.
                         <button
                             type="button"
                             class=class

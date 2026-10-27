@@ -7,5 +7,4 @@ pub mod icons;
 pub mod input;
 pub mod mint_list;
 pub mod reviews;
-pub mod stats_card;
 pub mod swap_list;

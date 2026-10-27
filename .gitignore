@@ -18,6 +18,7 @@ result/
 # Finder metadata
 .DS_Store
 
-# TX-02 is a licensed font; its files are supplied outside git.
-public/fonts/
+# TX-02 is a licensed font; its files are supplied outside git. Inter is
+# open source (OFL) and is committed.
+public/fonts/tx-02-*
 .impeccable/mocks/decision/fonts/

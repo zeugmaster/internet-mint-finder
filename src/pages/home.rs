@@ -1,67 +1,24 @@
 use crate::components::mint_list::MintList;
-use crate::components::stats_card::StatsCard;
-use crate::components::swap_list::SwapList;
 use leptos::prelude::*;
 use leptos_meta::Title;
 
+/// The directory: just the mints. Totals live on Analytics; audit activity
+/// and how the audit works live on Auditors.
 #[component]
 pub fn HomePage() -> impl IntoView {
     view! {
-        <Title text="Overview — Internet Mint Finder"/>
+        <Title text="Directory — Internet Mint Finder"/>
         <div class="shell">
-            <div class="page-head overview-head">
+            <div class="page-head">
                 <div>
                     <h1 class="page-title">"Find a Cashu mint."</h1>
                     <p class="page-subtitle">
                         "Every mint announced or reviewed on Nostr, with what independent auditors "
-                        "measured by moving real ecash through it. Measurements, reviews, no scores."
+                        "measured by moving real ecash through it."
                     </p>
                 </div>
-                <div class="page-actions">
-                    <a href="/dashboard" class="btn btn-secondary" rel="external">"Analytics"</a>
-                    <a href="/receive" class="btn btn-primary">"Donate ecash"</a>
-                </div>
             </div>
-
-            <StatsCard/>
-
-            <div class="grid-main overview-grid">
-                <section>
-                    <div class="section-head"><h2>"Directory"</h2><span>"Refreshes every 15s"</span></div>
-                    <MintList/>
-                </section>
-                <section>
-                    <div class="section-head"><h2>"Audit activity"</h2><span>"Latest 50 attempts"</span></div>
-                    <SwapList/>
-                </section>
-            </div>
-
-            <section class="mt-6">
-                <h2 class="section-title">"How the audit works"</h2>
-                <ol class="steps-grid">
-                    <li class="step-card">
-                        <h3><span class="step-num">"1"</span>"A mint quote is created"</h3>
-                        <p>
-                            "The auditor asks one mint for a Lightning invoice, exactly like "
-                            "a wallet topping up its balance would."
-                        </p>
-                    </li>
-                    <li class="step-card">
-                        <h3><span class="step-num">"2"</span>"Another mint pays it"</h3>
-                        <p>
-                            "Real ecash on a second mint is melted to settle that invoice "
-                            "over Lightning. Each successful payment moves real sats."
-                        </p>
-                    </li>
-                    <li class="step-card">
-                        <h3><span class="step-num">"3"</span>"Every outcome is published"</h3>
-                        <p>
-                            "Latency, fees, and failures are recorded verbatim and shown "
-                            "in the activity feed and the detailed analytics."
-                        </p>
-                    </li>
-                </ol>
-            </section>
+            <MintList/>
         </div>
     }
 }

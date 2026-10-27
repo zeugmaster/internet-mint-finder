@@ -5,16 +5,21 @@
 <title>Analytics — Internet Mint Finder</title>
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <meta name="color-scheme" content="light dark" />
-<meta name="theme-color" content="#f3f2ee" media="(prefers-color-scheme: light)" />
-<meta name="theme-color" content="#121211" media="(prefers-color-scheme: dark)" />
+<meta name="theme-color" content="#f6f6f6" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
 <script>(function(){var d=document.documentElement;d.dataset.theme=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');})();</script>
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css"/>
 <style>
   /* ===================================================================
-     Fonts — TX-02 for all text, served by the app from /fonts
+     Fonts — Inter for the interface, TX-02 for figures; served from /fonts
      =================================================================== */
+  @font-face {
+    font-family: 'InterVariable';
+    src: url('/fonts/InterVariable.woff2') format('woff2');
+    font-weight: 100 900; font-style: normal; font-display: swap;
+  }
   @font-face {
     font-family: 'TX-02';
     src: url('/fonts/tx-02-regular.otf') format('opentype');
@@ -22,83 +27,89 @@
   }
   @font-face {
     font-family: 'TX-02';
-    src: url('/fonts/tx-02-italic.otf') format('opentype');
-    font-weight: 400; font-style: italic; font-display: swap;
-  }
-  @font-face {
-    font-family: 'TX-02';
     src: url('/fonts/tx-02-bold.otf') format('opentype');
     font-weight: 700; font-style: normal; font-display: swap;
   }
-  @font-face {
-    font-family: 'TX-02';
-    src: url('/fonts/tx-02-bold-italic.otf') format('opentype');
-    font-weight: 700; font-style: italic; font-display: swap;
-  }
 
   /* ===================================================================
-     Design tokens — flat, warm neutrals; colour only for health.
-     Mirrors style/main.css in the Leptos app.
+     Design tokens — the Interfere system, as in style/main.css.
+     The chart script reads the first block, so those stay opaque hex
+     (Radix steps); the rest are Interfere's alpha tokens.
      =================================================================== */
   :root {
     color-scheme: light;
-    --bg: #f3f2ee;
-    --surface: #ffffff;
-    --subtle: #e9e7e1;
-    --ink: #141413;
-    --muted: #5c5a55;
-    --faint: #68655e;
-    --rule: #ecebe6;
-    --ok: #2b7a3d;
-    --warn: #8a5a00;
-    --error: #b9330c;
-    --info: #2f5f9e;
+    --bg: #f6f6f6;        /* color-shell */
+    --surface: #ffffff;   /* color-container */
+    --subtle: #f0f0f0;    /* gray-3 */
+    --ink: #202020;       /* gray-12, primary-foreground */
+    --muted: #646464;     /* gray-11, secondary-foreground */
+    --faint: #767676;     /* tertiary-foreground, darkened from gray-9 to meet AA */
+    --rule: #f0f0f0;      /* gray-3, border-default */
+    --ok: #30a46c;        /* green-9 */
+    --warn: #f76b15;      /* orange-9 */
+    --error: #e54d2e;     /* tomato-9 */
+    --info: #0090ff;      /* blue-9, brand-solid */
+
+    --component: #0000000f;
+    --component-hover: #00000017;
+    --surface-strong: #ffffff;
+    --surface-strong-hover: #f9f9f9;
+    --tab-border: #d9d9d9;
+    --disabled: #0000000f;
+    --fg-disabled: #00000044;
+    --focus: #0084e6a1;
+    --inverted: #000000f2;
+    --inverted-hover: #000000cc;
+    --inverted-active: #000000b3;
+    --on-inverted: #ffffff;
+    --brand-subtle: #008ff519;
+    --on-brand-subtle: #0090ff;
+    --success-fg: #00713fde;
+    --warning-bg: #ff9c0029;
+    --warning-fg: #cc4e00;
+    --danger-bg: #f52b0018;
+    --danger-fg: #cd2200ea;
+    --s-default: 0 0 0 0.5px #0000 inset, 0 0 0 0.5px #0000000f, 0 1px 1px -1px #0000001a, 0 1px 2px 0 #0000000d;
+    --s-large: 0 0 0 0.5px #0000000f, 0 2px 3px -2px #0000000f, 0 3px 12px -4px #0000001a, 0 4px 16px -8px #0000000d;
   }
   :root[data-theme='dark'] {
     color-scheme: dark;
-    --bg: #121211;
-    --surface: #1d1d1b;
-    --subtle: #2a2a27;
-    --ink: #f1f0eb;
-    --muted: #a9a79f;
-    --faint: #8a887f;
-    --rule: #262624;
-    --ok: #78c98c;
-    --warn: #e6b45a;
-    --error: #ff8a63;
-    --info: #8db4ec;
+    --bg: #000000;
+    --surface: #111111;   /* gray-1 */
+    --subtle: #222222;    /* gray-3 */
+    --ink: #eeeeee;       /* gray-12 */
+    --muted: #b4b4b4;     /* gray-11 */
+    --faint: #808080;     /* tertiary, lifted from gray-9 to meet AA */
+    --rule: #222222;
+
+    --component: #ffffff12;
+    --component-hover: #ffffff1b;
+    --surface-strong: #ffffff12;
+    --surface-strong-hover: #ffffff1b;
+    --tab-border: #484848;
+    --disabled: #ffffff09;
+    --fg-disabled: #ffffff55;
+    --focus: #0090ff;
+    --inverted: #fffffff2;
+    --inverted-hover: #ffffffcc;
+    --inverted-active: #ffffffb3;
+    --on-inverted: #000000;
+    --brand-subtle: #0077ff3a;
+    --on-brand-subtle: #70b8ff;
+    --success-fg: #46fea5d4;
+    --warning-bg: #fb6a0025;
+    --warning-fg: #ffa057;
+    --danger-bg: #ff35232b;
+    --danger-fg: #ff977d;
+    --s-default: 0 0 0 0.5px #ffffff12 inset, 0 0 0 0.5px #0000, 0 1px 1px -1px #0000, 0 1px 2px 0 #0000;
+    --s-large: 0 0 0 1px #ffffff2c, 0 2px 3px -2px #00000026, 0 3px 8px -2px #00000066, 0 4px 12px -4px #00000080;
   }
   :root {
-    --font: 'TX-02', ui-monospace, 'SF Mono', Menlo, monospace;
-    --radius-control: 8px;
-    --radius-surface: 16px;
-    --ease: ease;
-
-    /* Legacy aliases for the previous token names */
-    --bg-0: var(--bg);
-    --bg-1: var(--surface);
-    --bg-2: var(--surface);
-    --bg-3: var(--subtle);
-    --bg-4: var(--subtle);
-    --line-1: var(--rule);
-    --line-2: var(--subtle);
-    --line-3: var(--subtle);
-    --text-1: var(--ink);
-    --text-2: var(--muted);
-    --text-3: var(--faint);
-    --accent: var(--ink);
-    --accent-strong: var(--ink);
-    --accent-dim: var(--subtle);
-    --err: var(--error);
-    --blue: var(--info);
-    --violet: var(--info);
-    --radius-sm: var(--radius-control);
-    --radius: var(--radius-surface);
-    --radius-lg: var(--radius-surface);
-    --shadow-1: none;
-    --shadow-2: none;
-    --font-sans: var(--font);
-    --font-mono: var(--font);
+    --font: 'InterVariable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-mono: 'TX-02', ui-monospace, 'SF Mono', Menlo, monospace;
+    --focus-ring: inset 0 0 0 0.5px var(--focus), 0 0 0 1px var(--focus);
+    --ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-out: cubic-bezier(0, 0, 0.2, 1);
   }
 
   * { box-sizing: border-box; }
@@ -108,51 +119,60 @@
     background: var(--bg);
     color: var(--ink);
     font-family: var(--font);
-    font-size: 14px;
-    line-height: 1.5;
-    font-variant-numeric: tabular-nums;
+    font-size: 15px;
+    line-height: 24px;
+    font-feature-settings: 'ss03';
+    font-synthesis: none;
     -webkit-text-size-adjust: 100%;
     -webkit-font-smoothing: antialiased;
   }
   body { background: var(--bg); }
-
   button, input, select { font: inherit; color: inherit; }
-  ::selection { background: color-mix(in oklab, var(--ink) 18%, transparent); }
-  ::placeholder { color: var(--faint); }
-  * { scrollbar-color: var(--subtle) transparent; }
-  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  ::selection { background: var(--brand-subtle); }
+  ::placeholder { color: var(--muted); }
+  * { scrollbar-color: var(--component-hover) transparent; }
+  :focus-visible { outline: 1px solid var(--focus); outline-offset: -1px; }
+
+  /* Figures in the mono, with the plain zero. Tabular figures stay off
+     elsewhere: Inter's tnum also widens the hyphen in names and dates. */
+  .kpi .val, .sla-figure .big, td.num, .sla-axis {
+    font-family: var(--font-mono); font-feature-settings: 'ss02';
+    font-variant-numeric: tabular-nums;
+  }
 
   /* ===================================================================
      Header
      =================================================================== */
   header {
     max-width: 1560px; margin: 0 auto;
-    padding: 20px 22px 4px;
-    display: flex; align-items: center; gap: 12px;
+    padding: 16px 22px 4px;
+    display: flex; align-items: center; gap: 8px;
   }
   header .brand {
     display: flex; align-items: center; gap: 10px;
     color: var(--ink); text-decoration: none; white-space: nowrap;
-    border-radius: var(--radius-control);
+    border-radius: 6px;
   }
   header .brand-mark { display: flex; width: 22px; height: 22px; flex: none; }
   header .brand-mark svg { width: 100%; height: 100%; display: block; }
-  header h1 { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+  header h1 { margin: 0; font-size: 15px; line-height: 24px; font-weight: 600; letter-spacing: -0.01em; }
   header .sub { color: var(--faint); font-size: 15px; }
   header .spacer { flex: 1; }
   .live {
     display: inline-flex; align-items: center; gap: 8px;
-    color: var(--muted); white-space: nowrap;
+    color: var(--muted); white-space: nowrap; font-size: 13px;
   }
-  .live .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); flex: none; }
+  .live .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); flex: none; }
+  /* Interfere secondary button */
   header .back {
-    display: inline-flex; align-items: center; justify-content: center;
-    padding: 7px 14px; border: 0; border-radius: var(--radius-control);
-    background: var(--subtle); color: var(--ink);
-    font-size: 13px; text-decoration: none; white-space: nowrap; cursor: pointer;
-    transition: background-color 150ms var(--ease), opacity 150ms var(--ease);
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    height: 32px; padding: 0 12px; border: 0; border-radius: 8px;
+    background: var(--surface-strong); box-shadow: var(--s-default); color: var(--ink);
+    font-size: 13px; line-height: 20px; font-weight: 500;
+    text-decoration: none; white-space: nowrap; cursor: pointer;
+    transition: background-color 150ms var(--ease-out);
   }
-  header .back:hover { background: color-mix(in oklab, var(--subtle), var(--ink) 8%); }
+  header .back:hover { background: var(--surface-strong-hover); }
 
   /* ===================================================================
      Layout
@@ -171,30 +191,31 @@
     display: flex; align-items: baseline; gap: 12px;
     margin: 12px 2px 0;
   }
-  .section-head .t { font-size: 15px; font-weight: 700; color: var(--ink); letter-spacing: -0.01em; }
-  .section-head .d { font-size: 13px; color: var(--faint); }
+  .section-head .t { font-size: 16px; line-height: 24px; font-weight: 600; color: var(--ink); letter-spacing: -0.01em; }
+  .section-head .d { font-size: 13px; line-height: 20px; color: var(--muted); }
 
   /* ===================================================================
-     Cards — tone only, no borders or shadows
+     Cards — Interfere card: 12px radius, hairline default shadow
      =================================================================== */
   .card {
     background: var(--surface);
-    border-radius: var(--radius-surface);
+    border-radius: 12px;
+    box-shadow: var(--s-default);
     overflow: hidden;
   }
-  .panel { padding: 20px; position: sticky; top: 16px; }
-  .chart { padding: 16px 18px 10px; }
+  .panel { padding: 16px; position: sticky; top: 16px; }
+  .chart { padding: 16px 16px 8px; }
   .chart .head {
     display: flex; align-items: baseline; justify-content: space-between;
-    gap: 10px; padding: 2px 2px 12px;
+    gap: 10px; padding: 0 0 12px;
   }
-  .chart .head .ttl { font-size: 14px; font-weight: 700; color: var(--ink); white-space: nowrap; }
-  .chart .head .meta { font-size: 12px; color: var(--faint); text-align: right; min-width: 0; }
+  .chart .head .ttl { font-size: 14px; line-height: 20px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+  .chart .head .meta { font-size: 13px; line-height: 20px; color: var(--muted); text-align: right; min-width: 0; }
   .plot { width: 100%; }
 
   h2 {
-    margin: 0 0 4px 0; font-size: 15px; color: var(--ink);
-    font-weight: 700; letter-spacing: -0.01em;
+    margin: 0 0 4px 0; font-size: 15px; line-height: 24px; color: var(--ink);
+    font-weight: 600; letter-spacing: -0.01em;
   }
 
   .grid { display: grid; gap: 16px; }
@@ -206,21 +227,21 @@
      =================================================================== */
   .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
   .kpi {
-    position: relative; padding: 16px 16px 14px;
-    background: var(--surface); border-radius: var(--radius-surface);
+    position: relative; padding: 16px;
+    background: var(--surface); border-radius: 12px; box-shadow: var(--s-default);
     overflow: hidden; min-width: 0;
   }
-  .kpi .lbl { font-size: 13px; color: var(--muted); }
+  .kpi .lbl { font-size: 13px; line-height: 20px; color: var(--muted); }
   .kpi .val {
-    font-size: 24px; font-weight: 700; margin-top: 8px;
-    letter-spacing: -0.02em; color: var(--ink);
+    font-size: 24px; font-weight: 400; margin-top: 8px;
+    color: var(--ink);
     display: flex; align-items: baseline; gap: 6px; line-height: 1;
   }
-  .kpi .val .u { font-size: 13px; color: var(--faint); font-weight: 400; letter-spacing: 0; }
+  .kpi .val .u { font-family: var(--font); font-size: 13px; color: var(--faint); }
   .kpi .foot {
     display: flex; align-items: flex-end; justify-content: space-between; gap: 8px;
     margin-top: 10px; min-height: 26px;
-    font-size: 12px; line-height: 1.35; color: var(--faint);
+    font-size: 12px; line-height: 16px; color: var(--muted);
   }
   .kpi .foot > span:last-child { flex: 0 1 96px; min-width: 0; display: flex; justify-content: flex-end; }
   .kpi .foot > span:last-child:empty { display: none; }
@@ -229,181 +250,192 @@
     display: inline-flex; align-items: center; gap: 4px;
     font-size: 12px; white-space: nowrap;
   }
-  .delta.up { color: var(--ok); }
-  .delta.down { color: var(--error); }
+  .delta.up { color: var(--success-fg); }
+  .delta.down { color: var(--danger-fg); }
   .delta.flat { color: var(--faint); }
-  .delta.up.inv { color: var(--error); }
-  .delta.down.inv { color: var(--ok); }
+  .delta.up.inv { color: var(--danger-fg); }
+  .delta.down.inv { color: var(--success-fg); }
 
   /* ===================================================================
-     Filters
+     Filters — Interfere fields and buttons
      =================================================================== */
   .filters fieldset { border: 0; padding: 0; margin: 16px 0 0; min-width: 0; }
   .filter-toggle { display: none; }
   .filters label, .filters legend {
-    display: block; padding: 0; font-size: 13px; color: var(--muted);
+    display: block; padding: 0; font-size: 13px; line-height: 20px; font-weight: 500; color: var(--ink);
     margin: 16px 0 6px;
   }
   .filters legend { margin-top: 0; }
   .filters input[type="date"] {
-    width: 100%; min-width: 0; padding: 8px 8px; background: var(--bg);
-    border: 0; border-radius: var(--radius-control);
-    color: var(--ink); font-size: 12px;
+    width: 100%; min-width: 0; height: 32px; padding: 0 8px;
+    background: var(--surface-strong); box-shadow: var(--s-default);
+    border: 0; border-radius: 8px;
+    color: var(--ink); font-size: 13px;
   }
-  .filters input[type="date"]:focus-visible { outline: 2px solid var(--ink); outline-offset: 0; }
+  .filters input[type="date"]:focus-visible { outline: 0; box-shadow: var(--focus-ring); }
   .filters .row { display: flex; gap: 8px; }
   .filters .row > * { flex: 1; }
 
   .btn {
-    width: 100%; margin-top: 20px; padding: 10px;
-    border: 0; border-radius: var(--radius-control);
-    cursor: pointer; font: inherit; font-weight: 700; font-size: 14px;
-    background: var(--ink); color: var(--surface);
-    transition: opacity 150ms var(--ease), background-color 150ms var(--ease);
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; height: 32px; margin-top: 20px; padding: 0 12px;
+    border: 0; border-radius: 8px;
+    cursor: pointer; font: inherit; font-weight: 500; font-size: 13px; line-height: 20px;
+    background: var(--inverted); color: var(--on-inverted);
+    transition: background-color 150ms var(--ease-out);
   }
-  .btn:hover { opacity: 0.85; }
-  .btn:active { opacity: 0.75; }
-  .btn:disabled { cursor: wait; opacity: 0.55; }
+  .btn:hover { background: var(--inverted-hover); }
+  .btn:active { background: var(--inverted-active); }
+  .btn:disabled { cursor: wait; background: var(--disabled); color: var(--fg-disabled); }
   .btn.secondary {
-    margin-top: 8px; background: var(--subtle); color: var(--ink); font-weight: 400;
+    margin-top: 8px; background: var(--surface-strong); box-shadow: var(--s-default); color: var(--ink);
   }
-  .btn.secondary:hover { opacity: 1; background: color-mix(in oklab, var(--subtle), var(--ink) 8%); }
-  .btn.secondary:disabled { opacity: 0.55; }
+  .btn.secondary:hover { background: var(--surface-strong-hover); }
+  .btn.secondary:disabled { background: var(--disabled); box-shadow: none; color: var(--fg-disabled); }
 
   /* ===================================================================
-     Segmented control (time range + chart toggles)
+     Segmented control — Interfere tabs (time range + chart toggles)
      =================================================================== */
   .seg {
-    display: inline-flex; padding: 3px; gap: 2px;
-    background: var(--bg); border-radius: var(--radius-control);
+    display: inline-flex; gap: 0;
+    background: var(--component); border-radius: 6px;
   }
   .seg button {
+    display: inline-flex; align-items: center; justify-content: center;
+    height: 28px; padding: 0 10px;
     background: transparent; border: 0; color: var(--muted);
-    padding: 6px 12px; font: inherit; font-size: 13px;
+    font: inherit; font-size: 13px; line-height: 20px; font-weight: 500;
     cursor: pointer; border-radius: 6px;
-    transition: color 150ms var(--ease), background-color 150ms var(--ease);
+    transition: color 200ms ease-in-out, background-color 200ms ease-in-out, box-shadow 200ms ease-in-out;
   }
   .seg button:hover { color: var(--ink); }
-  .seg button.active { color: var(--ink); background: var(--subtle); }
+  .seg button.active {
+    color: var(--ink); background: var(--surface-strong);
+    box-shadow: inset 0 0 0 1px var(--tab-border);
+  }
   .seg button:disabled { cursor: wait; }
-  .seg.sm button { padding: 4px 10px; font-size: 12px; }
+  .seg.sm button { height: 24px; padding: 0 8px; font-size: 12px; line-height: 16px; }
 
   /* ===================================================================
      Fleet uptime — single aggregate timeline
      =================================================================== */
-  .sla { padding: 4px 2px 6px; }
+  .sla { padding: 4px 0 6px; }
   .sla-single { display: flex; align-items: center; gap: 22px; }
   .sla-figure { flex: none; min-width: 124px; }
   .sla-figure .big {
-    font-size: 32px; font-weight: 700;
-    letter-spacing: -0.02em; line-height: 1;
+    font-size: 32px; font-weight: 400; line-height: 1;
   }
   .sla-figure .cap {
-    margin-top: 8px; font-size: 13px; color: var(--muted);
+    margin-top: 8px; font-size: 13px; line-height: 20px; color: var(--muted);
     display: flex; align-items: center; gap: 8px;
   }
-  .sla-figure .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .sla-figure .dot { width: 6px; height: 6px; border-radius: 50%; flex: none; }
   .sla-wrap { flex: 1; min-width: 0; }
   .sla-cells { display: flex; gap: 2px; height: 38px; align-items: stretch; overflow: hidden; }
   .sla-cell {
-    flex: 1 1 0; min-width: 1px; border-radius: 2px; background: var(--subtle);
+    flex: 1 1 0; min-width: 1px; border-radius: 2px; background: var(--component);
     transition: opacity 120ms var(--ease);
   }
   .sla-cell:hover { opacity: 0.7; }
   .sla-cell.ok   { background: var(--ok); }
   .sla-cell.warn { background: var(--warn); }
   .sla-cell.err  { background: var(--error); }
-  .sla-cell.none { background: var(--subtle); }
+  .sla-cell.none { background: var(--component); }
   .sla-axis {
     display: flex; justify-content: space-between; margin-top: 8px;
-    font-size: 12px; color: var(--faint);
+    font-size: 12px; line-height: 16px; color: var(--faint);
   }
 
   /* ===================================================================
-     Tables
+     Tables — Interfere table: 36px header, half-pixel rules
      =================================================================== */
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { padding: 9px 8px; text-align: left; }
-  th { color: var(--faint); font-weight: 400; font-size: 12px; white-space: nowrap; }
-  td { color: var(--ink); border-top: 1px solid var(--rule); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; line-height: 20px; }
+  th, td { padding: 10px 12px; text-align: left; }
+  th { height: 36px; padding-block: 8px; color: var(--muted); font-weight: 500; font-size: 12px; line-height: 16px; white-space: nowrap; }
+  td { color: var(--ink); border-top: 0.5px solid var(--rule); }
   th.num, td.num { text-align: right; }
   td.num { white-space: nowrap; }
-  td.hl { font-weight: 700; }
+  td.hl { font-weight: 600; }
   /* Long route/mint names: one line, full text in the title tooltip. */
   td.trunc { width: 100%; max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   td .sep { color: var(--faint); }
   tbody tr td { transition: background-color 120ms var(--ease); }
-  tbody tr:hover td { background: color-mix(in oklab, var(--surface), var(--ink) 3%); }
+  tbody tr:hover td { background: var(--component); }
+  /* Error categories as Interfere badges, matching the app. */
   .pill {
-    display: inline-flex; align-items: center; gap: 7px;
-    font-size: 12px; white-space: nowrap; color: var(--muted);
+    display: inline-flex; align-items: center; justify-content: center;
+    height: 20px; padding: 0 6px; border-radius: 4px;
+    background: var(--component); color: var(--muted);
+    font-size: 12px; line-height: 16px; white-space: nowrap;
   }
-  .pill::before {
-    content: ''; width: 7px; height: 7px; border-radius: 50%;
-    background: currentColor; flex: none;
-  }
-  .pill.network, .pill.timeout, .pill.ssl { color: var(--error); }
-  .pill.mint, .pill.fee, .pill.rate_limit { color: var(--warn); }
-  .pill.liquidity, .pill.config { color: var(--info); }
-  .pill.internal, .pill.unknown { color: var(--muted); }
+  .pill.network, .pill.timeout, .pill.ssl { background: var(--danger-bg); color: var(--danger-fg); }
+  .pill.mint, .pill.fee, .pill.rate_limit { background: var(--warning-bg); color: var(--warning-fg); }
+  .pill.liquidity, .pill.config { background: var(--brand-subtle); color: var(--on-brand-subtle); }
+  .pill.internal, .pill.unknown { background: var(--component); color: var(--muted); }
 
   /* ===================================================================
      Skeleton + empty states
      =================================================================== */
   .skel {
-    border-radius: var(--radius-control);
-    background: var(--subtle);
-    animation: skel-pulse 1.6s ease-in-out infinite;
+    border-radius: 6px;
+    background: var(--component);
+    animation: skel-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
-  @keyframes skel-pulse { 50% { opacity: 0.55; } }
+  @keyframes skel-pulse { 50% { opacity: 0.5; } }
   .empty {
     display: grid; place-items: center; text-align: center;
-    color: var(--faint); font-size: 13px;
+    color: var(--muted); font-size: 13px; line-height: 20px;
     height: 100%; min-height: 120px; gap: 6px; padding: 18px;
   }
   .empty svg { width: 24px; height: 24px; opacity: 0.6; }
 
   /* ===================================================================
-     Choices.js overrides — same flat tokens
+     Choices.js overrides — Interfere select and menu
      =================================================================== */
-  /* TX-02's contextual forms space out "://"; keep URLs literal. */
   .choices, .plot, table { font-variant-ligatures: none; }
-  .choices { margin-bottom: 0; font-size: 13px; }
+  /* Choices.js clips the closed box, which would hide the field's ring. */
+  .choices { margin-bottom: 0; font-size: 13px; overflow: visible; }
   .choices__inner {
-    background: var(--bg) !important; border: 0 !important;
-    border-radius: var(--radius-control) !important; min-height: 38px;
+    background: var(--surface-strong) !important; border: 0 !important;
+    box-shadow: var(--s-default);
+    border-radius: 8px !important; min-height: 32px; padding: 3px 6px 0 !important;
     color: var(--ink); font-size: 13px;
   }
   .choices.is-focused .choices__inner,
-  .choices.is-open .choices__inner { outline: 2px solid var(--ink); outline-offset: 0; }
+  .choices.is-open .choices__inner { box-shadow: var(--focus-ring); }
   .choices__list--dropdown, .choices__list[aria-expanded] {
     background: var(--surface) !important;
-    border: 1px solid var(--subtle) !important;
-    border-radius: var(--radius-control) !important;
-    margin-top: 6px !important; box-shadow: none; overflow: hidden;
+    border: 0 !important; box-shadow: var(--s-large);
+    border-radius: 12px !important; padding: 4px;
+    margin-top: 4px !important; overflow: hidden; z-index: 20;
   }
+  :root[data-theme='dark'] .choices__list--dropdown,
+  :root[data-theme='dark'] .choices__list[aria-expanded] { background: #191919 !important; }
   .choices__list--dropdown .choices__item, .choices__list[aria-expanded] .choices__item {
-    color: var(--muted); font-size: 13px;
+    color: var(--ink); font-size: 13px; line-height: 20px; border-radius: 8px;
   }
   .choices__list--dropdown .choices__item--selectable,
-  .choices__list[aria-expanded] .choices__item--selectable { padding-right: 10px !important; overflow-wrap: anywhere; word-break: normal !important; }
+  .choices__list[aria-expanded] .choices__item--selectable { padding: 6px 8px !important; overflow-wrap: anywhere; word-break: normal !important; }
   .choices__list--dropdown .choices__item--selectable::after,
   .choices__list[aria-expanded] .choices__item--selectable::after { display: none; }
   .choices__list--dropdown .choices__item--selectable.is-highlighted,
   .choices__list[aria-expanded] .choices__item--selectable.is-highlighted {
-    background: var(--subtle) !important; color: var(--ink);
+    background: var(--component) !important; color: var(--ink);
   }
   .choices__list--multiple .choices__item {
-    background: var(--subtle) !important; border: 0 !important;
-    color: var(--ink) !important; font-weight: 400; font-size: 12px;
-    border-radius: 6px !important; padding: 3px 8px;
+    background: var(--component) !important; border: 0 !important;
+    color: var(--ink) !important; font-weight: 400; font-size: 12px; line-height: 16px;
+    border-radius: 4px !important; padding: 2px 6px; margin: 0 4px 3px 0 !important;
     display: inline-flex; align-items: center; max-width: 100%;
     overflow-wrap: anywhere; word-break: normal;
   }
   .choices__list--multiple .choices__item.is-highlighted {
-    background: color-mix(in oklab, var(--subtle), var(--ink) 10%) !important;
+    background: var(--component-hover) !important;
   }
-  .choices__input { background: transparent !important; color: var(--ink) !important; font-size: 13px; }
+  .choices__input {
+    background: transparent !important; color: var(--ink) !important; font-size: 13px;
+    margin-bottom: 3px !important;
+  }
   .choices[data-type*="select-multiple"] .choices__button {
     position: relative; display: inline-block; flex: none;
     width: 16px; height: 16px; margin: 0 -4px 0 6px; padding: 0;
@@ -416,9 +448,9 @@
   }
   .choices[data-type*="select-multiple"] .choices__button:hover { opacity: 1; }
   .choices[data-type*="select-multiple"] .choices__button:focus-visible {
-    opacity: 1; outline: 2px solid var(--ink); outline-offset: 1px;
+    opacity: 1; outline: 1px solid var(--focus); outline-offset: 1px;
   }
-  .choices__placeholder { color: var(--faint); opacity: 1; }
+  .choices__placeholder { color: var(--muted); opacity: 1; }
 
   /* ===================================================================
      Motion
@@ -430,16 +462,16 @@
     main { grid-template-columns: 1fr; }
     .panel { position: static; padding: 0; }
     .filter-toggle {
-      width: 100%; padding: 16px 20px;
+      width: 100%; padding: 12px 16px;
       display: flex; align-items: center; justify-content: space-between; gap: 12px;
-      border: 0; border-radius: var(--radius-surface);
+      border: 0; border-radius: 12px;
       background: transparent; color: var(--ink); cursor: pointer;
-      font-size: 14px; font-weight: 700;
+      font-size: 15px; font-weight: 600;
     }
-    .filter-toggle:focus-visible { outline-offset: -2px; }
+    .filter-toggle:focus-visible { outline-offset: -1px; }
     .filter-toggle-meta { margin-left: auto; color: var(--muted); font-size: 13px; font-weight: 400; }
     .filter-toggle-icon { color: var(--faint); transition: transform 150ms var(--ease); }
-    .filter-fields { display: none; padding: 4px 20px 20px; border-top: 1px solid var(--rule); }
+    .filter-fields { display: none; padding: 4px 16px 16px; border-top: 0.5px solid var(--rule); }
     .filters.is-open .filter-fields { display: block; }
     .filters.is-open .filter-toggle-icon { transform: rotate(180deg); }
     .filter-fields > h2 { display: none; }
@@ -454,6 +486,7 @@
     .sla-single { align-items: flex-start; }
   }
   @media (max-width: 620px) {
+    html, body { background: var(--surface); }
     .kpis { grid-template-columns: repeat(2, 1fr); }
     header .live, header .sub { display: none; }
     .sla-single { flex-direction: column; gap: 14px; }
@@ -462,21 +495,20 @@
     .chart { padding-inline: 12px; }
     .section-head { flex-direction: column; gap: 2px; }
   }
-  .data-status { max-width: 1560px; margin: 8px auto 0; padding: 0 22px; color: var(--faint); font-size: 13px; }
+  .data-status { max-width: 1560px; margin: 8px auto 0; padding: 0 22px; color: var(--muted); font-size: 13px; line-height: 20px; }
   button:disabled { cursor: wait; }
   .plot { min-width: 0; }
   main > *, .grid > * { min-width: 0; }
   @media (max-width: 760px) {
-    header { gap: 10px; flex-wrap: wrap; }
+    header { gap: 8px; flex-wrap: wrap; }
     #range-seg { order: 5; flex-basis: 100%; justify-content: center; }
-    header .back { padding: 7px 10px; font-size: 12px; }
+    header .back { padding: 0 10px; }
     main { padding: 16px 16px 40px; }
     .data-status { padding: 0 16px; line-height: 1.6; }
     .kpi .val { font-size: 24px; overflow-wrap: anywhere; }
   }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
-  .icon { width: 1em; height: 1em; flex: none; vertical-align: -0.125em; }
-  header .back { display: inline-flex; align-items: center; gap: 8px; }
+  .icon { width: 16px; height: 16px; flex: none; }
 </style>
 </head>
 <body>
@@ -489,7 +521,7 @@
 
 <header>
   <a href="/" class="brand">
-    <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v11c0 4-4 6.6-9 8-5-1.4-9-4-9-8z" fill="var(--ink)"/><path d="M7.5 15.5v-7l4.5 4.5 4.5-4.5v7" fill="none" stroke="var(--surface)" stroke-width="2" stroke-linejoin="round"/></svg></span>
+    <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v11c0 4-4 6.6-9 8-5-1.4-9-4-9-8z" fill="var(--inverted)"/><path d="M7.5 15.5v-7l4.5 4.5 4.5-4.5v7" fill="none" stroke="var(--on-inverted)" stroke-width="2" stroke-linejoin="round"/></svg></span>
     <h1>Internet Mint Finder</h1>
     <span class="sub">Analytics</span>
   </a>
@@ -710,7 +742,7 @@ function getJSON(path, extra) {
 // time (see readTheme, called before every renderAll pass) so both the light
 // and dark themes work. Plotly cannot resolve var(), so it gets the computed
 // hex values.
-const FONT = "TX-02, ui-monospace, monospace";
+const FONT = "InterVariable, system-ui, sans-serif";
 function cssVar(name, fallback) {
   const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   return v || fallback;
@@ -740,11 +772,11 @@ function mix(a, b, k) {
 let C = {}, PALETTE = [];
 function readTheme() {
   const t = {
-    ink: cssVar("--ink", "#141413"), muted: cssVar("--muted", "#5c5a55"),
-    faint: cssVar("--faint", "#68655e"), rule: cssVar("--rule", "#ecebe6"),
-    subtle: cssVar("--subtle", "#e9e7e1"), surface: cssVar("--surface", "#ffffff"),
-    ok: cssVar("--ok", "#2b7a3d"), warn: cssVar("--warn", "#8a5a00"),
-    err: cssVar("--error", "#b9330c"), info: cssVar("--info", "#2f5f9e"),
+    ink: cssVar("--ink", "#202020"), muted: cssVar("--muted", "#646464"),
+    faint: cssVar("--faint", "#767676"), rule: cssVar("--rule", "#f0f0f0"),
+    subtle: cssVar("--subtle", "#f0f0f0"), surface: cssVar("--surface", "#ffffff"),
+    ok: cssVar("--ok", "#30a46c"), warn: cssVar("--warn", "#f76b15"),
+    err: cssVar("--error", "#e54d2e"), info: cssVar("--info", "#0090ff"),
   };
   C = {
     ...t,
@@ -771,16 +803,17 @@ function axisStyle() {
     gridcolor: C.rule,
     zerolinecolor: C.subtle,
     linecolor: C.subtle,
-    tickfont: { color: C.faint, family: FONT, size: 11 },
+    tickfont: { color: C.faint, family: FONT, size: 12 },
   };
 }
 function baseLayout({ xaxis = {}, yaxis = {}, ...rest } = {}) {
   return {
     paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
-    font: { color: C.muted, family: FONT, size: 11 },
+    font: { color: C.muted, family: FONT, size: 12 },
     margin: { l: 52, r: 18, t: 14, b: 38 },
-    hoverlabel: { bgcolor: C.surface, bordercolor: C.subtle,
-                  font: { color: C.ink, family: FONT, size: 12 } },
+    // Interfere tooltips are dark in both themes.
+    hoverlabel: { bgcolor: "#222222", bordercolor: "#222222",
+                  font: { color: "#eeeeee", family: FONT, size: 12 } },
     transition: { duration: 350, easing: "cubic-in-out" },
     ...rest,
     xaxis: { ...axisStyle(), ...xaxis },
@@ -788,7 +821,7 @@ function baseLayout({ xaxis = {}, yaxis = {}, ...rest } = {}) {
   };
 }
 function legendStyle(extra = {}) {
-  return { orientation: "h", y: 1.14, ...extra, font: { color: C.muted, family: FONT, size: 11, ...(extra.font || {}) } };
+  return { orientation: "h", y: 1.14, ...extra, font: { color: C.muted, family: FONT, size: 12, ...(extra.font || {}) } };
 }
 const config = { displaylogo: false, responsive: true, displayModeBar: false };
 
@@ -937,7 +970,7 @@ async function renderSLA() {
 
     el.innerHTML = `<div class="sla-single">
       <div class="sla-figure">
-        <div class="big" style="color:${STATE_COLOR[curCls]}">${pct}%</div>
+        <div class="big">${pct}%</div>
         <div class="cap"><span class="dot" style="background:${STATE_COLOR[curCls]}"></span>fleet uptime</div>
       </div>
       <div class="sla-wrap">
@@ -974,10 +1007,10 @@ async function renderCatDonut() {
       type: "pie", hole: 0.62, sort: true, direction: "clockwise",
       marker: { colors: PALETTE, line: { color: C.surface, width: 2 } },
       // No fixed colour: Plotly picks a contrasting colour per slice.
-      textfont: { family: FONT, size: 11 },
+      textfont: { family: FONT, size: 13 },
       hovertemplate: "%{label}: %{value} (%{percent})<extra></extra>",
     }], baseLayout({ margin: { l: 10, r: 10, t: 10, b: 10 },
-          showlegend: true, legend: { orientation: "v", font: { color: C.muted, family: FONT, size: 11 } } }), config);
+          showlegend: true, legend: { orientation: "v", font: { color: C.muted, family: FONT, size: 12 } } }), config);
   } catch (e) { console.error(e); emptyState(el, "Failed to load"); }
 }
 async function renderBlame() {
@@ -1015,7 +1048,7 @@ async function renderTVL() {
       xaxis: { type: "date" },
       yaxis: { title: "sats" },
       showlegend: d.mints.length <= 8,
-      legend: legendStyle({ y: 1.12, font: { size: 10 } }) }), config);
+      legend: legendStyle({ y: 1.12, font: { size: 12 } }) }), config);
   } catch (e) { console.error(e); emptyState(el, "Failed to load"); }
 }
 // Collapse a→b and b→a corridors into one net direction, keep the largest N,
@@ -1085,9 +1118,9 @@ async function renderFlow() {
         hovertemplate: "%{source.label} → %{target.label}<br>%{value} sats net · fee %{customdata}<extra></extra>",
       },
       // Plain node labels: no halo/text-shadow.
-      textfont: { color: C.ink, family: FONT, size: 11, shadow: "none" },
+      textfont: { color: C.ink, family: FONT, size: 13, shadow: "none" },
     }], baseLayout({ margin: { l: 8, r: 8, t: 10, b: 8 },
-          font: { color: C.muted, family: FONT, size: 11 } }), config);
+          font: { color: C.muted, family: FONT, size: 13 } }), config);
     meta.textContent = f.dropped
       ? `top ${f.links.length} net corridors · ${compact(f.droppedValue)} sats in ${f.dropped} smaller`
       : `${f.links.length} net corridors`;
@@ -1378,9 +1411,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     $("refresh").addEventListener("click", () => location.reload());
     return;
   }
-  // Give TX-02 a moment to load so Plotly measures labels in the right font.
+  // Give the fonts a moment to load so Plotly measures labels in the right font.
   const fontReady = document.fonts && document.fonts.load
-    ? Promise.race([document.fonts.load('14px "TX-02"').catch(() => {}), new Promise(r => setTimeout(r, 1500))])
+    ? Promise.race([document.fonts.load('12px InterVariable').catch(() => {}), new Promise(r => setTimeout(r, 1500))])
     : Promise.resolve();
   await Promise.all([initFilters(), fontReady]);
   $("refresh").addEventListener("click", renderAll);

@@ -1,403 +1,982 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-26T16:13:52+00:00",
+  "generatedAt": "2026-10-27T13:07:57+00:00",
   "title": "Design System: Internet Mint Finder",
   "extensions": {
     "colorMeta": {
-      "bg": {
+      "shell": {
         "role": "neutral",
-        "displayName": "Paper Ground",
-        "canonical": "#f3f2ee",
-        "oklch": "oklch(96.1% 0.005 95)",
-        "theme": "light",
-        "cssVar": "--bg",
+        "displayName": "Shell",
+        "canonical": "#f6f6f6",
         "tonalRamp": [
-          "#0b0b0a",
-          "#252524",
-          "#424240",
-          "#62615e",
-          "#83827f",
-          "#a6a5a2",
-          "#c9c9c7",
-          "#efeeed"
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "container": {
+        "role": "neutral",
+        "displayName": "Container",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
         ]
       },
       "surface": {
         "role": "neutral",
-        "displayName": "Sheet",
+        "displayName": "Surface",
         "canonical": "#ffffff",
-        "oklch": "oklch(100.0% 0.000 90)",
-        "theme": "light",
-        "cssVar": "--surface",
         "tonalRamp": [
-          "#0b0b0b",
-          "#252525",
-          "#424242",
-          "#616161",
-          "#828282",
-          "#a5a5a5",
-          "#c9c9c9",
-          "#eeeeee"
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
         ]
       },
-      "subtle": {
+      "surface-strong": {
         "role": "neutral",
-        "displayName": "Tray",
-        "canonical": "#e9e7e1",
-        "oklch": "oklch(92.8% 0.008 91)",
-        "theme": "light",
-        "cssVar": "--subtle",
+        "displayName": "Surface Strong",
+        "canonical": "#ffffff",
         "tonalRamp": [
-          "#0b0b0a",
-          "#262523",
-          "#43423f",
-          "#63615d",
-          "#84827d",
-          "#a6a5a1",
-          "#cac9c6",
-          "#efeeed"
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
         ]
       },
-      "ink": {
+      "surface-strong-hover": {
+        "role": "neutral",
+        "displayName": "Surface Strong Hover",
+        "canonical": "#f9f9f9",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "component": {
+        "role": "neutral",
+        "displayName": "Component Grey",
+        "canonical": "#0000000f",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "component-hover": {
+        "role": "neutral",
+        "displayName": "Component Grey Hover",
+        "canonical": "#00000017",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "component-active": {
+        "role": "neutral",
+        "displayName": "Component Grey Active",
+        "canonical": "#0000001f",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "fg": {
+        "role": "neutral",
+        "displayName": "Foreground",
+        "canonical": "#000000df",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "fg-2": {
+        "role": "neutral",
+        "displayName": "Secondary Foreground",
+        "canonical": "#0000009b",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "fg-3": {
+        "role": "neutral",
+        "displayName": "Tertiary Foreground",
+        "canonical": "#00000072",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "fg-disabled": {
+        "role": "neutral",
+        "displayName": "Disabled Foreground",
+        "canonical": "#00000044",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#0000000f",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "border-strong": {
+        "role": "neutral",
+        "displayName": "Strong Hairline",
+        "canonical": "#00000026",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "tab-border": {
+        "role": "neutral",
+        "displayName": "Tab Edge",
+        "canonical": "#d9d9d9",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "focus": {
         "role": "primary",
-        "displayName": "Assay Ink",
-        "canonical": "#141413",
-        "oklch": "oklch(19.1% 0.002 107)",
-        "theme": "light",
-        "cssVar": "--ink",
+        "displayName": "Focus Blue",
+        "canonical": "#0084e6a1",
         "tonalRamp": [
-          "#0b0b0b",
-          "#252524",
-          "#424241",
-          "#616160",
-          "#828281",
-          "#a5a5a4",
-          "#c9c9c8",
-          "#eeeeee"
+          "#0d2847",
+          "#003362",
+          "#004074",
+          "#0d74ce",
+          "#0090ff",
+          "#5eb1ef",
+          "#acd8fc",
+          "#f4faff"
         ]
       },
-      "muted": {
-        "role": "neutral",
-        "displayName": "Muted Graphite",
-        "canonical": "#5c5a55",
-        "oklch": "oklch(46.8% 0.008 89)",
-        "theme": "light",
-        "cssVar": "--muted",
+      "brand": {
+        "role": "primary",
+        "displayName": "Interfere Blue",
+        "canonical": "#0090ff",
         "tonalRamp": [
-          "#0b0b0a",
-          "#262523",
-          "#43423f",
-          "#63615c",
-          "#84827d",
-          "#a6a5a1",
-          "#cac9c6",
-          "#efeeed"
+          "#0d2847",
+          "#003362",
+          "#004074",
+          "#0d74ce",
+          "#0090ff",
+          "#5eb1ef",
+          "#acd8fc",
+          "#f4faff"
         ]
       },
-      "faint": {
-        "role": "neutral",
-        "displayName": "Faint Graphite",
-        "canonical": "#68655e",
-        "oklch": "oklch(50.7% 0.011 88)",
-        "theme": "light",
-        "cssVar": "--faint",
+      "brand-subtle": {
+        "role": "primary",
+        "displayName": "Info Fill",
+        "canonical": "#008ff519",
         "tonalRamp": [
-          "#0c0b0a",
-          "#262522",
-          "#44423d",
-          "#64615b",
-          "#85827c",
-          "#a7a5a0",
-          "#cac9c5",
-          "#efeeec"
+          "#0d2847",
+          "#003362",
+          "#004074",
+          "#0d74ce",
+          "#0090ff",
+          "#5eb1ef",
+          "#acd8fc",
+          "#f4faff"
         ]
       },
-      "rule": {
-        "role": "neutral",
-        "displayName": "Rule",
-        "canonical": "#ecebe6",
-        "oklch": "oklch(93.9% 0.007 97)",
-        "theme": "light",
-        "cssVar": "--rule",
+      "on-brand-subtle": {
+        "role": "primary",
+        "displayName": "Info Text",
+        "canonical": "#0090ff",
         "tonalRamp": [
-          "#0b0b0a",
-          "#252523",
-          "#43423f",
-          "#62615d",
-          "#83827e",
-          "#a6a5a2",
-          "#cac9c7",
-          "#efeeed"
+          "#0d2847",
+          "#003362",
+          "#004074",
+          "#0d74ce",
+          "#0090ff",
+          "#5eb1ef",
+          "#acd8fc",
+          "#f4faff"
         ]
       },
-      "ok": {
+      "inverted": {
+        "role": "primary",
+        "displayName": "Inverted Ink",
+        "canonical": "#000000f2",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "inverted-hover": {
+        "role": "primary",
+        "displayName": "Inverted Ink Hover",
+        "canonical": "#000000cc",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "inverted-active": {
+        "role": "primary",
+        "displayName": "Inverted Ink Active",
+        "canonical": "#000000b3",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "on-inverted": {
+        "role": "primary",
+        "displayName": "On Inverted",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "success-bg": {
         "role": "tertiary",
-        "displayName": "Settled Green",
-        "canonical": "#2b7a3d",
-        "oklch": "oklch(51.6% 0.121 148)",
-        "theme": "light",
-        "cssVar": "--ok",
+        "displayName": "Success Fill",
+        "canonical": "#00a43319",
         "tonalRamp": [
-          "#030f04",
-          "#0d2d14",
-          "#1d4e27",
-          "#2e723c",
-          "#51945c",
-          "#81b488",
-          "#b0d4b4",
-          "#e0f5e2"
+          "#132d21",
+          "#113b29",
+          "#164430",
+          "#218358",
+          "#30a46c",
+          "#5bb98b",
+          "#adddc0",
+          "#fbfefc"
         ]
       },
-      "warn": {
+      "success-fg": {
         "role": "tertiary",
-        "displayName": "Partial Amber",
-        "canonical": "#8a5a00",
-        "oklch": "oklch(50.8% 0.108 73)",
-        "theme": "light",
-        "cssVar": "--warn",
+        "displayName": "Success Text",
+        "canonical": "#00713fde",
         "tonalRamp": [
-          "#130901",
-          "#342103",
-          "#593b0a",
-          "#825713",
-          "#a5793b",
-          "#c29e71",
-          "#dec5a5",
-          "#fbecd9"
+          "#132d21",
+          "#113b29",
+          "#164430",
+          "#218358",
+          "#30a46c",
+          "#5bb98b",
+          "#adddc0",
+          "#fbfefc"
         ]
       },
-      "error": {
+      "warning-bg": {
         "role": "tertiary",
-        "displayName": "Voided Rust",
-        "canonical": "#b9330c",
-        "oklch": "oklch(52.3% 0.176 35)",
-        "theme": "light",
-        "cssVar": "--error",
+        "displayName": "Warning Fill",
+        "canonical": "#ff9c0029",
         "tonalRamp": [
-          "#1b0301",
-          "#451004",
-          "#75210b",
-          "#a83314",
-          "#cf583b",
-          "#e68870",
-          "#fbb6a4",
-          "#ffe4d9"
+          "#331e0b",
+          "#462100",
+          "#562800",
+          "#cc4e00",
+          "#f76b15",
+          "#ec9455",
+          "#ffcca7",
+          "#fefcfb"
         ]
       },
-      "info": {
+      "warning-fg": {
         "role": "tertiary",
-        "displayName": "Category Blue",
-        "canonical": "#2f5f9e",
-        "oklch": "oklch(48.4% 0.114 256)",
-        "theme": "light",
-        "cssVar": "--info",
+        "displayName": "Warning Orange",
+        "canonical": "#cc4e00",
         "tonalRamp": [
-          "#040b18",
-          "#12253f",
-          "#24436b",
-          "#38629a",
-          "#5884bf",
-          "#85a7d6",
-          "#b2cbed",
-          "#e1f0ff"
+          "#331e0b",
+          "#462100",
+          "#562800",
+          "#cc4e00",
+          "#f76b15",
+          "#ec9455",
+          "#ffcca7",
+          "#fefcfb"
         ]
       },
-      "bg-dark": {
+      "danger-bg": {
+        "role": "tertiary",
+        "displayName": "Danger Fill",
+        "canonical": "#f52b0018",
+        "tonalRamp": [
+          "#3b1219",
+          "#4e1511",
+          "#5e1c16",
+          "#d13415",
+          "#e54d2e",
+          "#ec8e7b",
+          "#fdbdaf",
+          "#fffcfc"
+        ]
+      },
+      "danger-fg": {
+        "role": "tertiary",
+        "displayName": "Danger Tomato",
+        "canonical": "#cd2200ea",
+        "tonalRamp": [
+          "#3b1219",
+          "#4e1511",
+          "#5e1c16",
+          "#d13415",
+          "#e54d2e",
+          "#ec8e7b",
+          "#fdbdaf",
+          "#fffcfc"
+        ]
+      },
+      "danger-subtle": {
+        "role": "tertiary",
+        "displayName": "Danger Panel",
+        "canonical": "#ff200008",
+        "tonalRamp": [
+          "#3b1219",
+          "#4e1511",
+          "#5e1c16",
+          "#d13415",
+          "#e54d2e",
+          "#ec8e7b",
+          "#fdbdaf",
+          "#fffcfc"
+        ]
+      },
+      "danger-border": {
+        "role": "tertiary",
+        "displayName": "Danger Hairline",
+        "canonical": "#ff35002c",
+        "tonalRamp": [
+          "#3b1219",
+          "#4e1511",
+          "#5e1c16",
+          "#d13415",
+          "#e54d2e",
+          "#ec8e7b",
+          "#fdbdaf",
+          "#fffcfc"
+        ]
+      },
+      "ok-solid": {
+        "role": "tertiary",
+        "displayName": "Green 9",
+        "canonical": "#30a46c",
+        "tonalRamp": [
+          "#132d21",
+          "#113b29",
+          "#164430",
+          "#218358",
+          "#30a46c",
+          "#5bb98b",
+          "#adddc0",
+          "#fbfefc"
+        ]
+      },
+      "warn-solid": {
+        "role": "tertiary",
+        "displayName": "Orange 9",
+        "canonical": "#f76b15",
+        "tonalRamp": [
+          "#331e0b",
+          "#462100",
+          "#562800",
+          "#cc4e00",
+          "#f76b15",
+          "#ec9455",
+          "#ffcca7",
+          "#fefcfb"
+        ]
+      },
+      "err-solid": {
+        "role": "tertiary",
+        "displayName": "Tomato 9",
+        "canonical": "#e54d2e",
+        "tonalRamp": [
+          "#3b1219",
+          "#4e1511",
+          "#5e1c16",
+          "#d13415",
+          "#e54d2e",
+          "#ec8e7b",
+          "#fdbdaf",
+          "#fffcfc"
+        ]
+      },
+      "tooltip": {
         "role": "neutral",
-        "displayName": "Paper Ground (dark)",
-        "canonical": "#121211",
-        "oklch": "oklch(18.2% 0.002 107)",
-        "theme": "dark",
-        "cssVar": "--bg",
+        "displayName": "Tooltip Grey",
+        "canonical": "#222222",
         "tonalRamp": [
-          "#0b0b0b",
-          "#252524",
-          "#424241",
-          "#616160",
-          "#828281",
-          "#a5a5a4",
-          "#c9c9c8",
-          "#eeeeee"
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "shell-dark": {
+        "role": "neutral",
+        "displayName": "Shell (dark)",
+        "canonical": "#000000",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "container-dark": {
+        "role": "neutral",
+        "displayName": "Container (dark)",
+        "canonical": "#111111",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
         ]
       },
       "surface-dark": {
         "role": "neutral",
-        "displayName": "Sheet (dark)",
-        "canonical": "#1d1d1b",
-        "oklch": "oklch(23.0% 0.004 107)",
-        "theme": "dark",
-        "cssVar": "--surface",
+        "displayName": "Surface (dark)",
+        "canonical": "#ffffff09",
         "tonalRamp": [
-          "#0b0b0b",
-          "#252524",
-          "#424240",
-          "#61615f",
-          "#828280",
-          "#a5a5a3",
-          "#c9c9c8",
-          "#eeeeee"
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
         ]
       },
-      "subtle-dark": {
+      "surface-strong-dark": {
         "role": "neutral",
-        "displayName": "Tray (dark)",
-        "canonical": "#2a2a27",
-        "oklch": "oklch(28.4% 0.005 107)",
-        "theme": "dark",
-        "cssVar": "--subtle",
+        "displayName": "Surface Strong (dark)",
+        "canonical": "#ffffff12",
         "tonalRamp": [
-          "#0b0b0a",
-          "#252524",
-          "#424240",
-          "#61615e",
-          "#82827f",
-          "#a5a5a3",
-          "#c9c9c7",
-          "#eeeeed"
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
         ]
       },
-      "ink-dark": {
+      "surface-strong-hover-dark": {
+        "role": "neutral",
+        "displayName": "Surface Strong Hover (dark)",
+        "canonical": "#ffffff1b",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "component-dark": {
+        "role": "neutral",
+        "displayName": "Component Grey (dark)",
+        "canonical": "#ffffff12",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "component-hover-dark": {
+        "role": "neutral",
+        "displayName": "Component Grey Hover (dark)",
+        "canonical": "#ffffff1b",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "component-active-dark": {
+        "role": "neutral",
+        "displayName": "Component Grey Active (dark)",
+        "canonical": "#ffffff22",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "fg-dark": {
+        "role": "neutral",
+        "displayName": "Foreground (dark)",
+        "canonical": "#ffffffed",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "fg-2-dark": {
+        "role": "neutral",
+        "displayName": "Secondary Foreground (dark)",
+        "canonical": "#ffffffaf",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "fg-3-dark": {
+        "role": "neutral",
+        "displayName": "Tertiary Foreground (dark)",
+        "canonical": "#ffffff64",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "fg-disabled-dark": {
+        "role": "neutral",
+        "displayName": "Disabled Foreground (dark)",
+        "canonical": "#ffffff55",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "border-dark": {
+        "role": "neutral",
+        "displayName": "Hairline (dark)",
+        "canonical": "#ffffff12",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "border-strong-dark": {
+        "role": "neutral",
+        "displayName": "Strong Hairline (dark)",
+        "canonical": "#ffffff2c",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "tab-border-dark": {
+        "role": "neutral",
+        "displayName": "Tab Edge (dark)",
+        "canonical": "#484848",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "focus-dark": {
         "role": "primary",
-        "displayName": "Assay Ink (dark)",
-        "canonical": "#f1f0eb",
-        "oklch": "oklch(95.5% 0.007 97)",
-        "theme": "dark",
-        "cssVar": "--ink",
+        "displayName": "Focus Blue (dark)",
+        "canonical": "#0090ff",
         "tonalRamp": [
-          "#0b0b0a",
-          "#252523",
-          "#43423f",
-          "#62615d",
-          "#83827e",
-          "#a6a5a2",
-          "#c9c9c7",
-          "#efeeed"
+          "#0d2847",
+          "#003362",
+          "#004074",
+          "#0d74ce",
+          "#0090ff",
+          "#5eb1ef",
+          "#acd8fc",
+          "#f4faff"
         ]
       },
-      "muted-dark": {
-        "role": "neutral",
-        "displayName": "Muted Graphite (dark)",
-        "canonical": "#a9a79f",
-        "oklch": "oklch(72.8% 0.012 95)",
-        "theme": "dark",
-        "cssVar": "--muted",
+      "brand-subtle-dark": {
+        "role": "primary",
+        "displayName": "Info Fill (dark)",
+        "canonical": "#0077ff3a",
         "tonalRamp": [
-          "#0b0b0a",
-          "#262522",
-          "#43423d",
-          "#63615b",
-          "#84827b",
-          "#a6a5a0",
-          "#cac9c5",
-          "#efeeec"
+          "#0d2847",
+          "#003362",
+          "#004074",
+          "#0d74ce",
+          "#0090ff",
+          "#5eb1ef",
+          "#acd8fc",
+          "#f4faff"
         ]
       },
-      "faint-dark": {
-        "role": "neutral",
-        "displayName": "Faint Graphite (dark)",
-        "canonical": "#8a887f",
-        "oklch": "oklch(62.6% 0.013 97)",
-        "theme": "dark",
-        "cssVar": "--faint",
+      "on-brand-subtle-dark": {
+        "role": "primary",
+        "displayName": "Info Text (dark)",
+        "canonical": "#70b8ff",
         "tonalRamp": [
-          "#0c0b09",
-          "#262522",
-          "#43423d",
-          "#63615a",
-          "#84827a",
-          "#a6a59f",
-          "#cac9c4",
-          "#efeeec"
+          "#0d2847",
+          "#003362",
+          "#004074",
+          "#0d74ce",
+          "#0090ff",
+          "#5eb1ef",
+          "#acd8fc",
+          "#f4faff"
         ]
       },
-      "rule-dark": {
-        "role": "neutral",
-        "displayName": "Rule (dark)",
-        "canonical": "#262624",
-        "oklch": "oklch(26.8% 0.004 107)",
-        "theme": "dark",
-        "cssVar": "--rule",
+      "inverted-dark": {
+        "role": "primary",
+        "displayName": "Inverted Ink (dark)",
+        "canonical": "#fffffff2",
         "tonalRamp": [
-          "#0b0b0b",
-          "#252524",
-          "#424241",
-          "#61615f",
-          "#828280",
-          "#a5a5a3",
-          "#c9c9c8",
-          "#eeeeee"
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
         ]
       },
-      "ok-dark": {
+      "inverted-hover-dark": {
+        "role": "primary",
+        "displayName": "Inverted Ink Hover (dark)",
+        "canonical": "#ffffffcc",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "inverted-active-dark": {
+        "role": "primary",
+        "displayName": "Inverted Ink Active (dark)",
+        "canonical": "#ffffffb3",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "on-inverted-dark": {
+        "role": "primary",
+        "displayName": "On Inverted (dark)",
+        "canonical": "#000000",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#606060",
+          "#8d8d8d",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#fcfcfc"
+        ]
+      },
+      "success-bg-dark": {
         "role": "tertiary",
-        "displayName": "Settled Green (dark)",
-        "canonical": "#78c98c",
-        "oklch": "oklch(76.8% 0.118 151)",
-        "theme": "dark",
-        "cssVar": "--ok",
+        "displayName": "Success Fill (dark)",
+        "canonical": "#22ff991e",
         "tonalRamp": [
-          "#020f05",
-          "#0c2d16",
-          "#1a4e2a",
-          "#2a7240",
-          "#4e9461",
-          "#7fb48b",
-          "#afd4b6",
-          "#e0f5e4"
+          "#132d21",
+          "#113b29",
+          "#164430",
+          "#218358",
+          "#30a46c",
+          "#5bb98b",
+          "#adddc0",
+          "#fbfefc"
         ]
       },
-      "warn-dark": {
+      "success-fg-dark": {
         "role": "tertiary",
-        "displayName": "Partial Amber (dark)",
-        "canonical": "#e6b45a",
-        "oklch": "oklch(79.8% 0.122 80)",
-        "theme": "dark",
-        "cssVar": "--warn",
+        "displayName": "Success Text (dark)",
+        "canonical": "#46fea5d4",
         "tonalRamp": [
-          "#120900",
-          "#342100",
-          "#593c00",
-          "#815900",
-          "#a47a28",
-          "#c1a067",
-          "#ddc69e",
-          "#faedd6"
+          "#132d21",
+          "#113b29",
+          "#164430",
+          "#218358",
+          "#30a46c",
+          "#5bb98b",
+          "#adddc0",
+          "#fbfefc"
         ]
       },
-      "error-dark": {
+      "warning-bg-dark": {
         "role": "tertiary",
-        "displayName": "Voided Rust (dark)",
-        "canonical": "#ff8a63",
-        "oklch": "oklch(75.4% 0.152 39)",
-        "theme": "dark",
-        "cssVar": "--error",
+        "displayName": "Warning Fill (dark)",
+        "canonical": "#fb6a0025",
         "tonalRamp": [
-          "#190501",
-          "#411506",
-          "#6e2910",
-          "#9f3f1c",
-          "#c56140",
-          "#dd8e73",
-          "#f4baa6",
-          "#ffe6da"
+          "#331e0b",
+          "#462100",
+          "#562800",
+          "#cc4e00",
+          "#f76b15",
+          "#ec9455",
+          "#ffcca7",
+          "#fefcfb"
         ]
       },
-      "info-dark": {
+      "warning-fg-dark": {
         "role": "tertiary",
-        "displayName": "Category Blue (dark)",
-        "canonical": "#8db4ec",
-        "oklch": "oklch(76.3% 0.091 257)",
-        "theme": "dark",
-        "cssVar": "--info",
+        "displayName": "Warning Orange (dark)",
+        "canonical": "#ffa057",
         "tonalRamp": [
-          "#050b16",
-          "#17253a",
-          "#2c4363",
-          "#43628f",
-          "#6384b3",
-          "#8ca7cd",
-          "#b8cbe6",
-          "#e4efff"
+          "#331e0b",
+          "#462100",
+          "#562800",
+          "#cc4e00",
+          "#f76b15",
+          "#ec9455",
+          "#ffcca7",
+          "#fefcfb"
+        ]
+      },
+      "danger-bg-dark": {
+        "role": "tertiary",
+        "displayName": "Danger Fill (dark)",
+        "canonical": "#ff35232b",
+        "tonalRamp": [
+          "#3b1219",
+          "#4e1511",
+          "#5e1c16",
+          "#d13415",
+          "#e54d2e",
+          "#ec8e7b",
+          "#fdbdaf",
+          "#fffcfc"
+        ]
+      },
+      "danger-fg-dark": {
+        "role": "tertiary",
+        "displayName": "Danger Tomato (dark)",
+        "canonical": "#ff977d",
+        "tonalRamp": [
+          "#3b1219",
+          "#4e1511",
+          "#5e1c16",
+          "#d13415",
+          "#e54d2e",
+          "#ec8e7b",
+          "#fdbdaf",
+          "#fffcfc"
+        ]
+      },
+      "danger-subtle-dark": {
+        "role": "tertiary",
+        "displayName": "Danger Panel (dark)",
+        "canonical": "#ff55330f",
+        "tonalRamp": [
+          "#3b1219",
+          "#4e1511",
+          "#5e1c16",
+          "#d13415",
+          "#e54d2e",
+          "#ec8e7b",
+          "#fdbdaf",
+          "#fffcfc"
+        ]
+      },
+      "danger-border-dark": {
+        "role": "tertiary",
+        "displayName": "Danger Hairline (dark)",
+        "canonical": "#fd201142",
+        "tonalRamp": [
+          "#3b1219",
+          "#4e1511",
+          "#5e1c16",
+          "#d13415",
+          "#e54d2e",
+          "#ec8e7b",
+          "#fdbdaf",
+          "#fffcfc"
         ]
       }
     },
@@ -408,44 +987,54 @@
       },
       "dark": {
         "selector": ":root[data-theme='dark']",
-        "note": "Set before first paint from localStorage or prefers-color-scheme; footer toggle switches."
+        "note": "Set before first paint from localStorage or prefers-color-scheme (src/app.rs THEME_SCRIPT); toggled by the footer [data-theme-toggle] button. public/dashboard.html mirrors the tokens with opaque Radix steps (--bg, --surface, --ink, --muted, --faint, --rule, --ok, --warn, --error, --info) that the Plotly script reads."
       }
     },
     "typographyMeta": {
       "headline": {
         "displayName": "Headline",
-        "purpose": "One page title per page; 22px under 760px."
-      },
-      "figure": {
-        "displayName": "Figure",
-        "purpose": "KPI and uptime values; 20px under 760px. Units at 15px regular, muted."
+        "purpose": "One page title per page (heading-4); 24px/32px under 760px."
       },
       "title": {
         "displayName": "Title",
-        "purpose": "Section heads, card and step titles, mint names. Weight alone separates it from body."
+        "purpose": "Section heads, card, step and empty-state titles."
       },
       "body": {
         "displayName": "Body",
-        "purpose": "Running text; 70 to 75ch caps on subtitles and explainers."
-      },
-      "table": {
-        "displayName": "Table",
-        "purpose": "Data table cells."
+        "purpose": "Running text; 62ch subtitles and footer notes, 75ch explainers."
       },
       "small": {
         "displayName": "Small",
-        "purpose": "Metadata, hints, table headers, footer, small buttons, segmented options."
+        "purpose": "Buttons, tabs, fields, table cells, meta lines, hints, header status."
       },
       "label": {
         "displayName": "Label",
-        "purpose": "Category chips, tooltips, chart axes, stacked-table labels."
+        "purpose": "Table headers, badges, tooltips, stat labels, axis ticks."
+      },
+      "figure": {
+        "displayName": "Figure",
+        "purpose": "Uptime value; stat-chip values use TX-02 700 at 15/24."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "URLs, routes, amounts, incident messages; 12/16 for payment requests and error text."
       },
       "stamp": {
         "displayName": "Stamp",
-        "purpose": "Hallmark labels only."
+        "purpose": "Hallmark letters only."
       }
     },
     "fonts": [
+      {
+        "family": "InterVariable",
+        "files": [
+          "/fonts/InterVariable.woff2",
+          "/fonts/InterVariable-Italic.woff2"
+        ],
+        "weights": "100 900",
+        "display": "swap",
+        "featureSettings": "'ss03', set on html. All interface text."
+      },
       {
         "family": "TX-02",
         "files": [
@@ -458,196 +1047,286 @@
           400,
           700
         ],
-        "display": "swap"
+        "display": "swap",
+        "featureSettings": "'ss02' (plain undotted zero) plus tabular-nums, on every mono run. Berkeley Mono's successor from the same foundry; licensed, self-hosted, not in git. The crossed seven cannot be turned off; no OpenType feature exposes a plain seven."
       }
     ],
     "shadows": [
       {
-        "name": "hallmark-ring",
-        "value": "inset 0 0 0 1px var(--subtle)",
-        "purpose": "Idle hallmark edge. Not elevation; the only shadow in the system."
+        "name": "shadow-default",
+        "value": "0 0 0 0.5px #0000 inset, 0 0 0 0.5px #0000000f, 0 1px 1px -1px #0000001a, 0 1px 2px 0 #0000000d",
+        "dark": "0 0 0 0.5px #ffffff12 inset",
+        "purpose": "Hairline ring for cards, secondary buttons, fields, divided stat card, QR frame. Replaces borders."
       },
       {
-        "name": "hallmark-ring-signal",
-        "value": "inset 0 0 0 1.5px var(--warn | --error)",
-        "purpose": "Partial and voided hallmark edge."
+        "name": "shadow-large",
+        "value": "0 0 0 0.5px #0000000f, 0 2px 3px -2px #0000000f, 0 3px 12px -4px #0000001a, 0 4px 16px -8px #0000000d",
+        "dark": "0 0 0 1px #ffffff2c, 0 2px 3px -2px #00000026, 0 3px 8px -2px #00000066, 0 4px 12px -4px #00000080",
+        "purpose": "Overlays only (dashboard dropdowns)."
+      },
+      {
+        "name": "focus-ring",
+        "value": "inset 0 0 0 0.5px var(--focus), 0 0 0 1px var(--focus)",
+        "purpose": "Field focus, stacked on shadow-default. Elsewhere a 1px outline at -1px offset."
+      },
+      {
+        "name": "tab-edge",
+        "value": "inset 0 0 0 1px var(--tab-border)",
+        "purpose": "Active segmented tab."
+      },
+      {
+        "name": "stamp-edge",
+        "value": "inset 0 0 0 1px var(--border)",
+        "purpose": "Outline (no-verdict) hallmark."
+      },
+      {
+        "name": "danger-hairline",
+        "value": "inset 0 0 0 0.5px var(--danger-border)",
+        "purpose": "Incident panel, error callout, field error."
       }
     ],
     "motion": [
       {
         "name": "ease",
-        "value": "150ms ease",
-        "purpose": "Colour, background and opacity transitions on links, buttons, rows, tooltips."
+        "value": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "150ms colour/background on links, rows, fields; 200ms tooltip fade and chevron."
       },
       {
-        "name": "meter",
-        "value": "width 400ms ease",
-        "purpose": "Balance meter fill."
+        "name": "ease-out",
+        "value": "cubic-bezier(0, 0, 0.2, 1)",
+        "purpose": "150ms button colour and background."
       },
       {
-        "name": "breathe",
-        "value": "opacity 1 to 0.5, 1.4s ease-in-out infinite",
-        "purpose": "Loading skeletons."
+        "name": "tabs",
+        "value": "200ms ease-in-out",
+        "purpose": "Segmented tab colour, background and edge."
+      },
+      {
+        "name": "tooltip-in",
+        "value": "opacity + translate 4px, scale 0.95 to 1, 200ms",
+        "purpose": "Hallmark tooltip entrance."
+      },
+      {
+        "name": "skeleton-pulse",
+        "value": "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite (opacity 1 to 0.5)",
+        "purpose": "Loading placeholders."
       },
       {
         "name": "reduced-motion",
         "value": "animation and transition none",
-        "purpose": "Applied globally under prefers-reduced-motion: reduce."
+        "purpose": "prefers-reduced-motion: reduce."
       }
     ],
     "breakpoints": [
       {
+        "name": "shell-bg",
+        "value": "min-width: 48rem",
+        "purpose": "Page background becomes --shell; below it the page is --container."
+      },
+      {
+        "name": "donate-two-col",
+        "value": "min-width: 900px",
+        "purpose": "Donate grid splits into two columns."
+      },
+      {
+        "name": "header-two-row",
+        "value": "max-width: 960px",
+        "purpose": "Header becomes brand + status over a full-width nav."
+      },
+      {
         "name": "phone",
         "value": "max-width: 760px",
-        "purpose": "Tables restack, nav wraps, padding drops to 16px, hallmark tips pin to the bottom edge."
-      },
-      {
-        "name": "donate-split",
-        "value": "min-width: 900px"
-      },
-      {
-        "name": "overview-split",
-        "value": "min-width: 1100px",
-        "purpose": "Directory plus a 380px feed column."
+        "purpose": "16px gutter, 24px title, stacked tables, two-column stat chips, tooltip as bottom bar."
       }
     ],
     "layout": {
-      "shellMaxWidth": "1240px",
-      "shellPadding": "24px 24px 56px (16px 16px 40px on phone)",
-      "gridGap": "16px",
-      "cardPadding": "20px 24px"
+      "column": "960px (--column)",
+      "gutter": "24px, 16px under 760px (--gutter)",
+      "sharedBy": "header, page shells, footer",
+      "shellPadding": "8px top, 64px bottom (40px on phone)",
+      "sectionGap": "32px, single column (donate splits at 900px)",
+      "cardPadding": "16px (12px on phone)"
     },
-    "rootCss": ":host{--bg:#f3f2ee;--surface:#ffffff;--subtle:#e9e7e1;--ink:#141413;--muted:#5c5a55;--faint:#68655e;--rule:#ecebe6;--ok:#2b7a3d;--warn:#8a5a00;--error:#b9330c;--info:#2f5f9e;--font:'TX-02',ui-monospace,'SF Mono',Menlo,monospace;--radius-control:8px;--radius-surface:16px;--ease:150ms ease;font-family:var(--font);font-size:15px;line-height:1.5;font-variant-numeric:tabular-nums;color:var(--ink)} "
+    "rootCss": ":host{--shell:#f6f6f6;--container:#ffffff;--surface:#ffffff;--surface-strong:#ffffff;--surface-strong-hover:#f9f9f9;--component:#0000000f;--component-hover:#00000017;--component-active:#0000001f;--fg:#000000df;--fg-2:#0000009b;--fg-3:#00000072;--fg-disabled:#00000044;--border:#0000000f;--border-strong:#00000026;--tab-border:#d9d9d9;--focus:#0084e6a1;--brand:#0090ff;--brand-subtle:#008ff519;--on-brand-subtle:#0090ff;--inverted:#000000f2;--inverted-hover:#000000cc;--inverted-active:#000000b3;--on-inverted:#ffffff;--success-bg:#00a43319;--success-fg:#00713fde;--warning-bg:#ff9c0029;--warning-fg:#cc4e00;--danger-bg:#f52b0018;--danger-fg:#cd2200ea;--danger-subtle:#ff200008;--danger-border:#ff35002c;--ok-solid:#30a46c;--warn-solid:#f76b15;--err-solid:#e54d2e;--s-default:0 0 0 0.5px #0000 inset,0 0 0 0.5px #0000000f,0 1px 1px -1px #0000001a,0 1px 2px 0 #0000000d;--focus-ring:inset 0 0 0 0.5px var(--focus),0 0 0 1px var(--focus);--font-sans:'InterVariable',system-ui,-apple-system,'Segoe UI',sans-serif;--font-mono:'TX-02',ui-monospace,'SF Mono',Menlo,monospace;--ease:cubic-bezier(0.4,0,0.2,1);--ease-out:cubic-bezier(0,0,0.2,1);font-family:var(--font-sans);font-feature-settings:'ss03';font-size:15px;line-height:24px;color:var(--fg);background:var(--container)}",
+    "derivedTokens": [
+      {
+        "name": "--inverted / --on-inverted",
+        "light": "#000000f2 / #ffffff",
+        "dark": "#fffffff2 / #000000",
+        "purpose": "Primary button, struck hallmark, skip link."
+      },
+      {
+        "name": "--focus",
+        "light": "#0084e6a1 (blue-a8)",
+        "dark": "#0090ff",
+        "purpose": "Focus outline and field ring."
+      },
+      {
+        "name": "--s-default",
+        "light": "ring + 1-2px drop",
+        "dark": "inner 0.5px hairline only",
+        "purpose": "Containers and controls."
+      },
+      {
+        "name": "tooltip",
+        "light": "#222222 / #ffffffed",
+        "dark": "#222222 / #ffffffed",
+        "purpose": "Always dark."
+      }
+    ]
   },
   "components": [
     {
       "name": "Primary Button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Inverted ink; the one main action per view.",
+      "description": "Inverted fill: near-black in light, near-white in dark. The one main action per view.",
       "html": "<button class=\"ds-btn ds-btn-primary\">Donate ecash</button>",
-      "css": ".ds-btn{font-family:var(--font, 'TX-02', ui-monospace, Menlo, monospace);display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border:0;border-radius:var(--radius-control,8px);font-size:15px;cursor:pointer;white-space:nowrap;transition:background-color 150ms ease,color 150ms ease,opacity 150ms ease}.ds-btn-primary{background:var(--ink,#141413);color:var(--surface,#fff);font-weight:700}.ds-btn-primary:hover{opacity:.85}.ds-btn-primary:active{opacity:.75}.ds-btn:focus-visible{outline:2px solid var(--ink,#141413);outline-offset:2px}"
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 12px;border:0;border-radius:8px;background:var(--surface-strong);box-shadow:var(--s-default);color:var(--fg);font-family:var(--font-sans);font-feature-settings:'ss03';font-size:13px;line-height:20px;font-weight:500;cursor:pointer;transition:color 150ms var(--ease-out),background-color 150ms var(--ease-out)}.ds-btn:hover{background:var(--surface-strong-hover)}.ds-btn:focus-visible{outline:1px solid var(--focus);outline-offset:-1px}.ds-btn-primary{background:var(--inverted);box-shadow:none;color:var(--on-inverted)}.ds-btn-primary:hover{background:var(--inverted-hover)}.ds-btn-primary:active{background:var(--inverted-active)}"
     },
     {
       "name": "Secondary Button",
       "kind": "button",
-      "refersTo": "button",
-      "description": "Tray-grey default button for every other action.",
-      "html": "<button class=\"ds-btn2\">Analytics</button>",
-      "css": ".ds-btn2{font-family:var(--font, 'TX-02', ui-monospace, Menlo, monospace);display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border:0;border-radius:var(--radius-control,8px);background:var(--subtle,#e9e7e1);color:var(--ink,#141413);font-size:15px;cursor:pointer;transition:background-color 150ms ease}.ds-btn2:hover{background:color-mix(in oklab,var(--subtle,#e9e7e1),var(--ink,#141413) 8%)}.ds-btn2:focus-visible{outline:2px solid var(--ink,#141413);outline-offset:2px}"
+      "refersTo": "button-secondary",
+      "description": "Default .btn: strong surface with the hairline shadow. Retry, clear, sign in, theme toggle.",
+      "html": "<button class=\"ds-btn\">Try again</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 12px;border:0;border-radius:8px;background:var(--surface-strong);box-shadow:var(--s-default);color:var(--fg);font-family:var(--font-sans);font-feature-settings:'ss03';font-size:13px;line-height:20px;font-weight:500;cursor:pointer;transition:color 150ms var(--ease-out),background-color 150ms var(--ease-out)}.ds-btn:hover{background:var(--surface-strong-hover)}.ds-btn:focus-visible{outline:1px solid var(--focus);outline-offset:-1px}"
     },
     {
       "name": "Ghost Button",
       "kind": "button",
       "refersTo": "button-ghost",
-      "description": "Quiet muted action that gains the tray on hover.",
-      "html": "<button class=\"ds-btn-ghost\"><svg viewBox=\"0 0 16 16\" width=\"15\" height=\"15\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M13 8H3.5M7.5 4L3.5 8l4 4\"/></svg>Previous</button>",
-      "css": ".ds-btn-ghost{font-family:var(--font, 'TX-02', ui-monospace, Menlo, monospace);display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border:0;border-radius:var(--radius-control,8px);background:transparent;color:var(--muted,#5c5a55);font-size:13px;cursor:pointer;transition:background-color 150ms ease,color 150ms ease}.ds-btn-ghost:hover{background:var(--subtle,#e9e7e1);color:var(--ink,#141413)}.ds-btn-ghost:focus-visible{outline:2px solid var(--ink,#141413);outline-offset:2px}"
+      "description": "Transparent; fills grey on hover. Pagination and quiet actions.",
+      "html": "<button class=\"ds-btn ds-btn-ghost\">Next</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 12px;border:0;border-radius:8px;background:var(--surface-strong);box-shadow:var(--s-default);color:var(--fg);font-family:var(--font-sans);font-feature-settings:'ss03';font-size:13px;line-height:20px;font-weight:500;cursor:pointer;transition:color 150ms var(--ease-out),background-color 150ms var(--ease-out)}.ds-btn:hover{background:var(--surface-strong-hover)}.ds-btn:focus-visible{outline:1px solid var(--focus);outline-offset:-1px}.ds-btn-ghost{background:transparent;box-shadow:none;color:var(--fg-2)}.ds-btn-ghost:hover{background:var(--component);color:var(--fg)}"
     },
     {
       "name": "Search Field",
       "kind": "input",
       "refersTo": "input",
-      "description": "Recessed paper field inside a sheet, ink outline on focus.",
-      "html": "<label class=\"ds-search\"><svg viewBox=\"0 0 16 16\" width=\"15\" height=\"15\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" aria-hidden=\"true\"><circle cx=\"7\" cy=\"7\" r=\"4.5\"/><path d=\"M10.5 10.5L14 14\"/></svg><input placeholder=\"Find a mint…\" aria-label=\"Find a mint\"></label>",
-      "css": ".ds-search{font-family:var(--font, 'TX-02', ui-monospace, Menlo, monospace);display:flex;align-items:center;gap:10px;padding:0 14px;border-radius:var(--radius-control,8px);background:var(--bg,#f3f2ee);color:var(--faint,#68655e)}.ds-search:focus-within{outline:2px solid var(--ink,#141413)}.ds-search input{flex:1;min-width:0;padding:10px 0;border:0;background:transparent;color:var(--ink,#141413);font:inherit;font-size:15px;outline:none}.ds-search input::placeholder{color:var(--faint,#68655e)}"
+      "description": "Borderless field on the hairline shadow; focus ring stacks on it.",
+      "html": "<label class=\"ds-search\"><svg viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><circle cx=\"7\" cy=\"7\" r=\"4.5\"/><path d=\"M10.5 10.5L14 14\"/></svg><input placeholder=\"Search mints\"></label>",
+      "css": ".ds-search{position:relative;display:flex;align-items:center;height:40px;width:280px;border-radius:8px;background:var(--surface-strong);box-shadow:var(--s-default);transition:background-color 150ms var(--ease),box-shadow 150ms var(--ease)}.ds-search:hover{background:var(--surface-strong-hover)}.ds-search:focus-within{box-shadow:var(--focus-ring),var(--s-default)}.ds-search svg{position:absolute;left:12px;width:16px;height:16px;color:var(--fg-3)}.ds-search input{width:100%;height:100%;padding:0 8px 0 36px;border:0;background:transparent;color:var(--fg);font:inherit;font-size:13px;line-height:20px;outline:none}"
     },
     {
-      "name": "Navigation",
+      "name": "Segmented Nav",
       "kind": "nav",
-      "refersTo": "nav-link",
-      "description": "Flat text links; the current page sits on the tray.",
-      "html": "<nav class=\"ds-nav\"><a href=\"#\" aria-current=\"page\">Directory</a><a href=\"#\">Donate</a><a href=\"#\">Auditors</a><a href=\"#\">Analytics</a></nav>",
-      "css": ".ds-nav{font-family:var(--font, 'TX-02', ui-monospace, Menlo, monospace);display:flex;gap:4px;font-size:15px}.ds-nav a{padding:7px 12px;border-radius:var(--radius-control,8px);color:var(--muted,#5c5a55);text-decoration:none;transition:color 150ms ease,background-color 150ms ease}.ds-nav a:hover{color:var(--ink,#141413)}.ds-nav a[aria-current=page]{background:var(--subtle,#e9e7e1);color:var(--ink,#141413)}.ds-nav a:focus-visible{outline:2px solid var(--ink,#141413);outline-offset:2px}"
+      "refersTo": "nav-tab",
+      "description": "Interfere tabs: grey track, the current page a raised pill with a 1px gray edge.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-tab\" aria-current=\"page\">Mints</a><a class=\"ds-tab\">Auditors</a><a class=\"ds-tab\">Analytics</a><a class=\"ds-tab\">Donate</a></nav>",
+      "css": ".ds-nav{display:inline-flex;border-radius:6px;background:var(--component)}.ds-tab{display:inline-flex;align-items:center;height:28px;padding:0 10px;border-radius:6px;color:var(--fg-2);font-family:var(--font-sans);font-size:13px;line-height:20px;font-weight:500;cursor:pointer;transition:color 200ms ease-in-out,background-color 200ms ease-in-out}.ds-tab:hover{color:var(--fg)}.ds-tab[aria-current='page']{color:var(--fg);background:var(--surface-strong);box-shadow:inset 0 0 0 1px var(--tab-border)}"
     },
     {
-      "name": "Status and Category Chips",
+      "name": "State Badges",
       "kind": "chip",
-      "refersTo": "category-chip",
-      "description": "Dot-and-word health badge; tray chip coloured by error class.",
-      "html": "<span class=\"ds-badge ds-ok\"><i></i>Healthy</span> <span class=\"ds-badge ds-warn\"><i></i>Degraded</span> <span class=\"ds-cat ds-cat-err\">network</span> <span class=\"ds-cat ds-cat-info\">liquidity</span>",
-      "css": ".ds-badge{font-family:var(--font, 'TX-02', ui-monospace, Menlo, monospace);display:inline-flex;align-items:center;gap:7px;font-size:15px;color:var(--muted,#5c5a55)}.ds-badge i{width:7px;height:7px;border-radius:50%;background:currentColor}.ds-ok{color:var(--ok,#2b7a3d)}.ds-warn{color:var(--warn,#8a5a00)}.ds-cat{font-family:var(--font, 'TX-02', ui-monospace, Menlo, monospace);display:inline-flex;padding:2px 8px;border-radius:6px;background:var(--subtle,#e9e7e1);color:var(--muted,#5c5a55);font-size:12px}.ds-cat-err{color:var(--error,#b9330c)}.ds-cat-info{color:var(--info,#2f5f9e)}"
-    },
-    {
-      "name": "Stat Surface",
-      "kind": "card",
-      "refersTo": "card",
-      "description": "Flat sheet at 16px radius holding one figure.",
-      "html": "<div class=\"ds-kpi\"><div class=\"ds-kpi-l\">Volume audited</div><div class=\"ds-kpi-v\">7038<span>sat</span></div><div class=\"ds-kpi-s\">+7038 sat / 24h</div></div>",
-      "css": ".ds-kpi{font-family:var(--font, 'TX-02', ui-monospace, Menlo, monospace);padding:18px 20px;border-radius:var(--radius-surface,16px);background:var(--surface,#fff);font-size:15px;line-height:1.5;font-variant-numeric:tabular-nums;max-width:280px}.ds-kpi-l{color:var(--muted,#5c5a55)}.ds-kpi-v{margin-top:2px;font-size:24px;font-weight:700;letter-spacing:-.02em;color:var(--ink,#141413)}.ds-kpi-v span{margin-left:6px;font-size:15px;font-weight:400;color:var(--muted,#5c5a55)}.ds-kpi-s{font-size:13px;color:var(--faint,#68655e)}"
+      "refersTo": "badge",
+      "description": "Interfere md badges for mint state and error categories.",
+      "html": "<span class=\"ds-badge ds-ok\">Online</span> <span class=\"ds-badge ds-warn\">Degraded</span> <span class=\"ds-badge ds-err\">Offline</span> <span class=\"ds-badge ds-info\">config</span> <span class=\"ds-badge\">Unknown</span>",
+      "css": ".ds-badge{display:inline-flex;align-items:center;height:20px;padding:0 6px;border-radius:4px;background:var(--component);color:var(--fg-2);font-family:var(--font-sans);font-size:12px;line-height:16px}.ds-ok{background:var(--success-bg);color:var(--success-fg)}.ds-warn{background:var(--warning-bg);color:var(--warning-fg)}.ds-err{background:var(--danger-bg);color:var(--danger-fg)}.ds-info{background:var(--brand-subtle);color:var(--on-brand-subtle)}"
     },
     {
       "name": "Hallmarks",
       "kind": "custom",
-      "refersTo": "hallmark-struck",
-      "description": "Signature: one stamp per auditor, struck, partial, voided or no verdict, each naming its auditor on hover and focus.",
-      "html": "<span class=\"ds-hm-row\"><button class=\"ds-hm ds-struck\" data-tip=\"Auditor 3f3f…: settled 2m ago\">3f</button><button class=\"ds-hm ds-partial\" data-tip=\"Auditor a9a9…: settled after a failure 4m ago\">a9</button><button class=\"ds-hm ds-voided\" data-tip=\"This instance: failed 1m ago\">loc</button><button class=\"ds-hm\" data-tip=\"Auditor 7c7c…: no verdict\">7c</button></span>",
-      "css": ".ds-hm-row{display:inline-flex;gap:5px;padding-top:36px}.ds-hm{font-family:var(--font, 'TX-02', ui-monospace, Menlo, monospace);position:relative;display:inline-grid;place-items:center;min-width:28px;height:21px;padding:0 5px;border:0;border-radius:5px;background:transparent;font-size:11px;font-weight:700;line-height:1;color:var(--faint,#68655e);box-shadow:inset 0 0 0 1px var(--subtle,#e9e7e1);cursor:help}.ds-struck{background:var(--ink,#141413);color:var(--surface,#fff);box-shadow:none}.ds-partial{color:var(--warn,#8a5a00);box-shadow:inset 0 0 0 1.5px var(--warn,#8a5a00)}.ds-voided{color:var(--error,#b9330c);box-shadow:inset 0 0 0 1.5px var(--error,#b9330c);text-decoration:line-through}.ds-hm::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;padding:6px 10px;border-radius:6px;background:var(--ink,#141413);color:var(--surface,#fff);font-size:12px;font-weight:400;text-decoration:none;white-space:nowrap;pointer-events:none;opacity:0;transform:translateX(-50%);transition:opacity 150ms ease}.ds-hm:hover::after,.ds-hm:focus-visible::after{opacity:1}.ds-hm:focus-visible{outline:2px solid var(--ink,#141413);outline-offset:2px}"
+      "refersTo": "hallmark",
+      "description": "The signature: one TX-02 stamp per auditor. Struck, partial, voided, outline.",
+      "html": "<span class=\"ds-hallmarks\"><span class=\"ds-hm ds-struck\">A1</span><span class=\"ds-hm ds-partial\">B2</span><span class=\"ds-hm ds-voided\">C3</span><span class=\"ds-hm\">D4</span></span>",
+      "css": ".ds-hallmarks{display:inline-flex;gap:4px}.ds-hm{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:20px;padding:0 6px;border-radius:4px;box-shadow:inset 0 0 0 1px var(--border);color:var(--fg-2);font-family:var(--font-mono);font-feature-settings:'ss02';font-variant-numeric:tabular-nums;font-size:12px;line-height:16px;font-weight:700}.ds-struck{background:var(--inverted);box-shadow:none;color:var(--on-inverted)}.ds-partial{background:var(--warning-bg);box-shadow:none;color:var(--warning-fg)}.ds-voided{background:var(--danger-bg);box-shadow:none;color:var(--danger-fg);text-decoration:line-through}"
+    },
+    {
+      "name": "Directory Row",
+      "kind": "custom",
+      "refersTo": "mint-row",
+      "description": "Ledger row on the page: whole row is the link, 0.5px rules, hover tint bleeds past the column.",
+      "html": "<ul class=\"ds-list\"><li><a class=\"ds-row\"><span><b>Example Mint</b> <span class=\"ds-url\">mint.example.com</span></span><span class=\"ds-badge ds-ok\">Online</span></a></li><li><a class=\"ds-row\"><span><b>Second Mint</b> <span class=\"ds-url\">ecash.example.org</span></span><span class=\"ds-badge\">Unknown</span></a></li></ul>",
+      "css": ".ds-badge{display:inline-flex;align-items:center;height:20px;padding:0 6px;border-radius:4px;background:var(--component);color:var(--fg-2);font-family:var(--font-sans);font-size:12px;line-height:16px}.ds-ok{background:var(--success-bg);color:var(--success-fg)}.ds-list{margin:0;padding:0 12px;list-style:none;width:520px}.ds-list li{border-top:0.5px solid var(--border)}.ds-list li:last-child{border-bottom:0.5px solid var(--border)}.ds-row{display:flex;justify-content:space-between;align-items:center;gap:24px;margin-inline:-12px;padding:10px 12px;border-radius:8px;color:var(--fg);cursor:pointer;transition:background-color 150ms var(--ease)}.ds-row:hover{background:var(--component)}.ds-row b{font-weight:500}.ds-url{margin-left:12px;color:var(--fg-2);font-family:var(--font-mono);font-feature-settings:'ss02';font-size:13px;line-height:20px}"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Interfere card: 12px radius on the hairline shadow, no border.",
+      "html": "<div class=\"ds-card\"><h3>Uptime</h3><div class=\"ds-fig\">99.8%</div><p>Last 30 days</p></div>",
+      "css": ".ds-card{width:280px;padding:16px;border-radius:12px;background:var(--surface);box-shadow:var(--s-default)}.ds-card h3{margin:0;font-size:15px;line-height:24px;font-weight:600;letter-spacing:-0.01em}.ds-fig{font-family:var(--font-mono);font-feature-settings:'ss02';font-size:24px;line-height:32px;font-weight:700}.ds-card p{margin:0;color:var(--fg-2);font-size:13px;line-height:20px}"
+    },
+    {
+      "name": "Tooltip",
+      "kind": "custom",
+      "refersTo": "tooltip",
+      "description": "Always dark in both themes; explains a hallmark verdict.",
+      "html": "<span class=\"ds-tip\">Settled 3 min ago, no failures in 24 h</span>",
+      "css": ".ds-tip{display:inline-block;max-width:280px;padding:6px 10px;border-radius:8px;background:#222222;box-shadow:0 0 0 0.5px #ffffff12 inset;color:#ffffffed;font-family:var(--font-sans);font-feature-settings:'ss03';font-size:12px;line-height:16px;font-weight:500}"
     }
   ],
   "narrative": {
     "northStar": "The Assay Register",
-    "overview": "A flat, quiet ledger in one monospaced voice. Every surface is a tonal sheet laid on a warm paper ground; nothing glows, floats or gradates. The page reads like a register an assay office keeps: names, figures and outcomes in rows, and beside each mint a short line of hallmarks, one stamp struck by each independent auditor. The stamps are the only ornament, and they carry evidence.\n\nThe system ships in light and dark with the same structure and equal standing; the theme follows the visitor's setting before first paint and a footer toggle overrides it. Density is calm-operational: 15px base text, 16px gutters, generous card padding (20px 24px), tables with hairline row rules. Colour is withheld from chrome entirely; ink, three greys and tonal steps do all the hierarchy work, and hue appears only where the system is reporting health.\n\nThe world refuses the crypto-dashboard default: glowing dark panels, gradient KPIs, glass, and a single merged score.",
+    "overview": "A flat, quiet register built on the Interfere design system (design.interfere.com). Interfere supplies the material: Radix colour scales with hue-free neutrals, Inter for the interface, a mono for figures, and hairline shadow rings in place of borders. The product supplies the one thing that is its own: the hallmark, one small stamp per independent auditor on every mint, read left to right like marks on a bar of metal.\n\nSurfaces are a light grey shell with white containers in light mode, and black with a near-black container in dark mode. Depth comes from 0.5px rings and grey alpha fills, never from colour or blur. Hue is spent on state: green, orange and tomato for health, and Interfere blue (#0090ff) only for focus, info badges and one chart series. Everything else is grey and ink. The UI is deliberately restrained; gradient and glass styling is rejected outright.\n\nThe visual system is adapted from Interfere. Earlier layout inspiration came from Umbrel; no Umbrel code is used (Umbrel is PolyForm Noncommercial).",
     "keyCharacteristics": [
-      "One typeface (TX-02) for every role, tabular figures throughout.",
-      "Warm neutral ramps, mirrored for light and dark.",
-      "Tonal layering instead of borders or shadows: page, sheet, tray.",
-      "Inverted-ink primary action; everything else is tray-grey or ghost.",
-      "Colour only for health: ok, warn, error, plus info for neutral error categories.",
-      "Per-auditor hallmark stamps as the signature."
+      "Inter Variable with 'ss03' for all interface text; TX-02 with 'ss02' only for figures, URLs, codes and stamps.",
+      "Hue-free grey neutrals expressed as alpha steps (gray-a3 to gray-a12), so they sit on any surface.",
+      "One brand hue (#0090ff), used sparingly.",
+      "Hairline \"shadow-default\" rings instead of borders; 0.5px rules between rows.",
+      "Primary actions are inverted: near-black in light, near-white in dark.",
+      "The hallmark row is the signature: Interfere md badges in four verdict states.",
+      "Light and dark themes are first-class, toggled from the footer and set before first paint."
     ],
     "rules": [
       {
-        "name": "The Health-Only Rule",
-        "body": "Hue appears only when the system reports a health state or an error category. Navigation, buttons, headings and surfaces stay ink and grey.",
+        "name": "The Grey Is Hue-Free Rule",
+        "body": "Neutrals are pure greys as alpha steps. No warm or cool tint, no cream, no tinted paper.",
         "section": "colors"
       },
       {
-        "name": "The Tint, Not Fill Rule",
-        "body": "Health-tinted surfaces (incident panel, error callout, donation acknowledgement) are the signal colour mixed 10 to 12% into the sheet, never a saturated block.",
+        "name": "The State-Only Hue Rule",
+        "body": "Green, orange and tomato appear only when the system reports a health state, a verdict or an error category. Navigation, headings and surfaces stay grey.",
         "section": "colors"
       },
       {
-        "name": "The Paper QR Rule",
-        "body": "The donation QR always sits on a pure white frame (#ffffff, 12px radius, 14px padding) in both themes so scanners read it.",
+        "name": "The Sparing Blue Rule",
+        "body": "#0090ff is for focus, selection, info badges and one chart series. It is never a button fill, a heading colour or a surface.",
         "section": "colors"
       },
       {
-        "name": "The One Voice Rule",
-        "body": "TX-02 sets every string, headings included. Tabular numerals are on globally so figures align in columns and while values refresh.",
+        "name": "The Inverted Primary Rule",
+        "body": "The main action is the inverse of the page: near-black in light mode, near-white in dark mode. It is not blue.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Voices Rule",
+        "body": "Inter for words, TX-02 for values. Never set prose, headings or buttons in TX-02, and never set a figure, URL or code in Inter.",
         "section": "typography"
       },
       {
-        "name": "The Sentence Case Rule",
-        "body": "No uppercase labels and no wide tracking; letter-spacing only tightens (-0.01em to -0.02em) on bold sizes.",
+        "name": "The Plain Zero Rule",
+        "body": "Every TX-02 run carries 'ss02' and tabular numerals, so 0 never reads as a dotted or slashed glyph and columns align.",
         "section": "typography"
       },
       {
-        "name": "The Tonal Stack Rule",
-        "body": "Ground, sheet, tray, recess. A new layer is a new tone from this stack, never a shadow or an outline.",
+        "name": "The Hairline Not Border Rule",
+        "body": "Containers get a 0.5px ring from shadow-default, not a CSS border. Real borders exist only as 0.5px row rules.",
         "section": "elevation"
       },
       {
-        "name": "The Inset Ring Exception",
-        "body": "The only box-shadow in the system is the 1 to 1.5px inset ring that outlines an idle, partial or voided hallmark. It draws the stamp's edge; it is not elevation and must not spread to other components.",
+        "name": "The No Glass Rule",
+        "body": "No gradients, no backdrop blur, no translucent glass panels, no glow.",
         "section": "elevation"
       }
     ],
     "dos": [
-      "Do set every string in TX-02 with tabular numerals.",
-      "Do build depth from the tonal stack: paper ground, sheet at 16px radius, tray controls at 8px, recessed paper inputs.",
-      "Do reserve the inverted-ink fill for the one primary action and the struck hallmark.",
-      "Do use hue only for health states and error categories, and tint health surfaces at 10 to 12% into the sheet.",
-      "Do ship every change in both light and dark, using the token pairs.",
-      "Do show each auditor's own stamp; add a stamp key wherever auditors are listed.",
-      "Do keep motion to 150ms colour and opacity transitions, and none under reduced motion."
+      "Do set interface text in InterVariable with 'ss03', and figures, URLs, codes and stamps in TX-02 with 'ss02' and tabular numerals.",
+      "Do use the alpha grey tokens (`--fg`, `--fg-2`, `--fg-3`, `--component`, `--border`) so surfaces work in both themes.",
+      "Do separate containers with shadow-default and rows with 0.5px `--border` rules.",
+      "Do make the primary action inverted (`--inverted` / `--on-inverted`).",
+      "Do keep status colour tied to a real state: success, warning (Radix orange), danger (tomato).",
+      "Do draw every auditor verdict as a hallmark in one of its four states.",
+      "Do keep the header, pages and footer on the shared 960px column."
     ],
     "donts": [
-      "Don't add drop shadows, gradients, glass or blur to any surface; the hallmark's inset ring is the only shadow in the system.",
-      "Don't outline cards or controls with borders; hairline rules belong only between rows inside a surface.",
-      "Don't colour navigation, headings, buttons or surfaces with a brand hue.",
-      "Don't merge auditor stamps into one score or badge.",
-      "Don't introduce a second typeface, uppercase labels or wide letter-spacing."
+      "Don't use gradients, glass, backdrop blur or glow; the user regards them as AI slop.",
+      "Don't tint the neutrals warm or cool, or reintroduce cream fills or amber status.",
+      "Don't use #0090ff as a button fill, heading colour or decoration.",
+      "Don't add CSS borders to cards or fields; use the hairline shadow.",
+      "Don't set prose, headings or buttons in TX-02.",
+      "Don't lift elements with large drop shadows; shadow-large is for overlays only."
     ]
   }
 }
