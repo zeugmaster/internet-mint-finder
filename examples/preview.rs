@@ -58,7 +58,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         mint.n_mints = 90 + i as u64 * 23;
         mint.n_melts = 85 + i as u64 * 19;
         mint.n_errors = if i == 4 { 12 } else { i as u64 };
-        mint.info = Some(serde_json::json!({"version": "Preview/1.0", "description": "Synthetic mint for interface development. No real funds.", "nuts": {"4": {}, "5": {}, "7": {}, "18": {}}}).to_string());
+        let mut info = serde_json::json!({"version": "Preview/1.0", "description": "Synthetic mint for interface development. No real funds.", "nuts": {"4": {}, "5": {}, "7": {}, "18": {}}});
+        // One real icon, one that fails to load (the initial shows), the rest none.
+        match i {
+            0 => info["icon_url"] = "https://northstar.example/icon.png".into(),
+            1 => info["icon_url"] = "https://github.com/cashubtc.png".into(),
+            _ => {}
+        }
+        mint.info = Some(info.to_string());
         db.upsert_mint(&mint).await?;
         wallets
             .create_wallet(url.parse()?, CurrencyUnit::Sat, None)

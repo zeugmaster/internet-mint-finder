@@ -998,44 +998,159 @@ button.hallmark {
     border-bottom: 0.5px solid var(--border);
 }
 
-/* The whole row is the link. Its hover tint bleeds 12px past the column so
-   the text itself stays on the shared edge. */
+/* A mint row: avatar, name over a copyable URL, status. The name's link is
+   stretched over the row so the whole row opens the mint; the URL button sits
+   above that link. The hover tint bleeds 12px past the column so the avatar
+   stays on the shared edge. */
 .mint-row {
+    position: relative;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
-    gap: 4px 24px;
+    gap: 0 12px;
     margin-inline: -12px;
     padding: 10px 12px;
     border-radius: 8px;
     transition: background-color 150ms var(--ease);
 }
 
-a.mint-row:hover {
+.mint-row:not(.is-skeleton):hover {
     background: var(--component);
+}
+
+.mint-link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 8px;
+}
+
+/* The row tint is the hover cue; no underline on the name. */
+.mint-row a.mint-link:hover {
+    text-decoration: none;
+}
+
+.mint-link:focus-visible {
+    outline: none;
+}
+
+.mint-link:focus-visible::after {
+    box-shadow: var(--focus-ring);
 }
 
 .mint-id {
     min-width: 0;
     display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    column-gap: 12px;
+    flex-direction: column;
+    align-items: flex-start;
 }
 
 .mint-row .mint-name {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     font-weight: 500;
 }
 
-.mint-row .mint-url {
-    margin: 0;
+.mint-row .badge {
+    justify-self: end;
+}
+
+/* The URL as a quiet button: mono text and a copy icon, raised above the
+   row link. Negative margins keep its text on the name's edge. */
+.copy-url {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: calc(100% + 12px);
+    height: 24px;
+    margin: 0 -6px;
+    padding: 0 6px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--fg-2);
+    font-family: var(--font-mono);
+    font-feature-settings: 'ss02';
+    font-size: 13px;
+    line-height: 20px;
+    cursor: pointer;
+    transition: color 150ms var(--ease), background-color 150ms var(--ease);
+}
+
+.copy-url:hover {
+    background: var(--component-hover);
+    color: var(--fg);
+}
+
+.copy-url:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+}
+
+.copy-url-text {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.mint-row .badge {
-    justify-self: end;
+.copy-url .icon {
+    width: 14px;
+    height: 14px;
+    color: var(--fg-3);
+}
+
+.copy-url:hover .icon {
+    color: var(--fg-2);
+}
+
+.copy-url.is-copied .icon {
+    color: var(--success-fg);
+}
+
+/* Mint avatar: the mint's own icon over its initial on a grey disc. The
+   image gets an opaque ground so a transparent logo hides the letter. */
+.mint-avatar {
+    position: relative;
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--component);
+    color: var(--fg-2);
+    font-size: 14px;
+    line-height: 1;
+    font-weight: 600;
+    user-select: none;
+}
+
+.mint-avatar img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    background: var(--container);
+}
+
+.mint-avatar::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 0.5px var(--border-strong);
+    pointer-events: none;
+}
+
+.mint-avatar.skeleton::after {
+    content: none;
 }
 
 .pagination {

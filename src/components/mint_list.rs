@@ -1,6 +1,7 @@
 use crate::api::search_mints;
 use crate::components::badge::StateBadge;
-use crate::components::icons::{ArrowLeft, ArrowRight};
+use crate::components::icons::{ArrowLeft, ArrowRight, Check, Copy};
+use crate::components::mint_avatar::MintAvatar;
 use crate::format::{relative_time, short_url};
 use crate::hooks::use_poll;
 use crate::types::{MintPage, MintRead, MintState};
@@ -200,39 +201,99 @@ pub fn MintList() -> impl IntoView {
     }
 }
 
-/// One mint: the whole row is the link, so it is one tab stop whose name
-/// carries the status ("Northstar northstar.example Healthy").
+/// One mint: avatar, name over its URL, status. The name's link is stretched
+/// over the row, so the row opens the mint; the URL sits above that link as a
+/// button, because copying it is what most visitors come for.
 #[component]
 fn MintRow(mint: MintRead) -> impl IntoView {
     let href = format!("/mints/{}", mint.id);
-    let url_short = short_url(&mint.url);
-    let has_name = !mint.name.trim().is_empty();
-    let name = if has_name {
-        mint.name.clone()
+    let name = if mint.name.trim().is_empty() {
+        short_url(&mint.url)
     } else {
-        url_short.clone()
+        mint.name.clone()
     };
     view! {
-        <a class="mint-row" href=href title=mint.url.clone()>
+        <div class="mint-row">
+            <MintAvatar name=name.clone() info=mint.info.clone()/>
             <span class="mint-id">
-                <span class="mint-name">{name}</span>
-                {has_name.then(|| view! { <span class="mint-url">{url_short}</span> })}
+                <a class="mint-name mint-link" href=href>{name}</a>
+                <CopyUrl url=mint.url.clone()/>
             </span>
             <StateBadge state=mint.state/>
-        </a>
+        </div>
     }
 }
 
-/// Loading rows shaped like the real ones: a name and a status.
+/// The mint's address: shows the short form, copies the full URL, and turns
+/// to a check for a moment once it is on the clipboard.
+#[component]
+fn CopyUrl(url: String) -> impl IntoView {
+    // None: idle. Some(true): copied. Some(false): the browser refused.
+    let copied = RwSignal::new(None::<bool>);
+    let title = format!("Copy {url}");
+    let short = short_url(&url);
+    let on_click = move |_| {
+        #[cfg(feature = "hydrate")]
+        {
+            let url = url.clone();
+            leptos::task::spawn_local(async move {
+                let result = wasm_bindgen_futures::JsFuture::from(
+                    window().navigator().clipboard().write_text(&url),
+                )
+                .await;
+                copied.try_set(Some(result.is_ok()));
+                set_timeout(
+                    move || {
+                        copied.try_set(None);
+                    },
+                    std::time::Duration::from_millis(1600),
+                );
+            });
+        }
+        #[cfg(not(feature = "hydrate"))]
+        let _ = &url;
+    };
+    view! {
+        <button
+            type="button"
+            class="copy-url"
+            class:is-copied=move || copied.get() == Some(true)
+            title=title
+            on:click=on_click
+        >
+            <span class="sr-only">"Copy "</span>
+            <span class="copy-url-text">{short}</span>
+            {move || if copied.get() == Some(true) {
+                view! { <Check/> }.into_any()
+            } else {
+                view! { <Copy/> }.into_any()
+            }}
+        </button>
+        <span class="sr-only" role="status">
+            {move || match copied.get() {
+                Some(true) => "Copied",
+                Some(false) => "Couldn't copy. The full URL is in the button's tooltip.",
+                None => "",
+            }}
+        </span>
+    }
+}
+
+/// Loading rows shaped like the real ones: an avatar, a name over a URL, and
+/// a status.
 #[component]
 fn DirectorySkeleton() -> impl IntoView {
     view! {
         <div class="directory-meta"><span class="skeleton" style="width: 72px; height: 12px;"></span></div>
         <ul class="mint-list" role="status" aria-label="Loading mints">
             {[46, 32, 40, 28, 36, 44].into_iter().map(|w| view! {
-                <li><div class="mint-row">
-                    <span class="skeleton" style=format!("width: {w}%; height: 14px;")></span>
-                    <span class="skeleton" style="width: 84px; height: 14px;"></span>
+                <li><div class="mint-row is-skeleton">
+                    <span class="skeleton mint-avatar"></span>
+                    <span class="mint-id">
+                        <span class="skeleton" style=format!("width: {w}%; height: 14px;")></span>
+                        <span class="skeleton" style=format!("width: {}%; height: 12px; margin-top: 6px;", w / 2 + 12)></span>
+                    </span>
+                    <span class="skeleton" style="width: 72px; height: 20px;"></span>
                 </div></li>
             }).collect_view()}
         </ul>
