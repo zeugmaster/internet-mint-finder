@@ -6,7 +6,7 @@ use crate::components::auditor_table::AuditorTable;
 use crate::components::badge::{CategoryPill, StateBadge};
 use crate::components::hallmarks::Hallmarks;
 use crate::components::icons::ArrowLeft;
-use crate::components::reviews::{AnnouncementCard, ReviewsPanel};
+use crate::components::reviews::{AnnouncementCard, MeasuredSummary, RatingSummary, ReviewList};
 use crate::components::swap_list::SwapItem;
 use crate::format::{absolute_time, format_ms, format_sats, relative_time, short_url};
 use crate::hooks::use_poll;
@@ -66,9 +66,11 @@ pub fn MintDetailPage() -> impl IntoView {
         |(id, _)| async move { get_mint_announcement(id).await },
     );
 
+    // Loaded once per page, not on the poll: a refresh would rebuild the
+    // review form and drop what someone is typing.
     let reviews = Resource::new(
-        move || (mint_id.get(), tick.get()),
-        |(id, _)| async move { get_mint_reviews(id).await },
+        move || mint_id.get(),
+        |id| async move { get_mint_reviews(id).await },
     );
 
     view! {
@@ -110,6 +112,36 @@ pub fn MintDetailPage() -> impl IntoView {
                         })
                 }}
             </Transition>
+
+            <section class="mt-6" aria-labelledby="reviews-title">
+                <h2 class="section-title" id="reviews-title">"Reviews"</h2>
+                <div class="reviews">
+                    <div class="reviews-summary">
+                        <Transition fallback=move || view! { <div class="skeleton" style="height: 120px;"></div> }>
+                            {move || reviews.get().map(|res| {
+                                let list = res.map(|d| d.reviews).unwrap_or_default();
+                                view! { <RatingSummary reviews=list/> }
+                            })}
+                        </Transition>
+                        <Transition fallback=|| ()>
+                            {move || {
+                                let mint_data = mint.get().and_then(|r| r.ok()).flatten();
+                                let metrics_data = metrics.get().and_then(|r| r.ok());
+                                let uptime_data = uptime.get().and_then(|r| r.ok());
+                                view! { <MeasuredSummary mint=mint_data metrics=metrics_data uptime=uptime_data/> }
+                            }}
+                        </Transition>
+                    </div>
+                    <div class="reviews-main">
+                        <Transition fallback=move || view! { <div class="skeleton skeleton-row"></div> }>
+                            {move || reviews.get().map(|res| match res {
+                                Ok(data) => view! { <ReviewList data/> }.into_any(),
+                                Err(e) => view! { <div class="empty-state">{format!("Failed to load reviews: {e}")}</div> }.into_any(),
+                            })}
+                        </Transition>
+                    </div>
+                </div>
+            </section>
 
             <div class="grid-main mt-6">
                 <section>
@@ -175,14 +207,6 @@ pub fn MintDetailPage() -> impl IntoView {
                             Err(e) => view! { <div class="empty-state">{format!("Failed to load announcement: {e}")}</div> }.into_any(),
                         })}
                     </Transition>
-                    <div class="mt-4">
-                        <Transition fallback=move || view! { <div class="skeleton skeleton-row"></div> }>
-                            {move || reviews.get().map(|res| match res {
-                                Ok(data) => view! { <ReviewsPanel data/> }.into_any(),
-                                Err(e) => view! { <div class="empty-state">{format!("Failed to load reviews: {e}")}</div> }.into_any(),
-                            })}
-                        </Transition>
-                    </div>
                     <h2 class="section-title mt-6">"Recent donations"</h2>
                     <div class="card card-pad">
                         <Transition fallback=move || {

@@ -66,3 +66,22 @@ pub fn Check() -> impl IntoView {
         </svg>
     }
 }
+
+#[component]
+pub fn Star() -> impl IntoView {
+    view! {
+        <svg class="icon star" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+            <path d="M8 1.25l2.06 4.18 4.61.67-3.34 3.25.79 4.59L8 11.77l-4.12 2.17.79-4.59L1.33 6.1l4.61-.67z"/>
+        </svg>
+    }
+}
+
+#[component]
+pub fn User() -> impl IntoView {
+    view! {
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="8" cy="5.5" r="2.75"/>
+            <path d="M2.75 14a5.25 5.25 0 0 1 10.5 0"/>
+        </svg>
+    }
+}

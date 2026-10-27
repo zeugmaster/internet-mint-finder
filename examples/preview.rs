@@ -15,7 +15,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         cache::ResponseCache,
         http::api_router,
         state::AppState,
-        storage::{Auditor, AuditorDatabase, SwapEvent},
+        storage::{Auditor, AuditorDatabase, Review, SwapEvent},
     };
     use cdk_cashu_auditor::types::MintState;
     use chrono::{Duration, Utc};
@@ -80,6 +80,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             db.run(move |conn| { conn.execute("INSERT INTO mint_checks(mint_id, mint_url, state, created_at) VALUES (?1, ?2, ?3, ?4)", rusqlite::params![id, url, state, at])?; Ok(()) }).await?;
         }
         mints.push(mint);
+    }
+    // Reviews: six for Northstar (five rated, one not), one for Copper, none
+    // elsewhere, so the summary, "Show all" and the empty state all show.
+    let samples: [(usize, Option<u8>, &str, i64); 7] = [
+        (0, Some(5), "Been using it with my wallet for months. Mints and melts go through in a couple of seconds, and it has never lost a payment.", 2),
+        (0, Some(4), "Reliable. Lightning withdrawals sometimes take a while to find a route, but they always land.", 6),
+        (0, Some(5), "Fees are fair and the operator answered my question on Nostr within the hour.", 11),
+        (0, Some(3), "Works, but it was down for an afternoon last week without any notice.", 19),
+        (0, Some(5), "My go-to mint for zaps.", 33),
+        (0, None, "Haven't moved much through it yet. So far so good.", 40),
+        (1, Some(4), "Small mint, quick swaps. Would like to see it announced on Nostr.", 4),
+    ];
+    for (k, (mint, rating, text, days)) in samples.into_iter().enumerate() {
+        db.upsert_review(&Review {
+            pubkey: nostr_sdk::prelude::Keys::generate().public_key().to_hex(),
+            d: format!("preview-{mint}"),
+            event_id: format!("{k:064x}"),
+            mint_url: Some(mints[mint].url.clone()),
+            rating,
+            content: text.into(),
+            created_at: Utc::now() - Duration::days(days),
+        })
+        .await?;
     }
     for i in 0..100 {
         let from = &mints[i % 7];

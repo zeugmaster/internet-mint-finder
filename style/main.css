@@ -556,6 +556,311 @@ button.text-link {
 }
 
 /* ---------------------------------------------------------------------------
+   Reviews: the overall rating and the audit figures on the left; the
+   write-a-review card and the reviews on the right. Monochrome stars: hue is
+   for state only.
+--------------------------------------------------------------------------- */
+
+.reviews {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    gap: 32px 56px;
+    align-items: start;
+}
+
+.reviews-label {
+    font-size: 13px;
+    line-height: 20px;
+    font-weight: 500;
+    letter-spacing: 0;
+}
+
+.measured-head {
+    margin-top: 32px;
+}
+
+.rating-big {
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+    margin-top: 8px;
+}
+
+/* Inter, not the mono: at this size a mono period leaves a gap ("4 . 4"). */
+.rating-value {
+    font-size: 48px;
+    line-height: 56px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+}
+
+.rating-scale {
+    color: var(--fg-2);
+    font-size: 20px;
+    line-height: 28px;
+}
+
+.rating-none {
+    margin: 12px 0 8px;
+    font-size: 20px;
+    line-height: 28px;
+    font-weight: 600;
+}
+
+.rating-count {
+    margin-top: 6px;
+    color: var(--fg-2);
+    font-size: 13px;
+    line-height: 20px;
+}
+
+/* A grey row of stars with an ink row clipped to the rating on top. */
+.stars {
+    --star: 14px;
+    --star-gap: 2px;
+    position: relative;
+    display: inline-flex;
+    vertical-align: middle;
+}
+
+.stars-lg {
+    --star: 24px;
+    --star-gap: 4px;
+    margin-top: 4px;
+}
+
+.stars-track,
+.stars-fill {
+    display: flex;
+    gap: var(--star-gap);
+}
+
+.stars-track {
+    color: var(--border-strong);
+}
+
+.stars-fill {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: calc(var(--full) * (var(--star) + var(--star-gap)) + var(--frac) * var(--star));
+    overflow: hidden;
+    color: var(--fg);
+}
+
+.stars .icon {
+    flex: none;
+    width: var(--star);
+    height: var(--star);
+}
+
+/* Audit figures: label and value on one line, the bar full width below. */
+.measured {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 0 16px;
+    margin: 12px 0 0;
+}
+
+.measured dt {
+    font-size: 13px;
+    line-height: 20px;
+}
+
+.measured dd {
+    margin: 0;
+}
+
+.measured .measured-bar {
+    grid-column: 1 / -1;
+    margin: 6px 0 14px;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--component);
+    overflow: hidden;
+}
+
+.measured-bar > span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--fg);
+}
+
+.measured-value {
+    text-align: right;
+    font-family: var(--font-mono);
+    font-feature-settings: 'ss02';
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+    line-height: 20px;
+}
+
+.measured-caption {
+    margin-top: 2px;
+    color: var(--fg-2);
+    font-size: 12px;
+    line-height: 16px;
+}
+
+.reviews-main {
+    min-width: 0;
+}
+
+.review-compose > summary,
+.reviews-more > summary {
+    list-style: none;
+    cursor: pointer;
+}
+
+.review-compose > summary::-webkit-details-marker,
+.reviews-more > summary::-webkit-details-marker {
+    display: none;
+}
+
+.review-compose > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 24px;
+}
+
+.review-compose > summary:focus-visible {
+    outline: none;
+}
+
+.review-compose > summary:focus-visible .btn {
+    box-shadow: var(--focus-ring);
+}
+
+.review-compose-title {
+    display: block;
+    font-weight: 600;
+}
+
+.review-compose-hint {
+    display: block;
+    max-width: 56ch;
+    margin-top: 2px;
+    color: var(--fg-2);
+    font-size: 13px;
+    line-height: 20px;
+}
+
+.review-compose:not([open]) .when-open,
+.review-compose[open] .when-closed {
+    display: none;
+}
+
+/* Open, the button becomes a secondary "Close". */
+.review-compose[open] > summary .btn {
+    background: var(--surface-strong);
+    box-shadow: var(--s-default);
+    color: var(--fg);
+}
+
+.review-compose-body {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 0.5px solid var(--border);
+}
+
+.review-compose-body .field + .btn {
+    margin-top: 16px;
+}
+
+.review-list {
+    margin: 8px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.review {
+    padding: 20px 0;
+}
+
+.review + .review,
+.reviews-more .review:first-child {
+    border-top: 0.5px solid var(--border);
+}
+
+.review-rating {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-feature-settings: 'ss02';
+    font-size: 13px;
+    line-height: 20px;
+}
+
+.review-author {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.review-avatar {
+    width: 32px;
+    height: 32px;
+}
+
+.review-who {
+    display: block;
+    font-family: var(--font-mono);
+    font-feature-settings: 'ss02';
+    font-size: 13px;
+    line-height: 20px;
+}
+
+.review-date {
+    display: block;
+    color: var(--fg-2);
+    font-size: 13px;
+    line-height: 20px;
+}
+
+.review-text {
+    max-width: 75ch;
+    margin-top: 12px;
+    overflow-wrap: anywhere;
+}
+
+.reviews-empty {
+    margin-top: 20px;
+    color: var(--fg-2);
+}
+
+.reviews-more {
+    margin-top: 8px;
+}
+
+.reviews-more[open] > summary {
+    display: none;
+}
+
+.reviews-more .review-list {
+    margin-top: 0;
+}
+
+@media (max-width: 860px) {
+    .reviews {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .review-compose > summary {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+/* ---------------------------------------------------------------------------
    Buttons: Interfere primary (inverted), secondary, transparent
 --------------------------------------------------------------------------- */
 
