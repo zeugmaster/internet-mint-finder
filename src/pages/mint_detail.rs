@@ -1,13 +1,13 @@
 use crate::api::{
-    get_mint_announcement, get_mint_by_id, get_mint_metrics, get_mint_reviews, get_mint_uptime,
+    get_mint_by_id, get_mint_metrics, get_mint_reviews, get_mint_uptime,
 };
 use crate::components::badge::{CategoryPill, StateBadge};
 use crate::components::mint_avatar::MintAvatar;
 use crate::components::mint_list::CopyUrl;
 use crate::components::reviews::{RatingSummary, ReviewList};
-use crate::format::{absolute_time, relative_time, short_pubkey, short_url};
+use crate::format::{absolute_time, relative_time, short_url};
 use crate::hooks::use_poll;
-use crate::types::{AnnouncementRead, MintMetrics, MintRead, MintState, MintUptime};
+use crate::types::{MintMetrics, MintRead, MintState, MintUptime};
 use chrono::{DateTime, Utc};
 use leptos::prelude::*;
 use leptos_meta::Title;
@@ -52,11 +52,6 @@ pub fn MintDetailPage() -> impl IntoView {
     let uptime = Resource::new(
         move || (mint_id.get(), tick.get()),
         |(id, _)| async move { get_mint_uptime(id).await },
-    );
-
-    let announcement = Resource::new(
-        move || (mint_id.get(), tick.get()),
-        |(id, _)| async move { get_mint_announcement(id).await },
     );
 
     // Loaded once per page, not on the poll: a refresh would rebuild the
@@ -132,9 +127,6 @@ pub fn MintDetailPage() -> impl IntoView {
                         <dl class="kv-ledger">
                             <Transition fallback=|| ()>
                                 {move || mint.get().and_then(|r| r.ok()).flatten().map(|mint| view! { <AboutRows mint/> })}
-                            </Transition>
-                            <Transition fallback=|| ()>
-                                {move || announcement.get().map(|res| view! { <AnnouncementRow result=res.map_err(|e| e.to_string())/> })}
                             </Transition>
                         </dl>
                     </section>
@@ -258,25 +250,6 @@ fn AboutRows(mint: MintRead) -> impl IntoView {
         <dt>"Info updated"</dt>
         <dd class="mono">{absolute_time(mint.updated_at)}</dd>
     }
-}
-
-/// Whether the mint is listed on Nostr: a NIP-87 announcement (kind 38172)
-/// that wallets read to find mints, and whether the mint's own key signed it.
-#[component]
-fn AnnouncementRow(result: Result<Option<AnnouncementRead>, String>) -> impl IntoView {
-    let value = match result {
-        Err(_) => "Couldn't check right now".to_string(),
-        Ok(None) => "No announcement found".to_string(),
-        Ok(Some(a)) => {
-            let who = match a.verified {
-                Some(true) => "Yes, by the mint itself".to_string(),
-                Some(false) => format!("Yes, by someone other than the mint ({})", short_pubkey(&a.npub)),
-                None => "Yes, not yet checked against the mint's key".to_string(),
-            };
-            format!("{who}, updated {}", relative_time(a.created_at))
-        }
-    };
-    view! { <dt>"Listed on Nostr"</dt><dd>{value}</dd> }
 }
 
 /// The 24-hour strip of hourly results, its figure, and one line on what it
