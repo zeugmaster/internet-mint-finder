@@ -21,12 +21,13 @@ pub async fn check_connection() -> Result<(), ServerFnError> {
 pub async fn search_mints(
     search: String,
     state_filter: Option<crate::types::MintState>,
+    sort: crate::types::MintSort,
     page: u64,
 ) -> Result<crate::types::MintPage, ServerFnError> {
     let state = app_state()?;
     let (mints, total) = state
         .auditor_db
-        .search_mints(search, state_filter, page)
+        .search_mints(search, state_filter, sort, page)
         .await?;
     let mut reads = Vec::with_capacity(mints.len());
     for mint in mints {

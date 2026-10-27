@@ -1,10 +1,10 @@
 use crate::api::search_mints;
 use crate::components::badge::StateBadge;
-use crate::components::icons::{Check, Copy};
+use crate::components::icons::{Check, Copy, Star};
 use crate::components::mint_avatar::MintAvatar;
 use crate::format::{relative_time, short_url};
 use crate::hooks::use_poll;
-use crate::types::{MintPage, MintRead, MintState};
+use crate::types::{MintPage, MintRead, MintSort, MintState};
 use chrono::{DateTime, Utc};
 use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_query_map};
@@ -12,9 +12,18 @@ use leptos_router::NavigateOptions;
 
 const PAGE_SIZE: u64 = 20;
 
-/// The directory: one row per mint with its plain status. Search, status and
-/// page live in the URL (`?q=&status=&page=`) so Back and shared links keep
-/// the view.
+/// Status tabs in order: All, then each health state.
+const STATUS_TABS: [(Option<MintState>, &str); 5] = [
+    (None, "All"),
+    (Some(MintState::Ok), "Healthy"),
+    (Some(MintState::Warn), "Degraded"),
+    (Some(MintState::Error), "Failing"),
+    (Some(MintState::Unknown), "Unchecked"),
+];
+
+/// The directory: one row per mint with its rating and plain status. Search,
+/// status, sort and page live in the URL (`?q=&status=&sort=&page=`) so Back
+/// and shared links keep the view.
 #[component]
 pub fn MintList() -> impl IntoView {
     let tick = use_poll(15);
@@ -27,6 +36,13 @@ pub fn MintList() -> impl IntoView {
             .get()
             .get("status")
             .and_then(|slug| status_from_slug(&slug))
+    });
+    let sort = Memo::new(move |_| {
+        query
+            .get()
+            .get("sort")
+            .map(|slug| sort_from_slug(&slug))
+            .unwrap_or_default()
     });
     let page = Memo::new(move |_| {
         query
@@ -49,7 +65,7 @@ pub fn MintList() -> impl IntoView {
             let navigate = navigate.clone();
             if let Ok(handle) = set_timeout_with_handle(
                 move || {
-                    let url = view_url(&value, state_filter.get_untracked(), 0);
+                    let url = view_url(&value, state_filter.get_untracked(), sort.get_untracked(), 0);
                     navigate(&url, quiet());
                 },
                 std::time::Duration::from_millis(250),
@@ -65,10 +81,11 @@ pub fn MintList() -> impl IntoView {
                 tick.get(),
                 applied_search.get(),
                 state_filter.get(),
+                sort.get(),
                 page.get(),
             )
         },
-        |(_, search, state, page)| async move { search_mints(search, state, page).await },
+        |(_, search, state, sort, page)| async move { search_mints(search, state, sort, page).await },
     );
 
     // A failed background refresh keeps the last good list on screen.
@@ -92,16 +109,37 @@ pub fn MintList() -> impl IntoView {
         }
     };
 
-    let on_status = {
+    let on_sort = {
         let navigate = navigate.clone();
         move |ev| {
-            let status = status_from_slug(&event_target_value(&ev));
+            let sort = sort_from_slug(&event_target_value(&ev));
             navigate(
-                &view_url(&applied_search.get_untracked(), status, 0),
+                &view_url(&applied_search.get_untracked(), state_filter.get_untracked(), sort, 0),
                 quiet(),
             );
         }
     };
+    // Status tabs are links, so they work before hydration; once hydrated a
+    // click replaces the history entry and keeps the scroll position.
+    let status_tabs = STATUS_TABS
+        .into_iter()
+        .map(|(state, label)| {
+            let navigate = navigate.clone();
+            let href = move || view_url(&applied_search.get(), state, sort.get(), 0);
+            view! {
+                <a
+                    href=href
+                    aria-current=move || (state_filter.get() == state).then_some("true")
+                    on:click=move |ev| {
+                        ev.prevent_default();
+                        navigate(&href(), quiet());
+                    }
+                >
+                    {label}
+                </a>
+            }
+        })
+        .collect_view();
     let clear = {
         let navigate = navigate.clone();
         move |_| {
@@ -118,14 +156,18 @@ pub fn MintList() -> impl IntoView {
                     <input type="search" aria-label="Search mints by name or URL" placeholder="Search name or URL"
                         prop:value=move || search.get() on:input=move |ev| search.set(event_target_value(&ev))/>
                 </div>
-                <select class="filter-select" aria-label="Filter mints by status" on:change=on_status
-                    prop:value=move || state_filter.get().map(status_slug).unwrap_or("all")>
-                    <option value="all">"All statuses"</option>
-                    <option value="healthy">"Healthy"</option>
-                    <option value="degraded">"Degraded"</option>
-                    <option value="failing">"Failing"</option>
-                    <option value="unchecked">"Not checked yet"</option>
-                </select>
+                <div class="directory-filters">
+                    <nav class="segmented status-tabs" aria-label="Filter mints by status">{status_tabs}</nav>
+                    <label class="sort-field">
+                        <span>"Sort"</span>
+                        <select class="filter-select" on:change=on_sort prop:value=move || sort_slug(sort.get())>
+                            <option value="name">"Name"</option>
+                            <option value="top-rated">"Highest rated"</option>
+                            <option value="low-rated">"Lowest rated"</option>
+                            <option value="most-reviewed">"Most reviews"</option>
+                        </select>
+                    </label>
+                </div>
             </div>
             <Transition fallback=|| view! { <DirectorySkeleton/> }>
                 {move || mints.get().map(|result| {
@@ -147,8 +189,8 @@ pub fn MintList() -> impl IntoView {
                     let pages = total.div_ceil(PAGE_SIZE).max(1);
                     let filtered = !applied_search.get().is_empty() || state_filter.get().is_some();
                     let count = format!("{} {}", total, if total == 1 { "mint" } else { "mints" });
-                    let prev_url = view_url(&applied_search.get(), state_filter.get(), current.saturating_sub(1));
-                    let next_url = view_url(&applied_search.get(), state_filter.get(), current + 1);
+                    let prev_url = view_url(&applied_search.get(), state_filter.get(), sort.get(), current.saturating_sub(1));
+                    let next_url = view_url(&applied_search.get(), state_filter.get(), sort.get(), current + 1);
                     view! {
                         <div class="directory-meta">
                             <span>{count}</span>
@@ -201,9 +243,10 @@ pub fn MintList() -> impl IntoView {
     }
 }
 
-/// One mint: avatar, name over its URL, status. The name's link is stretched
-/// over the row, so the row opens the mint; the URL sits above that link as a
-/// button, because copying it is what most visitors come for.
+/// One mint: avatar, name over its URL, its Nostr rating, status. The name's
+/// link is stretched over the row, so the row opens the mint; the URL sits
+/// above that link as a button, because copying it is what most visitors
+/// come for.
 #[component]
 fn MintRow(mint: MintRead) -> impl IntoView {
     let href = format!("/mints/{}", mint.id);
@@ -219,8 +262,29 @@ fn MintRow(mint: MintRead) -> impl IntoView {
                 <a class="mint-name mint-link" href=href>{name}</a>
                 <CopyUrl url=mint.url.clone()/>
             </span>
+            <MintRating avg=mint.review_avg count=mint.review_count/>
             <StateBadge state=mint.state/>
         </div>
+    }
+}
+
+/// A star, the average and the review count, or nothing for an unrated mint.
+#[component]
+fn MintRating(avg: Option<f64>, count: u64) -> impl IntoView {
+    let reviews = if count == 1 { "review" } else { "reviews" };
+    match avg {
+        Some(avg) => view! {
+            <span class="mint-rating">
+                <span class="sr-only">{format!("Rated {avg:.1} out of 5 from {count} {reviews}")}</span>
+                <span class="mint-rating-shown" aria-hidden="true">
+                    <Star/>
+                    <span class="mint-rating-value">{format!("{avg:.1}")}</span>
+                    <span class="mint-rating-count">{format!("({count})")}</span>
+                </span>
+            </span>
+        }
+        .into_any(),
+        None => view! { <span class="mint-rating"></span> }.into_any(),
     }
 }
 
@@ -293,7 +357,8 @@ fn DirectorySkeleton() -> impl IntoView {
                         <span class="skeleton" style=format!("width: {w}%; height: 14px;")></span>
                         <span class="skeleton" style=format!("width: {}%; height: 12px; margin-top: 6px;", w / 2 + 12)></span>
                     </span>
-                    <span class="skeleton" style="width: 72px; height: 20px;"></span>
+                    <span class="mint-rating"><span class="skeleton" style="width: 48px; height: 14px;"></span></span>
+                    <span class="skeleton mint-status-skeleton" style="width: 72px; height: 20px;"></span>
                 </div></li>
             }).collect_view()}
         </ul>
@@ -310,6 +375,25 @@ fn status_slug(state: MintState) -> &'static str {
     }
 }
 
+/// Sort orders as they appear in the URL; the default (name) is omitted.
+fn sort_slug(sort: MintSort) -> &'static str {
+    match sort {
+        MintSort::Name => "name",
+        MintSort::RatingHigh => "top-rated",
+        MintSort::RatingLow => "low-rated",
+        MintSort::MostReviews => "most-reviewed",
+    }
+}
+
+fn sort_from_slug(slug: &str) -> MintSort {
+    match slug {
+        "top-rated" => MintSort::RatingHigh,
+        "low-rated" => MintSort::RatingLow,
+        "most-reviewed" => MintSort::MostReviews,
+        _ => MintSort::Name,
+    }
+}
+
 fn status_from_slug(slug: &str) -> Option<MintState> {
     match slug {
         "healthy" => Some(MintState::Ok),
@@ -320,14 +404,18 @@ fn status_from_slug(slug: &str) -> Option<MintState> {
     }
 }
 
-/// The directory URL for a view; the first page and empty filters are omitted.
-fn view_url(search: &str, status: Option<MintState>, page: u64) -> String {
+/// The directory URL for a view; the first page, the default sort and empty
+/// filters are omitted.
+fn view_url(search: &str, status: Option<MintState>, sort: MintSort, page: u64) -> String {
     let mut params = Vec::new();
     if !search.trim().is_empty() {
         params.push(format!("q={}", urlencode(search.trim())));
     }
     if let Some(status) = status {
         params.push(format!("status={}", status_slug(status)));
+    }
+    if sort != MintSort::default() {
+        params.push(format!("sort={}", sort_slug(sort)));
     }
     if page > 0 {
         params.push(format!("page={}", page + 1));
@@ -361,17 +449,27 @@ fn urlencode(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{status_from_slug, status_slug, view_url};
-    use crate::types::MintState;
+    use super::{sort_from_slug, sort_slug, status_from_slug, status_slug, view_url};
+    use crate::types::{MintSort, MintState};
 
     #[test]
     fn directory_urls_round_trip_and_omit_defaults() {
-        assert_eq!(view_url("", None, 0), "/");
-        assert_eq!(view_url(" copper ", None, 0), "/?q=copper");
+        let name = MintSort::Name;
+        assert_eq!(view_url("", None, name, 0), "/");
+        assert_eq!(view_url(" copper ", None, name, 0), "/?q=copper");
         assert_eq!(
-            view_url("paper moon", Some(MintState::Warn), 2),
-            "/?q=paper%20moon&status=degraded&page=3"
+            view_url("paper moon", Some(MintState::Warn), MintSort::RatingHigh, 2),
+            "/?q=paper%20moon&status=degraded&sort=top-rated&page=3"
         );
+        for sort in [
+            MintSort::Name,
+            MintSort::RatingHigh,
+            MintSort::RatingLow,
+            MintSort::MostReviews,
+        ] {
+            assert_eq!(sort_from_slug(sort_slug(sort)), sort);
+        }
+        assert_eq!(sort_from_slug("nonsense"), MintSort::Name);
         for state in [
             MintState::Ok,
             MintState::Warn,

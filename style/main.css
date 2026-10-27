@@ -399,7 +399,8 @@ button.text-link {
 }
 
 .nav-link,
-.segmented button {
+.segmented button,
+.segmented a {
     display: inline-flex;
     align-items: center;
     height: 28px;
@@ -415,12 +416,14 @@ button.text-link {
 }
 
 .nav-link:hover,
-.segmented button:hover {
+.segmented button:hover,
+.segmented a:hover {
     color: var(--fg);
 }
 
 .nav-link[aria-current='page'],
-.segmented button[aria-pressed='true'] {
+.segmented button[aria-pressed='true'],
+.segmented a[aria-current='true'] {
     color: var(--fg);
     background: var(--surface-strong);
     box-shadow: inset 0 0 0 1px var(--tab-border);
@@ -1260,15 +1263,45 @@ button.hallmark {
    Directory: a ledger on the page, no card
 --------------------------------------------------------------------------- */
 
+/* Search on its own line; status tabs and the sort menu below it. */
 .directory-tools {
     display: flex;
-    gap: 8px;
+    flex-direction: column;
+    gap: 12px;
 }
 
-/* The directory's controls use Interfere's xl field size. */
-.directory-tools .search-field,
-.directory-tools .filter-select {
+/* The search uses Interfere's xl field size. In this column `flex: 1`
+   would set its height, so it does not grow. */
+.directory-tools .search-field {
+    flex: none;
     height: 40px;
+}
+
+.directory-filters {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px 16px;
+}
+
+.status-tabs {
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.sort-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--fg-2);
+    font-size: 13px;
+    line-height: 20px;
+}
+
+.sort-field .filter-select {
+    width: auto;
 }
 
 .directory-tools .search-field {
@@ -1283,9 +1316,6 @@ button.hallmark {
     padding-left: 36px;
 }
 
-.directory-tools .filter-select {
-    padding-left: 12px;
-}
 
 .directory-meta {
     display: flex;
@@ -1315,7 +1345,8 @@ button.hallmark {
 .mint-row {
     position: relative;
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) 88px 112px;
+    grid-template-areas: "avatar id rating status";
     align-items: center;
     gap: 0 12px;
     margin-inline: -12px;
@@ -1363,8 +1394,47 @@ button.hallmark {
     font-weight: 500;
 }
 
-.mint-row .badge {
+.mint-row > .mint-avatar {
+    grid-area: avatar;
+}
+
+.mint-row > .mint-id {
+    grid-area: id;
+}
+
+.mint-row .badge,
+.mint-status-skeleton {
+    grid-area: status;
     justify-self: end;
+}
+
+.mint-rating {
+    grid-area: rating;
+    justify-self: end;
+}
+
+.mint-rating-shown {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    line-height: 20px;
+}
+
+.mint-rating .icon {
+    width: 13px;
+    height: 13px;
+    color: var(--fg);
+}
+
+.mint-rating-value {
+    font-family: var(--font-mono);
+    font-feature-settings: 'ss02';
+    font-variant-numeric: tabular-nums;
+}
+
+.mint-rating-count {
+    color: var(--fg-2);
 }
 
 /* The URL as a quiet button: mono text and a copy icon, raised above the
@@ -2215,13 +2285,21 @@ a.mint-name:hover {
         line-height: 32px;
     }
 
-    .directory-tools {
-        flex-wrap: wrap;
+    /* Phones: the rating sits under the status, both right-aligned. */
+    .mint-row {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-areas:
+            "avatar id status"
+            "avatar id rating";
     }
 
-    .directory-tools .search-field,
-    .directory-tools .filter-select {
+    .status-tabs {
         flex: 1 1 100%;
+    }
+
+    .status-tabs a {
+        flex: 1 0 auto;
+        justify-content: center;
     }
 
     .card-pad,

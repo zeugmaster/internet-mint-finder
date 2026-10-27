@@ -7,7 +7,9 @@
 
 use crate::server::classify::resolve_category;
 use crate::server::error::AuditorError;
-use crate::types::{AuditorMark, MintRead, MintState, MintUptime, MintUptimeBar, SwapEventRead};
+use crate::types::{
+    AuditorMark, MintRead, MintSort, MintState, MintUptime, MintUptimeBar, SwapEventRead,
+};
 use chrono::{DateTime, Utc};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
@@ -624,19 +626,40 @@ impl AuditorDatabase {
     // ----- Mints ---------------------------------------------------------------
 
     /// Search the entire registry, with stable pages and a matching total.
+    /// One directory page of 20. Reviews count toward a mint when they name
+    /// its URL or its NUT-06 key, as in `directory_stats`; unrated mints sort
+    /// after rated ones either way.
     pub async fn search_mints(
         &self,
         search: String,
         state: Option<MintState>,
+        sort: MintSort,
         page: u64,
     ) -> Result<(Vec<Mint>, u64), AuditorError> {
         let search = search.trim().to_lowercase();
         let state = state.map(|s| state_to_str(&s).to_string());
         let offset = page.saturating_mul(20).min(i64::MAX as u64) as i64;
+        let order = match sort {
+            MintSort::Name => "sort_name, id",
+            MintSort::RatingHigh => "r_avg IS NULL, r_avg DESC, r_count DESC, sort_name, id",
+            MintSort::RatingLow => "r_avg IS NULL, r_avg ASC, r_count DESC, sort_name, id",
+            MintSort::MostReviews => "r_count DESC, r_avg IS NULL, r_avg DESC, sort_name, id",
+        };
         self.run(move |conn| {
             let condition = "deleted_at IS NULL AND (?1 = '' OR instr(lower(name), ?1) > 0 OR instr(lower(url), ?1) > 0) AND (?2 IS NULL OR state = ?2)";
             let total = conn.query_row(&format!("SELECT COUNT(*) FROM mints WHERE {condition}"), params![search, state], |row| row.get(0))?;
-            let mut stmt = conn.prepare(&format!("SELECT {MINT_COLUMNS} FROM mints WHERE {condition} ORDER BY id LIMIT 20 OFFSET ?3"))?;
+            let mut stmt = conn.prepare(&format!(
+                "WITH m AS (
+                    SELECT *, CASE WHEN json_valid(info) THEN json_extract(info, '$.pubkey') END AS pk
+                    FROM mints WHERE {condition}),
+                 s AS (
+                    SELECT m.*,
+                        (SELECT AVG(rating) FROM reviews r WHERE r.mint_url = m.url OR (m.pk IS NOT NULL AND r.d = m.pk)) AS r_avg,
+                        (SELECT COUNT(*) FROM reviews r WHERE r.mint_url = m.url OR (m.pk IS NOT NULL AND r.d = m.pk)) AS r_count,
+                        lower(COALESCE(NULLIF(trim(m.name), ''), replace(replace(m.url, 'https://', ''), 'http://', ''))) AS sort_name
+                    FROM m)
+                 SELECT {MINT_COLUMNS} FROM s ORDER BY {order} LIMIT 20 OFFSET ?3"
+            ))?;
             let mints = stmt.query_map(params![search, state, offset], row_to_mint)?.collect::<Result<Vec<_>, _>>()?;
             Ok((mints, total))
         }).await
@@ -2505,6 +2528,52 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn registry_sorts_by_rating_with_unrated_mints_last() {
+        let db = AuditorDatabase::open_in_memory().unwrap();
+        let mut mints = Vec::new();
+        for name in ["low", "high", "none", "keyed"] {
+            let mint = db
+                .record_donation(&format!("https://{name}.example"), 1, "token")
+                .await
+                .unwrap();
+            mints.push(mint);
+        }
+        let urls: Vec<String> = mints.iter().map(|m| m.url.clone()).collect();
+        // "keyed" is reviewed by its NUT-06 key, not its URL.
+        let mut keyed = mints[3].clone();
+        keyed.info = Some(r#"{"pubkey":"02abc"}"#.into());
+        db.upsert_mint(&keyed).await.unwrap();
+        let review = |author: &str, d: &str, url: Option<&str>, rating: u8| Review {
+            pubkey: author.into(),
+            d: d.into(),
+            event_id: format!("{author}{d}"),
+            mint_url: url.map(str::to_string),
+            rating: Some(rating),
+            content: String::new(),
+            created_at: Utc::now(),
+        };
+        for r in [
+            review("a", "low", Some(&urls[0]), 2),
+            review("b", "low", Some(&urls[0]), 3),
+            review("a", "high", Some(&urls[1]), 5),
+            review("a", "02abc", None, 4),
+        ] {
+            db.upsert_review(&r).await.unwrap();
+        }
+        let names = |mints: Vec<Mint>| -> Vec<String> {
+            mints.into_iter().map(|m| m.url.replace("https://", "").replace(".example", "")).collect()
+        };
+        let high = db.search_mints(String::new(), None, MintSort::RatingHigh, 0).await.unwrap().0;
+        assert_eq!(names(high), ["high", "keyed", "low", "none"]);
+        let low = db.search_mints(String::new(), None, MintSort::RatingLow, 0).await.unwrap().0;
+        assert_eq!(names(low), ["low", "keyed", "high", "none"]);
+        let most = db.search_mints(String::new(), None, MintSort::MostReviews, 0).await.unwrap().0;
+        assert_eq!(names(most), ["low", "high", "keyed", "none"]);
+        let by_name = db.search_mints(String::new(), None, MintSort::Name, 0).await.unwrap().0;
+        assert_eq!(names(by_name), ["high", "keyed", "low", "none"]);
+    }
+
+    #[tokio::test]
     async fn registry_search_pages_and_filters_the_full_active_registry() {
         let db = AuditorDatabase::open_in_memory().unwrap();
         for i in 0..22 {
@@ -2517,25 +2586,36 @@ mod tests {
             .await
             .unwrap();
         db.soft_delete_mint_by_url(&hidden.url).await.unwrap();
-        let (first, total) = db.search_mints(" ALPHA ".into(), None, 0).await.unwrap();
+        let by_name = MintSort::Name;
+        let (first, total) = db
+            .search_mints(" ALPHA ".into(), None, by_name, 0)
+            .await
+            .unwrap();
         let (second, _) = db
-            .search_mints("alpha".into(), Some(MintState::Unknown), 1)
+            .search_mints("alpha".into(), Some(MintState::Unknown), by_name, 1)
             .await
             .unwrap();
         assert_eq!(total, 22);
         assert_eq!(first.len(), 20);
         assert_eq!(second.len(), 2);
-        assert!(first.last().unwrap().id < second[0].id);
-        assert_eq!(db.search_mints("%".into(), None, 0).await.unwrap().1, 0);
+        // Unnamed mints sort by their URL without the scheme.
+        assert!(first.last().unwrap().url < second[0].url);
         assert_eq!(
-            db.search_mints("".into(), Some(MintState::Ok), 0)
+            db.search_mints("%".into(), None, by_name, 0)
+                .await
+                .unwrap()
+                .1,
+            0
+        );
+        assert_eq!(
+            db.search_mints("".into(), Some(MintState::Ok), by_name, 0)
                 .await
                 .unwrap()
                 .1,
             0
         );
         assert!(db
-            .search_mints("".into(), None, u64::MAX)
+            .search_mints("".into(), None, by_name, u64::MAX)
             .await
             .unwrap()
             .0

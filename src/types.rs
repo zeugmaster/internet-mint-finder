@@ -35,6 +35,17 @@ fn default_limit() -> u64 {
     100
 }
 
+/// Directory order, chosen by the visitor. Ratings come from public Nostr
+/// reviews; no order here is an editorial ranking.
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub enum MintSort {
+    #[default]
+    Name,
+    RatingHigh,
+    RatingLow,
+    MostReviews,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MintPage {
     pub mints: Vec<MintRead>,
