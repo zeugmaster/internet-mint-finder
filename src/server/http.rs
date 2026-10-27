@@ -614,6 +614,29 @@ async fn api_donate(
 // Static analytics dashboard
 // ---------------------------------------------------------------------------
 
-async fn dashboard_page() -> Html<&'static str> {
-    Html(include_str!("../../public/dashboard.html"))
+/// The analytics page repeats the app header, so it carries the instance name.
+async fn dashboard_page(State(state): State<AppState>) -> Html<String> {
+    Html(render_dashboard(&state.app_name))
+}
+
+fn render_dashboard(app_name: &str) -> String {
+    let escaped = app_name
+        .replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;");
+    include_str!("../../public/dashboard.html").replace("{{APP_NAME}}", &escaped)
+}
+
+#[cfg(test)]
+mod dashboard_tests {
+    use super::render_dashboard;
+
+    #[test]
+    fn dashboard_carries_the_escaped_instance_name() {
+        let html = render_dashboard("Mint <Finder> & Co");
+        assert!(html.contains("<span>Mint &lt;Finder&gt; &amp; Co</span>"));
+        assert!(html.contains("<title>Analytics — Mint &lt;Finder&gt; &amp; Co</title>"));
+        assert!(!html.contains("{{APP_NAME}}"));
+    }
 }

@@ -140,7 +140,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let state = AppState {
         leptos_options: get_configuration(Some("Cargo.toml"))?.leptos_options,
         wallet_repository: wallets,
-        app_name: "Internet Mint Finder · Preview".into(),
+        app_name: "Internet Mint Finder".into(),
         auditor_db: db,
         auditor_config: AuditorConfig::default(),
         cache: Arc::new(ResponseCache::new()),

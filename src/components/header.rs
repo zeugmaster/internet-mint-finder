@@ -1,7 +1,5 @@
-use crate::api::{check_connection, get_auditors};
-use crate::hooks::use_poll;
-use crate::types::{AppConfig, AuditorRead};
-use chrono::Utc;
+use crate::components::icons::{Moon, Sun};
+use crate::types::AppConfig;
 use leptos::prelude::*;
 use leptos_router::hooks::use_location;
 
@@ -12,13 +10,12 @@ const BRAND_MARK_SVG: &str = r##"<svg viewBox="0 0 24 24" xmlns="http://www.w3.o
   <path d="M7.5 15.5v-7l4.5 4.5 4.5-4.5v7" fill="none" stroke="var(--on-inverted)" stroke-width="2" stroke-linejoin="round"/>
 </svg>"##;
 
+/// Brand, the three sections, and the theme switch. public/dashboard.html
+/// repeats this markup, so keep the two in step.
 #[component]
 pub fn Header() -> impl IntoView {
     let config = use_context::<Resource<AppConfig>>();
     let location = use_location();
-    let tick = use_poll(15);
-    let connection = Resource::new(move || tick.get(), |_| check_connection());
-    let auditors = Resource::new(move || tick.get(), |_| get_auditors());
 
     let active = move |path: &'static str| {
         let current = location.pathname.get();
@@ -55,13 +52,6 @@ pub fn Header() -> impl IntoView {
                     <a href="/" class="nav-link" aria-current=move || active("/")>
                         "Directory"
                     </a>
-                    <a
-                        href="/receive"
-                        class="nav-link"
-                        aria-current=move || active("/receive")
-                    >
-                        "Donate"
-                    </a>
                     <a href="/auditors" class="nav-link" aria-current=move || active("/auditors")>
                         "Auditors"
                     </a>
@@ -70,35 +60,13 @@ pub fn Header() -> impl IntoView {
                     </a>
                 </nav>
 
-                <div class="header-status">
-                    <Transition fallback=|| view! { <span>"Connecting…"</span> }>
-                        {move || connection.get().map(|result| {
-                            let connected = result.is_ok();
-                            let label = match auditors.get() {
-                                Some(Ok(list)) if connected => {
-                                    let n = live_count(&list);
-                                    // "auditors" drops out on phones: "3 live".
-                                    view! { {n}<span class="live-long">{if n == 1 { " auditor" } else { " auditors" }}</span>" live" }.into_any()
-                                }
-                                _ if connected => view! { "Connected" }.into_any(),
-                                _ => view! { "Reconnecting…" }.into_any(),
-                            };
-                            view! {
-                                <span class=if connected { "connection-dot connected" } else { "connection-dot disconnected" }></span>
-                                <span title="This instance plus peers seen publishing in the last 24 hours">{label}</span>
-                            }
-                        })}
-                    </Transition>
-                </div>
+                // The click is handled by the theme script in the shell, so the
+                // switch works before (and without) hydration.
+                <button type="button" class="btn btn-ghost btn-icon theme-toggle" data-theme-toggle="">
+                    <span class="when-light"><Moon/><span class="sr-only">"Use dark mode"</span></span>
+                    <span class="when-dark"><Sun/><span class="sr-only">"Use light mode"</span></span>
+                </button>
             </div>
         </header>
     }
-}
-
-/// Auditors live: this instance plus every peer seen in the last 24 h.
-fn live_count(list: &[AuditorRead]) -> usize {
-    let cutoff = Utc::now() - chrono::Duration::hours(24);
-    list.iter()
-        .filter(|a| a.is_self || a.last_seen.is_some_and(|at| at >= cutoff))
-        .count()
 }

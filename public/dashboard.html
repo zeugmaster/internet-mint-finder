@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>Analytics — Internet Mint Finder</title>
+<title>Analytics — {{APP_NAME}}</title>
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <meta name="color-scheme" content="light dark" />
 <meta name="theme-color" content="#f6f6f6" media="(prefers-color-scheme: light)" />
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
-<script>(function(){var d=document.documentElement;d.dataset.theme=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');})();</script>
+<script>(function(){var d=document.documentElement;d.dataset.theme=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.addEventListener('click',function(e){if(!e.target.closest('[data-theme-toggle]'))return;var next=d.dataset.theme==='dark'?'light':'dark';d.dataset.theme=next;localStorage.setItem('theme',next);});})();</script>
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css"/>
@@ -55,6 +55,7 @@
     --surface-strong: #ffffff;
     --surface-strong-hover: #f9f9f9;
     --tab-border: #d9d9d9;
+    --border-strong: #00000026;
     --disabled: #0000000f;
     --fg-disabled: #00000044;
     --focus: #0084e6a1;
@@ -87,6 +88,7 @@
     --surface-strong: #ffffff12;
     --surface-strong-hover: #ffffff1b;
     --tab-border: #484848;
+    --border-strong: #ffffff2c;
     --disabled: #ffffff09;
     --fg-disabled: #ffffff55;
     --focus: #0090ff;
@@ -110,6 +112,8 @@
     --focus-ring: inset 0 0 0 0.5px var(--focus), 0 0 0 1px var(--focus);
     --ease: cubic-bezier(0.4, 0, 0.2, 1);
     --ease-out: cubic-bezier(0, 0, 0.2, 1);
+    --column: 960px;
+    --gutter: 24px;
   }
 
   * { box-sizing: border-box; }
@@ -130,6 +134,7 @@
   button, input, select { font: inherit; color: inherit; }
   ::selection { background: var(--brand-subtle); }
   ::placeholder { color: var(--muted); }
+  p { text-wrap: pretty; }
   * { scrollbar-color: var(--component-hover) transparent; }
   :focus-visible { outline: 1px solid var(--focus); outline-offset: -1px; }
 
@@ -141,55 +146,110 @@
   }
 
   /* ===================================================================
-     Header
+     Header, page head and footer — the app's markup and styles
+     (src/components/header.rs, src/app.rs, style/main.css)
      =================================================================== */
-  header {
-    max-width: 1560px; margin: 0 auto;
-    padding: 16px 22px 4px;
-    display: flex; align-items: center; gap: 8px;
+  .site-header-inner, .site-footer-inner, main {
+    width: 100%; max-width: calc(var(--column) + 2 * var(--gutter));
+    margin: 0 auto; padding-inline: var(--gutter);
   }
-  header .brand {
-    display: flex; align-items: center; gap: 10px;
-    color: var(--ink); text-decoration: none; white-space: nowrap;
-    border-radius: 6px;
+  .site-header-inner {
+    display: grid; grid-template-columns: minmax(0, max-content) 1fr max-content;
+    grid-template-areas: "brand nav theme"; align-items: center; gap: 12px 28px;
+    padding-top: 24px; padding-bottom: 16px;
   }
-  header .brand-mark { display: flex; width: 22px; height: 22px; flex: none; }
-  header .brand-mark svg { width: 100%; height: 100%; display: block; }
-  header h1 { margin: 0; font-size: 15px; line-height: 24px; font-weight: 600; letter-spacing: -0.01em; }
-  header .sub { color: var(--faint); font-size: 15px; }
-  header .spacer { flex: 1; }
-  .live {
-    display: inline-flex; align-items: center; gap: 8px;
-    color: var(--muted); white-space: nowrap; font-size: 13px;
+  .brand {
+    grid-area: brand; min-width: 0; display: flex; align-items: center; gap: 10px;
+    color: var(--ink); font-weight: 600; text-decoration: none; white-space: nowrap;
   }
-  .live .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); flex: none; }
+  .brand > span:last-child { overflow: hidden; text-overflow: ellipsis; }
+  .brand-mark { flex: none; display: flex; width: 20px; height: 20px; }
+  .brand-mark svg { width: 100%; height: 100%; }
+  .site-nav {
+    grid-area: nav; justify-self: start; display: inline-flex;
+    border-radius: 6px; background: var(--component); white-space: nowrap;
+  }
+  .nav-link {
+    display: inline-flex; align-items: center; height: 28px; padding: 0 10px;
+    border-radius: 6px; color: var(--muted); text-decoration: none;
+    font-size: 13px; line-height: 20px; font-weight: 500;
+    transition: color 200ms ease-in-out, background-color 200ms ease-in-out, box-shadow 200ms ease-in-out;
+  }
+  .nav-link:hover { color: var(--ink); }
+  .nav-link[aria-current='page'] {
+    color: var(--ink); background: var(--surface-strong);
+    box-shadow: inset 0 0 0 1px var(--tab-border);
+  }
+  /* Interfere icon button: a transparent 32px square. */
+  .theme-toggle {
+    grid-area: theme; justify-self: end;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px;
+    background: transparent; color: var(--muted); cursor: pointer;
+    transition: color 150ms var(--ease-out), background-color 150ms var(--ease-out);
+  }
+  .theme-toggle:hover { background: var(--component); color: var(--ink); }
+  .theme-toggle > span { display: inline-flex; }
+  :root[data-theme='dark'] .when-light,
+  :root:not([data-theme='dark']) .when-dark { display: none; }
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; margin: -1px;
+    overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+  .skip-link {
+    position: fixed; top: 8px; left: 16px; z-index: 100; padding: 4px 12px;
+    border-radius: 8px; background: var(--inverted); color: var(--on-inverted);
+    font-size: 13px; line-height: 20px; font-weight: 500; text-decoration: none;
+    transform: translateY(-150%);
+  }
+  .skip-link:focus { transform: translateY(0); }
+
+  .page-head {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    gap: 16px 40px; flex-wrap: wrap; margin: 24px 0 12px;
+  }
+  .page-title { margin: 0; font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: -0.01em; }
+  .page-subtitle { margin: 6px 0 0; max-width: 62ch; color: var(--muted); }
+  .page-tools { display: flex; align-items: center; gap: 8px; }
   /* Interfere secondary button */
-  header .back {
+  .tool-btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
     height: 32px; padding: 0 12px; border: 0; border-radius: 8px;
     background: var(--surface-strong); box-shadow: var(--s-default); color: var(--ink);
-    font-size: 13px; line-height: 20px; font-weight: 500;
-    text-decoration: none; white-space: nowrap; cursor: pointer;
+    font-size: 13px; line-height: 20px; font-weight: 500; white-space: nowrap; cursor: pointer;
     transition: background-color 150ms var(--ease-out);
   }
-  header .back:hover { background: var(--surface-strong-hover); }
+  .tool-btn:hover { background: var(--surface-strong-hover); }
+
+  /* One sentence and the donate link. */
+  .site-footer-inner {
+    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline;
+    gap: 8px 32px; padding-top: 24px; padding-bottom: 40px;
+    color: var(--muted); font-size: 13px; line-height: 20px;
+  }
+  .site-footer-inner p { margin: 0; }
+  .site-footer-inner a {
+    color: inherit; text-decoration: underline solid 0.1em;
+    text-decoration-color: var(--border-strong); text-underline-offset: 20%;
+    text-decoration-skip-ink: none;
+    transition: text-decoration-color 150ms var(--ease), color 150ms var(--ease);
+  }
+  .site-footer-inner a:hover { color: var(--ink); text-decoration-color: var(--muted); }
 
   /* ===================================================================
      Layout
      =================================================================== */
   main {
-    position: relative; z-index: 1;
-    padding: 16px 22px 48px;
-    max-width: 1560px; margin: 0 auto;
+    padding-top: 8px; padding-bottom: 48px;
     display: grid; gap: 16px;
-    grid-template-columns: 290px 1fr;
-    align-items: start;
+    grid-template-columns: minmax(0, 1fr);
   }
+  main:focus { outline: none; }
   .stack { display: grid; gap: 16px; min-width: 0; }
 
   .section-head {
     display: flex; align-items: baseline; gap: 12px;
-    margin: 12px 2px 0;
+    margin: 12px 0 0;
   }
   .section-head .t { font-size: 16px; line-height: 24px; font-weight: 600; color: var(--ink); letter-spacing: -0.01em; }
   .section-head .d { font-size: 13px; line-height: 20px; color: var(--muted); }
@@ -203,7 +263,7 @@
     box-shadow: var(--s-default);
     overflow: hidden;
   }
-  .panel { padding: 16px; position: sticky; top: 16px; }
+  .panel { padding: 0; }
   .chart { padding: 16px 16px 8px; }
   .chart .head {
     display: flex; align-items: baseline; justify-content: space-between;
@@ -260,7 +320,26 @@
      Filters — Interfere fields and buttons
      =================================================================== */
   .filters fieldset { border: 0; padding: 0; margin: 16px 0 0; min-width: 0; }
-  .filter-toggle { display: none; }
+  .filter-toggle {
+    width: 100%; padding: 12px 16px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    border: 0; border-radius: 12px;
+    background: transparent; color: var(--ink); cursor: pointer;
+    font-size: 14px; line-height: 20px; font-weight: 600;
+  }
+  .filter-toggle:focus-visible { outline-offset: -1px; }
+  .filter-toggle-meta { margin-left: auto; color: var(--muted); font-size: 13px; font-weight: 400; }
+  .filter-toggle-icon { display: inline-flex; color: var(--faint); transition: transform 150ms var(--ease); }
+  .filter-toggle-icon svg { width: 16px; height: 16px; }
+  .filter-fields {
+    display: none; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px;
+    padding: 0 16px 16px; border-top: 0.5px solid var(--rule);
+  }
+  .filters.is-open .filter-fields { display: grid; }
+  .filters.is-open .filter-toggle-icon { transform: rotate(180deg); }
+  .filter-fields .span-2 { grid-column: 1 / -1; }
+  .filter-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+  .filters .filter-actions .btn { width: auto; margin: 0; }
   .filters label, .filters legend {
     display: block; padding: 0; font-size: 13px; line-height: 20px; font-weight: 500; color: var(--ink);
     margin: 16px 0 6px;
@@ -273,7 +352,7 @@
     color: var(--ink); font-size: 13px;
   }
   .filters input[type="date"]:focus-visible { outline: 0; box-shadow: var(--focus-ring); }
-  .filters .row { display: flex; gap: 8px; }
+  .filters .row { display: flex; gap: 16px; }
   .filters .row > * { flex: 1; }
 
   .btn {
@@ -458,54 +537,43 @@
   .rise { opacity: 0; animation: rise 300ms var(--ease) forwards; }
   @keyframes rise { to { opacity: 1; } }
 
-  @media (max-width: 1180px) {
-    main { grid-template-columns: 1fr; }
-    .panel { position: static; padding: 0; }
-    .filter-toggle {
-      width: 100%; padding: 12px 16px;
-      display: flex; align-items: center; justify-content: space-between; gap: 12px;
-      border: 0; border-radius: 12px;
-      background: transparent; color: var(--ink); cursor: pointer;
-      font-size: 15px; font-weight: 600;
-    }
-    .filter-toggle:focus-visible { outline-offset: -1px; }
-    .filter-toggle-meta { margin-left: auto; color: var(--muted); font-size: 13px; font-weight: 400; }
-    .filter-toggle-icon { color: var(--faint); transition: transform 150ms var(--ease); }
-    .filter-fields { display: none; padding: 4px 16px 16px; border-top: 0.5px solid var(--rule); }
-    .filters.is-open .filter-fields { display: block; }
-    .filters.is-open .filter-toggle-icon { transform: rotate(180deg); }
-    .filter-fields > h2 { display: none; }
+  .data-status { margin: 4px 0 0; color: var(--muted); font-size: 13px; line-height: 20px; }
+  button:disabled { cursor: wait; }
+  .plot { min-width: 0; }
+  main > *, .grid > * { min-width: 0; }
+  @media (max-width: 860px) {
     .kpis { grid-template-columns: repeat(3, 1fr); }
     .g2, .g3 { grid-template-columns: 1fr; }
-  }
-  @media (max-width: 860px) {
-    header { padding: 16px 16px 4px; flex-wrap: wrap; }
-    #range-seg { order: 3; width: 100%; }
-    #range-seg button { flex: 1; padding-inline: 8px; }
-    main { padding: 14px 14px 40px; }
     .sla-single { align-items: flex-start; }
   }
-  @media (max-width: 620px) {
+  @media (max-width: 767px) {
     html, body { background: var(--surface); }
+  }
+  @media (max-width: 760px) {
+    :root { --gutter: 16px; }
+    .site-header-inner { padding-top: 16px; padding-bottom: 12px; }
+    .page-head { margin: 16px 0 4px; }
+    .page-title { font-size: 24px; line-height: 32px; }
+    .kpi .val { overflow-wrap: anywhere; }
+  }
+  @media (max-width: 640px) {
+    .site-header-inner {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas: "brand theme" "nav nav";
+    }
+    .page-tools { width: 100%; }
+    #range-seg { flex: 1; }
+    #range-seg button { flex: 1; padding-inline: 8px; }
+    .filter-fields { grid-template-columns: minmax(0, 1fr); }
+    .filters .row { gap: 8px; }
+  }
+  @media (max-width: 620px) {
     .kpis { grid-template-columns: repeat(2, 1fr); }
-    header .live, header .sub { display: none; }
     .sla-single { flex-direction: column; gap: 14px; }
     .sla-figure { min-width: 0; }
     .sla-cells { gap: 1px; }
     .chart { padding-inline: 12px; }
     .section-head { flex-direction: column; gap: 2px; }
-  }
-  .data-status { max-width: 1560px; margin: 8px auto 0; padding: 0 22px; color: var(--muted); font-size: 13px; line-height: 20px; }
-  button:disabled { cursor: wait; }
-  .plot { min-width: 0; }
-  main > *, .grid > * { min-width: 0; }
-  @media (max-width: 760px) {
-    header { gap: 8px; flex-wrap: wrap; }
-    #range-seg { order: 5; flex-basis: 100%; justify-content: center; }
-    header .back { padding: 0 10px; }
-    main { padding: 16px 16px 40px; }
-    .data-status { padding: 0 16px; line-height: 1.6; }
-    .kpi .val { font-size: 24px; overflow-wrap: anywhere; }
   }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
   .icon { width: 16px; height: 16px; flex: none; }
@@ -519,26 +587,44 @@
   </symbol>
 </svg>
 
-<header>
-  <a href="/" class="brand">
-    <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v11c0 4-4 6.6-9 8-5-1.4-9-4-9-8z" fill="var(--inverted)"/><path d="M7.5 15.5v-7l4.5 4.5 4.5-4.5v7" fill="none" stroke="var(--on-inverted)" stroke-width="2" stroke-linejoin="round"/></svg></span>
-    <h1>Internet Mint Finder</h1>
-    <span class="sub">Analytics</span>
-  </a>
-  <div class="spacer"></div>
-  <div class="seg" id="range-seg" role="group" aria-label="Time range">
-    <button type="button" data-days="1" aria-pressed="false">24h</button>
-    <button type="button" data-days="7" aria-pressed="false">7d</button>
-    <button type="button" data-days="30" class="active" aria-pressed="true">30d</button>
-    <button type="button" data-days="90" aria-pressed="false">90d</button>
-    <button type="button" data-days="0" aria-pressed="false">All</button>
+<header class="site-header">
+  <div class="site-header-inner">
+    <a href="/" class="brand">
+      <span class="brand-mark"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M3 3h18v11c0 4-4 6.6-9 8-5-1.4-9-4-9-8z" fill="var(--inverted)"/><path d="M7.5 15.5v-7l4.5 4.5 4.5-4.5v7" fill="none" stroke="var(--on-inverted)" stroke-width="2" stroke-linejoin="round"/></svg></span>
+      <span>{{APP_NAME}}</span>
+    </a>
+    <nav class="site-nav" aria-label="Main navigation">
+      <a href="/" class="nav-link">Directory</a>
+      <a href="/auditors" class="nav-link">Auditors</a>
+      <a href="/dashboard" class="nav-link" aria-current="page">Analytics</a>
+    </nav>
+    <button type="button" class="theme-toggle" data-theme-toggle="">
+      <span class="when-light"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 9.6A5.75 5.75 0 0 1 6.4 2.5a5.75 5.75 0 1 0 7.1 7.1z"/></svg><span class="sr-only">Use dark mode</span></span>
+      <span class="when-dark"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.25M8 13.25v1.25M1.5 8h1.25M13.25 8h1.25M3.4 3.4l.9.9M11.7 11.7l.9.9M3.4 12.6l.9-.9M11.7 4.3l.9-.9"/></svg><span class="sr-only">Use light mode</span></span>
+    </button>
   </div>
-  <button id="refresh" class="back" type="button">Refresh</button>
-  <a href="/" class="back"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 8H3.5M7.5 4L3.5 8l4 4"/></svg>Directory</a>
 </header>
+<a href="#main-content" class="skip-link">Skip to content</a>
 
-<div id="data-status" class="data-status" role="status" aria-live="polite">Loading analytics…</div>
-<main aria-busy="false">
+<main id="main-content" tabindex="-1" aria-busy="false">
+  <div class="page-head">
+    <div>
+      <h1 class="page-title">Analytics</h1>
+      <p class="page-subtitle">Every audit swap and health probe, charted.</p>
+      <p id="data-status" class="data-status" role="status" aria-live="polite">Loading analytics…</p>
+    </div>
+    <div class="page-tools">
+      <div class="seg" id="range-seg" role="group" aria-label="Time range">
+        <button type="button" data-days="1" aria-pressed="false">24h</button>
+        <button type="button" data-days="7" aria-pressed="false">7d</button>
+        <button type="button" data-days="30" class="active" aria-pressed="true">30d</button>
+        <button type="button" data-days="90" aria-pressed="false">90d</button>
+        <button type="button" data-days="0" aria-pressed="false">All</button>
+      </div>
+      <button id="refresh" class="tool-btn" type="button">Refresh</button>
+    </div>
+  </div>
+
   <aside class="card panel filters" aria-label="Analytics filters">
     <button
       type="button"
@@ -549,12 +635,10 @@
     >
       <span>Filters</span>
       <span class="filter-toggle-meta" id="filter-toggle-meta">30d</span>
-      <span class="filter-toggle-icon" aria-hidden="true">⌄</span>
+      <span class="filter-toggle-icon" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6l4.5 4.5L12.5 6"/></svg></span>
     </button>
     <div class="filter-fields" id="filter-fields">
-      <h2>Filters</h2>
-
-      <fieldset>
+      <fieldset class="span-2">
         <legend>Custom date range</legend>
         <div class="row">
           <input type="date" id="f-start" aria-label="Start date" />
@@ -562,20 +646,27 @@
         </div>
       </fieldset>
 
-      <label for="f-from">From mint (source)</label>
-      <select id="f-from" multiple></select>
+      <div>
+        <label for="f-from">From mint (source)</label>
+        <select id="f-from" multiple></select>
+      </div>
+      <div>
+        <label for="f-to">To mint (destination)</label>
+        <select id="f-to" multiple></select>
+      </div>
+      <div>
+        <label for="f-from-version">Source mint version</label>
+        <select id="f-from-version" multiple></select>
+      </div>
+      <div>
+        <label for="f-to-version">Destination mint version</label>
+        <select id="f-to-version" multiple></select>
+      </div>
 
-      <label for="f-to">To mint (destination)</label>
-      <select id="f-to" multiple></select>
-
-      <label for="f-from-version">Source mint version</label>
-      <select id="f-from-version" multiple></select>
-
-      <label for="f-to-version">Destination mint version</label>
-      <select id="f-to-version" multiple></select>
-
-      <button type="button" id="apply" class="btn">Apply filters</button>
-      <button type="button" id="reset" class="btn secondary">Reset</button>
+      <div class="filter-actions span-2">
+        <button type="button" id="reset" class="btn secondary">Reset</button>
+        <button type="button" id="apply" class="btn">Apply filters</button>
+      </div>
     </div>
   </aside>
 
@@ -685,6 +776,13 @@
   </div>
 </main>
 
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <p>Audits move real ecash between mints. Results are measurements, not endorsements.</p>
+    <a href="/receive">Donate ecash to fund the audits</a>
+  </div>
+</footer>
+
 <script>
 //===================== state & utils =====================
 const state = {
@@ -768,6 +866,14 @@ function mix(a, b, k) {
   if (!x || !y) return a;
   const c = x.map((v, i) => Math.round(v + (y[i] - v) * k));
   return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+// Black or white, whichever reads better on a solid token colour.
+function onColor(color) {
+  const rgb = hexRGB(color);
+  if (!rgb) return C.ink;
+  const [r, g, b] = rgb.map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
+  const l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return (l + 0.05) / 0.05 > 1.05 / (l + 0.05) ? "#000000" : "#ffffff";
 }
 let C = {}, PALETTE = [];
 function readTheme() {
@@ -1006,8 +1112,8 @@ async function renderCatDonut() {
       labels: rows.map(r => r.category), values: rows.map(r => r.count),
       type: "pie", hole: 0.62, sort: true, direction: "clockwise",
       marker: { colors: PALETTE, line: { color: C.surface, width: 2 } },
-      // No fixed colour: Plotly picks a contrasting colour per slice.
-      textfont: { family: FONT, size: 13 },
+      // Per-slice black or white: Plotly's own pick is white on the blue.
+      textfont: { family: FONT, size: 13, color: rows.map((_, i) => onColor(PALETTE[i % PALETTE.length])) },
       hovertemplate: "%{label}: %{value} (%{percent})<extra></extra>",
     }], baseLayout({ margin: { l: 10, r: 10, t: 10, b: 10 },
           showlegend: true, legend: { orientation: "v", font: { color: C.muted, family: FONT, size: 12 } } }), config);
@@ -1417,6 +1523,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     : Promise.resolve();
   await Promise.all([initFilters(), fontReady]);
   $("refresh").addEventListener("click", renderAll);
+  // The theme script in <head> flips data-theme first; renderAll re-reads it.
+  document.addEventListener("click", e => { if (e.target.closest("[data-theme-toggle]")) renderAll(); });
   setRange(30); paintRangeToggle(); paintScatterToggle();
 
   $("filter-toggle").addEventListener("click", () => {
@@ -1424,7 +1532,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
   $("apply").addEventListener("click", () => {
     state.range_days = -1; paintRangeToggle();
-    if (window.matchMedia("(max-width: 1180px)").matches) setFilterPanel(false);
+    setFilterPanel(false);
     renderAll();
   });
   $("reset").addEventListener("click", () => {

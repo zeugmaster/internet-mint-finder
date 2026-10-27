@@ -1,4 +1,4 @@
-use crate::api::{get_app_config, get_auditors};
+use crate::api::get_app_config;
 use crate::components::header::Header;
 use crate::pages::auditors::AuditorsPage;
 use crate::pages::home::HomePage;
@@ -96,33 +96,11 @@ fn NotFound() -> impl IntoView {
 
 #[component]
 fn Footer() -> impl IntoView {
-    // Mirrors come from the auditors' Nostr announcements, not from config, so
-    // a visitor can find another instance even if this domain disappears.
-    let auditors = Resource::new(|| (), |_| get_auditors());
     view! {
         <footer class="site-footer">
             <div class="site-footer-inner">
-                <div class="footer-notes">
-                    <p>"Audits run by moving real ecash between mints. Results are measurements, not endorsements."</p>
-                    <Suspense fallback=|| ()>
-                        {move || auditors.get().and_then(|r| r.ok()).map(|list| {
-                            let mirrors: Vec<String> = list.into_iter().filter(|a| !a.is_self).flat_map(|a| a.urls).collect();
-                            (!mirrors.is_empty()).then(|| view! {
-                                <p class="footer-mirrors">
-                                    "Mirrors: "
-                                    {mirrors.into_iter().map(|u| view! { <a href=u.clone() rel="external noopener">{u.clone()}</a> }).collect_view()}
-                                </p>
-                            })
-                        })}
-                    </Suspense>
-                </div>
-                <div class="footer-meta">
-                    <a href="https://github.com/cashubtc/cdk" rel="external noopener" target="_blank">"Built on CDK"</a>
-                    <button type="button" class="btn btn-small theme-toggle" data-theme-toggle="">
-                        <span class="when-dark">"Use light mode"</span>
-                        <span class="when-light">"Use dark mode"</span>
-                    </button>
-                </div>
+                <p>"Audits move real ecash between mints. Results are measurements, not endorsements."</p>
+                <a href="/receive">"Donate ecash to fund the audits"</a>
             </div>
         </footer>
     }

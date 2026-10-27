@@ -353,11 +353,11 @@ button.text-link {
 --------------------------------------------------------------------------- */
 
 /* The nav never wraps; a long instance name truncates before anything else
-   gives way, and below 960px the header takes two rows. */
+   gives way, and below 640px the nav takes its own row. */
 .site-header-inner {
     display: grid;
     grid-template-columns: minmax(0, max-content) 1fr max-content;
-    grid-template-areas: "brand nav status";
+    grid-template-areas: "brand nav theme";
     align-items: center;
     gap: 12px 28px;
     padding-top: 24px;
@@ -430,32 +430,14 @@ button.text-link {
     box-shadow: inset 0 0 0 1px var(--tab-border);
 }
 
-.header-status {
-    grid-area: status;
+/* Interfere icon button: a transparent 32px square. */
+.theme-toggle {
+    grid-area: theme;
     justify-self: end;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--fg-2);
-    font-size: 13px;
-    line-height: 20px;
-    white-space: nowrap;
 }
 
-.connection-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    background: var(--fg-3);
-}
-
-.connection-dot.connected {
-    background: var(--ok-solid);
-}
-
-.connection-dot.disconnected {
-    background: var(--err-solid);
+.theme-toggle > span {
+    display: inline-flex;
 }
 
 /* ---------------------------------------------------------------------------
@@ -630,6 +612,11 @@ button.text-link {
     height: 24px;
     padding: 0 8px;
     border-radius: 6px;
+}
+
+.btn-icon {
+    width: 32px;
+    padding: 0;
 }
 
 .btn-block {
@@ -1794,42 +1781,18 @@ div.kv-list {
    Footer
 --------------------------------------------------------------------------- */
 
+/* One sentence and the donate link. */
 .site-footer-inner {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: end;
-    gap: 16px 32px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px 32px;
     padding-top: 24px;
     padding-bottom: 40px;
     color: var(--fg-2);
     font-size: 13px;
     line-height: 20px;
-}
-
-.footer-notes {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    max-width: 62ch;
-}
-
-.footer-mirrors {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0 12px;
-}
-
-.footer-mirrors a {
-    font-family: var(--font-mono);
-    font-feature-settings: 'ss02';
-    overflow-wrap: anywhere;
-}
-
-.footer-meta {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    white-space: nowrap;
 }
 
 :root[data-theme='dark'] .when-light,
@@ -1859,11 +1822,11 @@ div.kv-list {
    Narrower screens
 --------------------------------------------------------------------------- */
 
-@media (max-width: 960px) {
+@media (max-width: 640px) {
     .site-header-inner {
         grid-template-columns: minmax(0, 1fr) auto;
         grid-template-areas:
-            "brand status"
+            "brand theme"
             "nav nav";
     }
 }
@@ -1892,15 +1855,6 @@ div.kv-list {
         line-height: 32px;
     }
 
-    .site-footer-inner {
-        grid-template-columns: minmax(0, 1fr);
-        align-items: start;
-    }
-
-    .footer-meta {
-        justify-content: space-between;
-    }
-
     .directory-tools {
         flex-wrap: wrap;
     }
@@ -1908,10 +1862,6 @@ div.kv-list {
     .directory-tools .search-field,
     .directory-tools .filter-select {
         flex: 1 1 100%;
-    }
-
-    .live-long {
-        display: none;
     }
 
     .card-pad,

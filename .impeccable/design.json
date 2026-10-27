@@ -987,7 +987,7 @@
       },
       "dark": {
         "selector": ":root[data-theme='dark']",
-        "note": "Set before first paint from localStorage or prefers-color-scheme (src/app.rs THEME_SCRIPT); toggled by the footer [data-theme-toggle] button. public/dashboard.html mirrors the tokens with opaque Radix steps (--bg, --surface, --ink, --muted, --faint, --rule, --ok, --warn, --error, --info) that the Plotly script reads."
+        "note": "Set before first paint from localStorage or prefers-color-scheme (src/app.rs THEME_SCRIPT); toggled by the header's sun/moon [data-theme-toggle] icon button, which public/dashboard.html repeats. public/dashboard.html mirrors the tokens with opaque Radix steps (--bg, --surface, --ink, --muted, --faint, --rule, --ok, --warn, --error, --info) that the Plotly script reads."
       }
     },
     "typographyMeta": {
@@ -1188,7 +1188,7 @@
       "name": "Secondary Button",
       "kind": "button",
       "refersTo": "button-secondary",
-      "description": "Default .btn: strong surface with the hairline shadow. Retry, clear, sign in, theme toggle.",
+      "description": "Default .btn: strong surface with the hairline shadow. Retry, clear, sign in.",
       "html": "<button class=\"ds-btn\">Try again</button>",
       "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 12px;border:0;border-radius:8px;background:var(--surface-strong);box-shadow:var(--s-default);color:var(--fg);font-family:var(--font-sans);font-feature-settings:'ss03';font-size:13px;line-height:20px;font-weight:500;cursor:pointer;transition:color 150ms var(--ease-out),background-color 150ms var(--ease-out)}.ds-btn:hover{background:var(--surface-strong-hover)}.ds-btn:focus-visible{outline:1px solid var(--focus);outline-offset:-1px}"
     },
@@ -1267,7 +1267,7 @@
       "Hairline \"shadow-default\" rings instead of borders; 0.5px rules between rows.",
       "Primary actions are inverted: near-black in light, near-white in dark.",
       "The hallmark row is the signature: Interfere md badges in four verdict states.",
-      "Light and dark themes are first-class, toggled from the footer and set before first paint."
+      "Light and dark themes are first-class, switched from a sun/moon icon at the top right and set before first paint."
     ],
     "rules": [
       {
