@@ -4,7 +4,7 @@ use crate::api::{
 use crate::components::badge::{CategoryPill, StateBadge};
 use crate::components::mint_avatar::MintAvatar;
 use crate::components::mint_list::CopyUrl;
-use crate::components::reviews::{RatingSummary, ReviewList};
+use crate::components::reviews::ReviewsBlock;
 use crate::format::{absolute_time, relative_time, short_url};
 use crate::hooks::use_poll;
 use crate::types::{MintMetrics, MintRead, MintState, MintUptime};
@@ -102,24 +102,12 @@ pub fn MintDetailPage() -> impl IntoView {
 
                     <section aria-labelledby="reviews-title">
                         <h2 class="section-title" id="reviews-title">"Reviews"</h2>
-                        <div class="reviews">
-                            <div class="reviews-summary">
-                                <Transition fallback=|| view! { <div class="skeleton" style="height: 120px;"></div> }>
-                                    {move || reviews.get().map(|res| {
-                                        let list = res.map(|d| d.reviews).unwrap_or_default();
-                                        view! { <RatingSummary reviews=list/> }
-                                    })}
-                                </Transition>
-                            </div>
-                            <div class="reviews-main">
-                                <Transition fallback=|| view! { <div class="skeleton skeleton-row"></div> }>
-                                    {move || reviews.get().map(|res| match res {
-                                        Ok(data) => view! { <ReviewList data/> }.into_any(),
-                                        Err(e) => view! { <p class="section-empty" title=e.to_string()>"Couldn't load reviews. Refresh the page to try again."</p> }.into_any(),
-                                    })}
-                                </Transition>
-                            </div>
-                        </div>
+                        <Transition fallback=|| view! { <div class="skeleton" style="height: 120px;"></div> }>
+                            {move || reviews.get().map(|res| match res {
+                                Ok(data) => view! { <ReviewsBlock data/> }.into_any(),
+                                Err(e) => view! { <p class="section-empty" title=e.to_string()>"Couldn't load reviews. Refresh the page to try again."</p> }.into_any(),
+                            })}
+                        </Transition>
                     </section>
 
                     <section aria-labelledby="about-title">

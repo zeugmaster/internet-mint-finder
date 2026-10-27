@@ -6,18 +6,35 @@ use leptos::prelude::*;
 /// How many reviews show before "Show all".
 const FIRST_REVIEWS: usize = 4;
 
-// The mint page lays the reviews out side by side: the overall rating on the
-// left; the write-a-review row and the reviews on the right. Reviews are kind
-// 38000 events read from relays; a new one is signed in the browser
-// (`public/review.js`) and never posted to us. The page loads reviews once,
-// not on the poll, so a review being typed survives.
+// Reviews are kind 38000 events read from relays; a new one is signed in the
+// browser (`public/review.js`) and never posted to us. The mint page loads
+// reviews once, not on the poll, so a review being typed survives. The whole
+// section uses three text styles: its heading, body text, and small grey meta
+// (plus the average as the one large figure).
+
+/// The reviews section body. With reviews: the average on the left, the
+/// reviews and the write-a-review row on the right. Without: one line and the
+/// button, so nothing says "none yet" twice.
+#[component]
+pub fn ReviewsBlock(data: MintReviews) -> impl IntoView {
+    if data.reviews.is_empty() {
+        return view! { <ReviewCompose context=data.context empty=true/> }.into_any();
+    }
+    let for_summary = data.reviews.clone();
+    view! {
+        <div class="reviews">
+            <div class="reviews-summary"><RatingSummary reviews=for_summary/></div>
+            <div class="reviews-main"><ReviewList data/></div>
+        </div>
+    }
+    .into_any()
+}
 
 /// The overall rating: the average, its stars, and how many ratings it rests on.
 #[component]
-pub fn RatingSummary(reviews: Vec<ReviewRead>) -> impl IntoView {
+fn RatingSummary(reviews: Vec<ReviewRead>) -> impl IntoView {
     let ratings: Vec<u8> = reviews.iter().filter_map(|r| r.rating).collect();
     view! {
-        <h3 class="reviews-label">"Overall rating"</h3>
         {match rating_average(&ratings) {
             Some(avg) => view! {
                 <div class="rating-big">
@@ -28,7 +45,8 @@ pub fn RatingSummary(reviews: Vec<ReviewRead>) -> impl IntoView {
                 <p class="sr-only">{format!("Rated {avg:.1} out of 5")}</p>
                 <p class="rating-count">{format!("Based on {}", count_label(ratings.len(), "rating", "ratings"))}</p>
             }.into_any(),
-            None => view! { <p class="rating-none">"No ratings yet"</p> }.into_any(),
+            // Reviews that carry no star rating.
+            None => view! { <p class="rating-count">"No star ratings yet"</p> }.into_any(),
         }}
     }
 }
@@ -36,7 +54,7 @@ pub fn RatingSummary(reviews: Vec<ReviewRead>) -> impl IntoView {
 /// The first reviews, a "Show all" for the rest, then the write-a-review row:
 /// read what others say before adding your own.
 #[component]
-pub fn ReviewList(data: MintReviews) -> impl IntoView {
+fn ReviewList(data: MintReviews) -> impl IntoView {
     let mut first = data.reviews;
     let rest = if first.len() > FIRST_REVIEWS {
         first.split_off(FIRST_REVIEWS)
@@ -45,26 +63,18 @@ pub fn ReviewList(data: MintReviews) -> impl IntoView {
     };
     let total = first.len() + rest.len();
     view! {
-        {if total == 0 {
-            view! {
-                <p class="reviews-empty">"No reviews yet."</p>
-            }.into_any()
-        } else {
-            view! {
-                <ol class="review-list" aria-label="Reviews">
-                    {first.into_iter().map(|r| view! { <ReviewItem review=r/> }).collect_view()}
+        <ol class="review-list" aria-label="Reviews">
+            {first.into_iter().map(|r| view! { <ReviewItem review=r/> }).collect_view()}
+        </ol>
+        {(!rest.is_empty()).then(|| view! {
+            // A details element, so "Show all" works before hydration.
+            <details class="reviews-more">
+                <summary class="btn">{format!("Show all {total} reviews")}</summary>
+                <ol class="review-list">
+                    {rest.into_iter().map(|r| view! { <ReviewItem review=r/> }).collect_view()}
                 </ol>
-                {(!rest.is_empty()).then(|| view! {
-                    // A details element, so "Show all" works before hydration.
-                    <details class="reviews-more">
-                        <summary class="btn">{format!("Show all {total} reviews")}</summary>
-                        <ol class="review-list">
-                            {rest.into_iter().map(|r| view! { <ReviewItem review=r/> }).collect_view()}
-                        </ol>
-                    </details>
-                })}
-            }.into_any()
-        }}
+            </details>
+        })}
         <ReviewCompose context=data.context/>
     }
 }
@@ -101,19 +111,22 @@ fn ReviewItem(review: ReviewRead) -> impl IntoView {
     }
 }
 
-/// The write-a-review row. The form stays in a details element, closed until
-/// asked for; `public/review.js` finds its fields by id either way.
+/// The write-a-review row: one line of text and a button. The form stays in a
+/// details element, closed until asked for; `public/review.js` finds its
+/// fields by id either way. With no reviews yet the line says so itself.
 #[component]
-fn ReviewCompose(context: ReviewContext) -> impl IntoView {
+fn ReviewCompose(context: ReviewContext, #[prop(optional)] empty: bool) -> impl IntoView {
     let can_review = context.mint_pubkey.is_some();
     let relays = context.relays.join(",");
+    let line = if empty {
+        "No reviews yet. Used this mint? Rate it with your Nostr key."
+    } else {
+        "Used this mint? Rate it with your Nostr key."
+    };
     view! {
-        <details class="review-compose">
+        <details class=if empty { "review-compose is-empty" } else { "review-compose" }>
             <summary>
-                <span>
-                    <span class="review-compose-title">"Used this mint?"</span>
-                    <span class="review-compose-hint">"Rate it with your Nostr key. Your review is posted to Nostr, not to this site."</span>
-                </span>
+                <span class="review-compose-line">{line}</span>
                 <span class="btn">
                     <span class="when-closed">"Write a review"</span>
                     <span class="when-open">"Close"</span>
@@ -150,7 +163,7 @@ fn ReviewCompose(context: ReviewContext) -> impl IntoView {
                     </div>
                     <button type="submit" class="btn btn-primary" disabled=!can_review>"Post review"</button>
                     <p id="review-status" class="field-hint mt-2">
-                        {if can_review { "" } else { "Reviews open once this mint shares its public key, which it hasn't yet." }}
+                        {if can_review { "Posted to Nostr, not to this site." } else { "Reviews open once this mint shares its public key, which it hasn't yet." }}
                     </p>
                 </form>
             </div>

@@ -243,7 +243,6 @@ kbd,
 .pr-string,
 .tag,
 .hallmark,
-.step-num,
 .uptime-value,
 .incident-msg,
 .donation-row .amount,
@@ -619,43 +618,26 @@ button.text-link {
     align-items: start;
 }
 
-.reviews-label {
-    font-size: 13px;
-    line-height: 20px;
-    font-weight: 500;
-    letter-spacing: 0;
-}
 
 
 .rating-big {
     display: flex;
     align-items: baseline;
     gap: 2px;
-    margin-top: 8px;
 }
 
-/* Inter, not the mono: at this size a mono period leaves a gap ("4 . 4"). */
+/* The Figure size and weight (24/32 regular), but in Inter: in the mono a
+   three-character "4.4" reads as "4 . 4". */
 .rating-value {
-    font-size: 48px;
-    line-height: 56px;
-    font-weight: 600;
-    letter-spacing: -0.02em;
     font-variant-numeric: tabular-nums;
+    font-size: 24px;
+    line-height: 32px;
 }
 
 .rating-scale {
     color: var(--fg-2);
-    font-size: 20px;
-    line-height: 28px;
 }
 
-.rating-none {
-    margin-top: 8px;
-    color: var(--fg-2);
-    font-size: 20px;
-    line-height: 28px;
-    font-weight: 600;
-}
 
 .rating-count {
     margin-top: 6px;
@@ -674,8 +656,8 @@ button.text-link {
 }
 
 .stars-lg {
-    --star: 24px;
-    --star-gap: 4px;
+    --star: 20px;
+    --star-gap: 3px;
     margin-top: 4px;
 }
 
@@ -720,11 +702,20 @@ button.text-link {
     display: none;
 }
 
+/* Only the button toggles the form: the line beside it ignores clicks and
+   stays plain text, while keyboard focus still lands on the summary. */
 .review-compose > summary {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px 24px;
+    cursor: default;
+    pointer-events: none;
+}
+
+.review-compose > summary .btn {
+    pointer-events: auto;
+    cursor: pointer;
 }
 
 .review-compose > summary:focus-visible {
@@ -735,19 +726,7 @@ button.text-link {
     box-shadow: var(--focus-ring);
 }
 
-.review-compose-title {
-    display: block;
-    font-weight: 600;
-}
 
-.review-compose-hint {
-    display: block;
-    max-width: 56ch;
-    margin-top: 2px;
-    color: var(--fg-2);
-    font-size: 13px;
-    line-height: 20px;
-}
 
 .review-compose:not([open]) .when-open,
 .review-compose[open] .when-closed {
@@ -761,9 +740,20 @@ button.text-link {
     border-top: 0.5px solid var(--border);
 }
 
-.reviews-more + .review-compose,
-.reviews-empty + .review-compose {
+.reviews-more + .review-compose {
     margin-top: 24px;
+}
+
+/* With no reviews the row is the whole section: no rule above it. */
+.review-compose.is-empty {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+}
+
+/* One line in body text, grey, beside the button. */
+.review-compose-line {
+    color: var(--fg-2);
 }
 
 .review-compose-body {
@@ -839,9 +829,6 @@ button.text-link {
     overflow-wrap: anywhere;
 }
 
-.reviews-empty {
-    color: var(--fg-2);
-}
 
 .reviews-more {
     margin-top: 8px;
@@ -1102,6 +1089,13 @@ h4.field-label {
 --------------------------------------------------------------------------- */
 
 /* Interfere badge, md: 20px tall, 12/16 text, 4px radius. */
+/* Badges and categories use the Label role (12/16 medium); NUT tags stay
+   in the regular mono. */
+.badge,
+.cat-pill {
+    font-weight: 500;
+}
+
 .badge,
 .cat-pill,
 .tag {
@@ -1728,7 +1722,6 @@ a.mint-name:hover {
 .feed-amount {
     font-size: 13px;
     line-height: 20px;
-    font-weight: 700;
     white-space: nowrap;
 }
 
@@ -1950,7 +1943,7 @@ a.mint-name:hover {
 .detail-head .mint-avatar {
     width: 56px;
     height: 56px;
-    font-size: 20px;
+    font-size: 24px;
 }
 
 .detail-id {
@@ -2027,7 +2020,6 @@ a.mint-name:hover {
 .uptime-value {
     font-size: 24px;
     line-height: 32px;
-    font-weight: 700;
 }
 
 .uptime-state {
@@ -2084,8 +2076,8 @@ a.mint-name:hover {
     justify-content: space-between;
     margin-top: 6px;
     color: var(--fg-2);
-    font-size: 12px;
-    line-height: 16px;
+    font-size: 13px;
+    line-height: 20px;
 }
 
 .uptime-note {
@@ -2123,9 +2115,6 @@ a.mint-name:hover {
     padding-top: 0;
 }
 
-.donation-row .amount {
-    font-weight: 700;
-}
 
 .donation-row .meta {
     color: var(--fg-2);
@@ -2201,9 +2190,6 @@ a.mint-name:hover {
     color: var(--success-fg);
 }
 
-.ack-banner .amount {
-    font-weight: 700;
-}
 
 .ack-banner .detail {
     color: var(--fg-2);

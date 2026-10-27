@@ -251,7 +251,7 @@
     display: flex; align-items: baseline; gap: 12px;
     margin: 12px 0 0;
   }
-  .section-head .t { font-size: 16px; line-height: 24px; font-weight: 600; color: var(--ink); letter-spacing: -0.01em; }
+  .section-head .t { font-size: 15px; line-height: 24px; font-weight: 600; color: var(--ink); letter-spacing: -0.01em; }
   .section-head .d { font-size: 13px; line-height: 20px; color: var(--muted); }
 
   /* ===================================================================
@@ -269,7 +269,7 @@
     display: flex; align-items: baseline; justify-content: space-between;
     gap: 10px; padding: 0 0 12px;
   }
-  .chart .head .ttl { font-size: 14px; line-height: 20px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+  .chart .head .ttl { font-size: 13px; line-height: 20px; font-weight: 500; color: var(--ink); white-space: nowrap; }
   .chart .head .meta { font-size: 13px; line-height: 20px; color: var(--muted); text-align: right; min-width: 0; }
   .plot { width: 100%; }
 
@@ -301,14 +301,14 @@
   .kpi .foot {
     display: flex; align-items: flex-end; justify-content: space-between; gap: 8px;
     margin-top: 10px; min-height: 26px;
-    font-size: 12px; line-height: 16px; color: var(--muted);
+    font-size: 13px; line-height: 20px; color: var(--muted);
   }
   .kpi .foot > span:last-child { flex: 0 1 96px; min-width: 0; display: flex; justify-content: flex-end; }
   .kpi .foot > span:last-child:empty { display: none; }
   .kpi .spark { width: 100%; max-width: 96px; height: 26px; display: block; }
   .delta {
     display: inline-flex; align-items: center; gap: 4px;
-    font-size: 12px; white-space: nowrap;
+    font-size: 13px; white-space: nowrap;
   }
   .delta.up { color: var(--success-fg); }
   .delta.down { color: var(--danger-fg); }
@@ -325,7 +325,7 @@
     display: flex; align-items: center; justify-content: space-between; gap: 12px;
     border: 0; border-radius: 12px;
     background: transparent; color: var(--ink); cursor: pointer;
-    font-size: 14px; line-height: 20px; font-weight: 600;
+    font-size: 13px; line-height: 20px; font-weight: 500;
   }
   .filter-toggle:focus-visible { outline-offset: -1px; }
   .filter-toggle-meta { margin-left: auto; color: var(--muted); font-size: 13px; font-weight: 400; }
@@ -402,7 +402,7 @@
   .sla-single { display: flex; align-items: center; gap: 22px; }
   .sla-figure { flex: none; min-width: 124px; }
   .sla-figure .big {
-    font-size: 32px; font-weight: 400; line-height: 1;
+    font-size: 24px; font-weight: 400; line-height: 32px;
   }
   .sla-figure .cap {
     margin-top: 8px; font-size: 13px; line-height: 20px; color: var(--muted);
@@ -434,7 +434,6 @@
   td { color: var(--ink); border-top: 0.5px solid var(--rule); }
   th.num, td.num { text-align: right; }
   td.num { white-space: nowrap; }
-  td.hl { font-weight: 600; }
   /* Long route/mint names: one line, full text in the title tooltip. */
   td.trunc { width: 100%; max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   td .sep { color: var(--faint); }
@@ -743,11 +742,11 @@
         <div id="scatter" class="plot" style="height:320px;"></div>
       </div>
       <div class="card chart">
-        <div class="head"><span class="ttl">Mint performance</span></div>
+        <div class="head"><span class="ttl">Mint performance</span><span class="meta">every mint, A to Z</span></div>
         <div style="padding:4px;">
-          <table id="top5">
-            <thead><tr><th class="num">#</th><th>Mint</th><th class="num">Payments</th><th class="num">Errors</th><th class="num">Avg ms</th><th class="num">Score</th></tr></thead>
-            <tbody><tr><td colspan="6"><div class="skel" style="height:120px"></div></td></tr></tbody>
+          <table id="mint-table">
+            <thead><tr><th>Mint</th><th class="num">Payments</th><th class="num">Errors</th><th class="num">Avg ms</th></tr></thead>
+            <tbody><tr><td colspan="4"><div class="skel" style="height:120px"></div></td></tr></tbody>
           </table>
         </div>
       </div>
@@ -1308,7 +1307,7 @@ async function renderFees() {
         <td class="num">${fmt.format(r.swaps)}</td>
         <td class="num">${compact(r.total_amount)}</td>
         <td class="num">${compact(r.total_fee)}</td>
-        <td class="num hl">${(r.fee_pct*100).toFixed(2)}%</td>
+        <td class="num">${(r.fee_pct*100).toFixed(2)}%</td>
       </tr>`).join("");
   } catch (e) { console.error(e); tbody.innerHTML = `<tr><td colspan="5"><div class="empty">Failed to load</div></td></tr>`; }
 }
@@ -1331,21 +1330,23 @@ async function renderScatter() {
           yaxis: { title: "Avg payment time (ms)" } }), config);
   } catch (e) { console.error(e); emptyState(el, "Couldn't load this chart"); }
 }
-async function renderTop5() {
-  const tbody = document.querySelector("#top5 tbody");
+// Every mint's own numbers in alphabetical order. No score and no rank:
+// the directory never orders mints by quality.
+async function renderMintTable() {
+  const tbody = document.querySelector("#mint-table tbody");
   try {
-    const rows = await getJSON("/api/top-quality", { group_by: state.scatter_group, limit: 10 });
-    if (!rows.length) { tbody.innerHTML = `<tr><td colspan="6"><div class="empty">No qualifying mints</div></td></tr>`; return; }
-    tbody.innerHTML = rows.map((r, i) => `
+    const rows = await getJSON("/api/scatter", { group_by: state.scatter_group });
+    if (!rows.length) { tbody.innerHTML = `<tr><td colspan="4"><div class="empty">No payments in this range</div></td></tr>`; return; }
+    const name = r => r.mint.replace(/^https?:\/\//, "");
+    rows.sort((a, b) => name(a).localeCompare(name(b)));
+    tbody.innerHTML = rows.map(r => `
       <tr>
-        <td class="num">#${i+1}</td>
-        <td class="trunc" title="${r.mint}">${r.mint.replace(/^https?:\/\//, "")}</td>
+        <td class="trunc" title="${r.mint}">${name(r)}</td>
         <td class="num">${fmt.format(r.attempts)}</td>
-        <td class="num">${(r.error_rate*100).toFixed(1)}</td>
+        <td class="num">${(r.error_rate*100).toFixed(1)}%</td>
         <td class="num">${Math.round(r.avg_latency_ms)}</td>
-        <td class="num hl">${r.score.toFixed(3)}</td>
       </tr>`).join("");
-  } catch (e) { console.error(e); }
+  } catch (e) { console.error(e); tbody.innerHTML = `<tr><td colspan="4"><div class="empty">Couldn't load this table</div></td></tr>`; }
 }
 async function renderTSSwaps() {
   const el = $("ts-swaps");
@@ -1421,7 +1422,7 @@ async function renderAll() {
       await Promise.allSettled([
         renderKPIs(), renderSLA(), renderStages(), renderCatDonut(), renderBlame(),
         renderTVL(), renderFlow(), renderDonations(), renderFees(),
-        renderScatter(), renderTop5(), renderTSSwaps(), renderTSLatency(), renderHist(), renderErrors(),
+        renderScatter(), renderMintTable(), renderTSSwaps(), renderTSLatency(), renderHist(), renderErrors(),
       ]);
       const stamp = new Date().toLocaleTimeString([], { timeZone: "UTC", hour12: false });
       $("data-status").textContent = failedRequests.size
