@@ -1,6 +1,6 @@
 use crate::api::search_mints;
 use crate::components::badge::StateBadge;
-use crate::components::icons::{ArrowLeft, ArrowRight, Check, Copy};
+use crate::components::icons::{Check, Copy};
 use crate::components::mint_avatar::MintAvatar;
 use crate::format::{relative_time, short_url};
 use crate::hooks::use_poll;
@@ -182,15 +182,15 @@ pub fn MintList() -> impl IntoView {
                         <Show when=move || { pages > 1 }>
                             <nav class="pagination" aria-label="Pages">
                                 {if current > 0 {
-                                    view! { <a class="btn btn-ghost btn-small" href=prev_url.clone()><ArrowLeft/>"Previous"</a> }.into_any()
+                                    view! { <a class="btn btn-ghost btn-small" href=prev_url.clone()>"Previous"</a> }.into_any()
                                 } else {
-                                    view! { <span class="btn btn-ghost btn-small" aria-disabled="true"><ArrowLeft/>"Previous"</span> }.into_any()
+                                    view! { <span class="btn btn-ghost btn-small" aria-disabled="true">"Previous"</span> }.into_any()
                                 }}
                                 <span class="page-number">{format!("{} / {}", current + 1, pages)}</span>
                                 {if current + 1 < pages {
-                                    view! { <a class="btn btn-ghost btn-small" href=next_url.clone()>"Next"<ArrowRight/></a> }.into_any()
+                                    view! { <a class="btn btn-ghost btn-small" href=next_url.clone()>"Next"</a> }.into_any()
                                 } else {
-                                    view! { <span class="btn btn-ghost btn-small" aria-disabled="true">"Next"<ArrowRight/></span> }.into_any()
+                                    view! { <span class="btn btn-ghost btn-small" aria-disabled="true">"Next"</span> }.into_any()
                                 }}
                             </nav>
                         </Show>
@@ -227,7 +227,7 @@ fn MintRow(mint: MintRead) -> impl IntoView {
 /// The mint's address: shows the short form, copies the full URL, and turns
 /// to a check for a moment once it is on the clipboard.
 #[component]
-fn CopyUrl(url: String) -> impl IntoView {
+pub fn CopyUrl(url: String) -> impl IntoView {
     // None: idle. Some(true): copied. Some(false): the browser refused.
     let copied = RwSignal::new(None::<bool>);
     let title = format!("Copy {url}");

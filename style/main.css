@@ -240,12 +240,10 @@ kbd,
 .hop,
 .feed-amount,
 .feed-fee,
-.detail-url,
 .pr-string,
 .tag,
 .hallmark,
 .step-num,
-.stat-chip .value,
 .uptime-value,
 .incident-msg,
 .donation-row .amount,
@@ -257,7 +255,6 @@ kbd,
 
 /* Interfere text links: a quiet underline that darkens on hover. */
 .text-link,
-.detail-url a,
 .site-footer-inner a,
 .stack-table td a:not(.btn) {
     color: inherit;
@@ -269,7 +266,6 @@ kbd,
 }
 
 .text-link:hover,
-.detail-url a:hover,
 .site-footer-inner a:hover,
 .stack-table td a:not(.btn):hover {
     color: var(--fg);
@@ -493,7 +489,8 @@ button.text-link {
     margin-bottom: 12px;
 }
 
-.section-title.compact {
+.section-title.compact,
+.section-head .section-title {
     margin-bottom: 0;
 }
 
@@ -556,6 +553,57 @@ button.text-link {
 }
 
 /* ---------------------------------------------------------------------------
+   Mint page: one column of sections, 48px apart, each a heading on the page
+   with its content 12px below. The one card holds the uptime chart, an
+   instrument read as a whole; reviews and the About rows sit on the page
+   with 0.5px rules.
+--------------------------------------------------------------------------- */
+
+.mint-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 48px;
+    margin-top: 48px;
+}
+
+.mint-sections > section {
+    min-width: 0;
+}
+
+
+.section-empty {
+    color: var(--fg-2);
+}
+
+/* Label and value rows, a rule above each. */
+.kv-ledger {
+    display: grid;
+    grid-template-columns: 160px minmax(0, 1fr);
+    margin: 0;
+    border-bottom: 0.5px solid var(--border);
+    font-size: 13px;
+    line-height: 20px;
+}
+
+.kv-ledger dt,
+.kv-ledger dd {
+    margin: 0;
+    padding: 10px 0;
+    border-top: 0.5px solid var(--border);
+}
+
+.kv-ledger dt {
+    padding-right: 24px;
+    color: var(--fg-2);
+}
+
+.kv-ledger dd {
+    overflow-wrap: anywhere;
+}
+
+
+
+/* ---------------------------------------------------------------------------
    Reviews: the overall rating and the audit figures on the left; the
    write-a-review card and the reviews on the right. Monochrome stars: hue is
    for state only.
@@ -575,9 +623,6 @@ button.text-link {
     letter-spacing: 0;
 }
 
-.measured-head {
-    margin-top: 32px;
-}
 
 .rating-big {
     display: flex;
@@ -602,7 +647,8 @@ button.text-link {
 }
 
 .rating-none {
-    margin: 12px 0 8px;
+    margin-top: 8px;
+    color: var(--fg-2);
     font-size: 20px;
     line-height: 28px;
     font-weight: 600;
@@ -656,56 +702,6 @@ button.text-link {
     height: var(--star);
 }
 
-/* Audit figures: label and value on one line, the bar full width below. */
-.measured {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: baseline;
-    gap: 0 16px;
-    margin: 12px 0 0;
-}
-
-.measured dt {
-    font-size: 13px;
-    line-height: 20px;
-}
-
-.measured dd {
-    margin: 0;
-}
-
-.measured .measured-bar {
-    grid-column: 1 / -1;
-    margin: 6px 0 14px;
-    height: 6px;
-    border-radius: 3px;
-    background: var(--component);
-    overflow: hidden;
-}
-
-.measured-bar > span {
-    display: block;
-    height: 100%;
-    border-radius: inherit;
-    background: var(--fg);
-}
-
-.measured-value {
-    text-align: right;
-    font-family: var(--font-mono);
-    font-feature-settings: 'ss02';
-    font-variant-numeric: tabular-nums;
-    font-size: 13px;
-    line-height: 20px;
-}
-
-.measured-caption {
-    margin-top: 2px;
-    color: var(--fg-2);
-    font-size: 12px;
-    line-height: 16px;
-}
-
 .reviews-main {
     min-width: 0;
 }
@@ -755,11 +751,16 @@ button.text-link {
     display: none;
 }
 
-/* Open, the button becomes a secondary "Close". */
-.review-compose[open] > summary .btn {
-    background: var(--surface-strong);
-    box-shadow: var(--s-default);
-    color: var(--fg);
+/* Under the reviews, ruled off above. */
+.review-compose {
+    margin-top: 8px;
+    padding-top: 20px;
+    border-top: 0.5px solid var(--border);
+}
+
+.reviews-more + .review-compose,
+.reviews-empty + .review-compose {
+    margin-top: 24px;
 }
 
 .review-compose-body {
@@ -773,13 +774,18 @@ button.text-link {
 }
 
 .review-list {
-    margin: 8px 0 0;
+    margin: 0;
     padding: 0;
     list-style: none;
 }
 
 .review {
     padding: 20px 0;
+}
+
+/* The first review lines up with "Overall rating" across the gutter. */
+.reviews-main > .review-list > .review:first-child {
+    padding-top: 0;
 }
 
 .review + .review,
@@ -831,7 +837,6 @@ button.text-link {
 }
 
 .reviews-empty {
-    margin-top: 20px;
     color: var(--fg-2);
 }
 
@@ -1430,7 +1435,7 @@ button.hallmark {
     overflow: hidden;
     background: var(--component);
     color: var(--fg-2);
-    font-size: 14px;
+    font-size: 13px;
     line-height: 1;
     font-weight: 600;
     user-select: none;
@@ -1831,28 +1836,66 @@ a.mint-name:hover {
    Mint detail
 --------------------------------------------------------------------------- */
 
-.back-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
+/* Breadcrumb: words and a slash; navigation never gets a back arrow. */
+.breadcrumb {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
     margin: 16px 0 4px;
     color: var(--fg-2);
     font-size: 13px;
     line-height: 20px;
     font-weight: 500;
+}
+
+.breadcrumb a {
     transition: color 150ms var(--ease);
 }
 
-.back-link:hover {
+.breadcrumb a:hover {
     color: var(--fg);
 }
 
+.breadcrumb-sep {
+    color: var(--fg-3);
+}
+
+.breadcrumb [aria-current='page'] {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--fg);
+}
+
+/* Mint head: the avatar beside the name and state over the copyable URL. */
 .detail-head {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 8px 16px;
+    gap: 16px;
     margin-top: 16px;
+}
+
+.detail-head .mint-avatar {
+    width: 56px;
+    height: 56px;
+    font-size: 20px;
+}
+
+.detail-id {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+}
+
+.detail-title {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 12px;
 }
 
 .detail-head .badge {
@@ -1863,16 +1906,9 @@ a.mint-name:hover {
     line-height: 20px;
 }
 
-.detail-url {
-    margin: 4px 0 24px;
-    color: var(--fg-2);
-    font-size: 13px;
-    line-height: 20px;
-    overflow-wrap: anywhere;
-}
 
 .incident {
-    margin-bottom: 16px;
+    margin-top: 24px;
     padding: 16px;
     border-radius: 12px;
     background: var(--danger-subtle);
@@ -1906,60 +1942,15 @@ a.mint-name:hover {
     overflow-wrap: anywhere;
 }
 
-/* Interfere divided card: cells separated by hairlines. */
-.stat-chips {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0.5px;
-    margin-bottom: 16px;
-    border-radius: 12px;
-    overflow: hidden;
-    background: var(--border);
-    box-shadow: var(--s-default);
-}
-
-.stat-chip {
-    padding: 12px 16px;
-    background: var(--container);
-}
-
-.stat-chip .label {
-    color: var(--fg-2);
-    font-size: 12px;
-    line-height: 16px;
-}
-
-.stat-chip .value {
-    margin-top: 4px;
-    font-size: 15px;
-    line-height: 24px;
-    font-weight: 700;
-}
-
-.uptime-card {
-    margin-bottom: 16px;
-}
 
 .uptime-head {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 16px;
+    align-items: baseline;
     flex-wrap: wrap;
+    gap: 4px 12px;
 }
 
-.uptime-window {
-    color: var(--fg-2);
-    font-size: 13px;
-    line-height: 20px;
-}
 
-.uptime-primary {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    text-align: right;
-}
 
 .uptime-value {
     font-size: 24px;
@@ -1968,14 +1959,6 @@ a.mint-name:hover {
 }
 
 .uptime-state {
-    color: var(--fg-2);
-    font-size: 13px;
-    line-height: 20px;
-}
-
-.uptime-explainer {
-    margin-top: 8px;
-    max-width: 75ch;
     color: var(--fg-2);
     font-size: 13px;
     line-height: 20px;
@@ -1996,23 +1979,19 @@ a.mint-name:hover {
     background: var(--component);
 }
 
-.uptime-bar.ok,
-.lgd.ok {
+.uptime-bar.ok {
     background: var(--ok-solid);
 }
 
-.uptime-bar.warn,
-.lgd.warn {
+.uptime-bar.warn {
     background: var(--warn-solid);
 }
 
-.uptime-bar.err,
-.lgd.err {
+.uptime-bar.err {
     background: var(--err-solid);
 }
 
-.uptime-bar.unknown,
-.lgd.unknown {
+.uptime-bar.unknown {
     background: var(--component);
 }
 
@@ -2037,51 +2016,12 @@ a.mint-name:hover {
     line-height: 16px;
 }
 
-.uptime-legend,
-.uptime-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 16px;
+.uptime-note {
+    max-width: 75ch;
     margin-top: 12px;
     color: var(--fg-2);
     font-size: 13px;
     line-height: 20px;
-}
-
-.uptime-legend span {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.lgd {
-    width: 8px;
-    height: 8px;
-    border-radius: 2px;
-}
-
-.kv-list {
-    display: grid;
-    grid-template-columns: max-content minmax(0, 1fr);
-    gap: 8px 24px;
-    margin: 0;
-    font-size: 13px;
-    line-height: 20px;
-}
-
-div.kv-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.kv-list dt {
-    color: var(--fg-2);
-}
-
-.kv-list dd {
-    margin: 0;
-    overflow-wrap: anywhere;
 }
 
 .tag-list {
@@ -2294,10 +2234,6 @@ div.kv-list {
         padding: 0 12px 8px;
     }
 
-    .stat-chips {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
     .stack-table thead {
         display: none;
     }
@@ -2350,13 +2286,17 @@ div.kv-list {
         transform: none;
     }
 
-    .kv-list {
+    .kv-ledger {
         grid-template-columns: minmax(0, 1fr);
-        gap: 2px;
     }
 
-    .kv-list dd {
-        margin-bottom: 8px;
+    .kv-ledger dt {
+        padding-bottom: 0;
+    }
+
+    .kv-ledger dd {
+        padding-top: 2px;
+        border-top: 0;
     }
 }
 
