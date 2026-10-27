@@ -74,6 +74,7 @@ document.addEventListener('submit', async (ev) => {
   const data = form.dataset;
   const rating = form.elements.rating.value;
   const text = form.elements.content.value.trim();
+  if (!rating) { say('Choose a star rating first.', false); return; }
   if (!text) { say('Write a few words first.', false); return; }
   const tags = [['k', '38172'], ['d', data.mintPubkey]];
   if (data.mintUrl) tags.push(['u', data.mintUrl]);

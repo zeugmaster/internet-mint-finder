@@ -60,8 +60,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         mint.n_errors = if i == 4 { 12 } else { i as u64 };
         let mut info = serde_json::json!({"version": "Preview/1.0", "description": "Synthetic mint for interface development. No real funds.", "nuts": {"4": {}, "5": {}, "7": {}, "18": {}}});
         // One real icon, one that fails to load (the initial shows), the rest none.
+        // Northstar also has a key, so its review form is open in the preview.
         match i {
-            0 => info["icon_url"] = "https://northstar.example/icon.png".into(),
+            0 => {
+                info["icon_url"] = "https://northstar.example/icon.png".into();
+                info["pubkey"] =
+                    "02a9acc1e48c25eeeb9289b5031cc57da9fe72f3fe2861d264bdc074209b107ba2".into();
+            }
             1 => info["icon_url"] = "https://github.com/cashubtc.png".into(),
             _ => {}
         }

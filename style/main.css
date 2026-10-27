@@ -459,9 +459,9 @@ button.text-link {
     letter-spacing: -0.01em;
 }
 
+/* The intro runs the full column, at the owner's request. */
 .page-subtitle {
     margin-top: 6px;
-    max-width: 62ch;
     color: var(--fg-2);
 }
 
@@ -760,6 +760,69 @@ button.text-link {
     margin-top: 16px;
     padding-top: 16px;
     border-top: 0.5px solid var(--border);
+}
+
+/* Star picker: radios 1 to 5 in order, each followed by its star. Filled
+   (ink) up to the checked one; while hovering, filled up to the pointer
+   instead. No gaps between stars, so the preview never flickers off. */
+.star-field {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.star-field legend {
+    padding: 0;
+}
+
+.star-input {
+    display: inline-flex;
+    margin-left: -4px;
+}
+
+.star-input input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+}
+
+.star-input label {
+    display: inline-flex;
+    padding: 4px;
+    border-radius: 6px;
+    color: var(--border-strong);
+    cursor: pointer;
+    transition: color 120ms var(--ease);
+}
+
+.star-input .icon {
+    width: 24px;
+    height: 24px;
+}
+
+.star-input input:checked + label,
+.star-input label:has(~ input:checked) {
+    color: var(--fg);
+}
+
+.star-input:not(:has(:disabled)):hover label:not(:hover):not(:has(~ label:hover)) {
+    color: var(--border-strong);
+}
+
+.star-input:not(:has(:disabled)):hover label:hover,
+.star-input:not(:has(:disabled)):hover label:has(~ label:hover) {
+    color: var(--fg);
+}
+
+.star-input input:focus-visible + label {
+    box-shadow: var(--focus-ring);
+}
+
+.star-input input:disabled + label {
+    color: var(--disabled);
+    cursor: not-allowed;
 }
 
 .review-compose-body .field + .btn {

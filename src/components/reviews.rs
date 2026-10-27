@@ -150,13 +150,7 @@ fn ReviewCompose(context: ReviewContext, #[prop(optional)] empty: bool) -> impl 
                     data-mint-pubkey=context.mint_pubkey.clone().unwrap_or_default()
                     data-announcer=context.announcer.clone().unwrap_or_default()
                     data-relays=relays>
-                    <div class="field">
-                        <label class="field-label" for="review-rating">"Rating"</label>
-                        <select id="review-rating" name="rating" class="filter-select" disabled=!can_review>
-                            <option value="5">"5 · excellent"</option><option value="4">"4 · good"</option>
-                            <option value="3" selected>"3 · okay"</option><option value="2">"2 · poor"</option><option value="1">"1 · avoid"</option>
-                        </select>
-                    </div>
+                    <StarInput disabled=!can_review/>
                     <div class="field">
                         <label class="field-label" for="review-content">"Your experience"</label>
                         <textarea id="review-content" name="content" class="field-textarea" rows="3" maxlength="1000" disabled=!can_review></textarea>
@@ -168,6 +162,34 @@ fn ReviewCompose(context: ReviewContext, #[prop(optional)] empty: bool) -> impl 
                 </form>
             </div>
         </details>
+    }
+}
+
+/// The rating as five stars to pick from: hovering fills the stars up to the
+/// pointer, clicking keeps them. Underneath it is a plain radio group named
+/// `rating` (values 1–5), so arrow keys, screen readers, `required` and
+/// `public/review.js` all work, and the stars work before hydration.
+#[component]
+fn StarInput(disabled: bool) -> impl IntoView {
+    const WORDS: [&str; 5] = ["avoid", "poor", "okay", "good", "excellent"];
+    view! {
+        <fieldset class="field star-field" disabled=disabled>
+            <legend class="field-label">"Rating"</legend>
+            <div class="star-input">
+                {(1..=5u8).map(|n| {
+                    let id = format!("review-rating-{n}");
+                    let word = WORDS[usize::from(n - 1)];
+                    let name = format!("{n} {}, {word}", if n == 1 { "star" } else { "stars" });
+                    view! {
+                        <input type="radio" name="rating" id=id.clone() value=n.to_string() required=true/>
+                        <label for=id title=word>
+                            <Star/>
+                            <span class="sr-only">{name}</span>
+                        </label>
+                    }
+                }).collect_view()}
+            </div>
+        </fieldset>
     }
 }
 
