@@ -2013,8 +2013,10 @@ a.mint-name:hover {
 }
 
 
+/* The figure at the left, the current state across from it. */
 .uptime-head {
     display: flex;
+    justify-content: space-between;
     align-items: baseline;
     flex-wrap: wrap;
     gap: 4px 12px;
