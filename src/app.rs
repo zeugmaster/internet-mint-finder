@@ -10,9 +10,29 @@ use leptos_router::{
 };
 
 /// Runs before first paint: the saved theme, else the system setting. The
-/// footer toggle is handled here too, by delegation, so it works before (and
-/// without) hydration.
-const THEME_SCRIPT: &str = r#"(function(){var d=document.documentElement;d.dataset.theme=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.addEventListener('click',function(e){if(!e.target.closest('[data-theme-toggle]'))return;var next=d.dataset.theme==='dark'?'light':'dark';d.dataset.theme=next;localStorage.setItem('theme',next);});})();"#;
+/// theme switch is handled here too, by delegation, so it works before (and
+/// without) hydration. Switching runs as a view transition that opens the new
+/// theme from the switch (see `.theme-swap` in main.css). Transitions are off
+/// for the swap, so every colour changes at once instead of some fading and
+/// some snapping; without view transitions the swap is just that, instant.
+/// `public/dashboard.html` carries the same script.
+const THEME_SCRIPT: &str = r#"(function(){
+var d=document.documentElement,swaps=0;
+d.dataset.theme=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+document.addEventListener('click',function(e){
+var b=e.target.closest('[data-theme-toggle]');if(!b)return;
+var next=d.dataset.theme==='dark'?'light':'dark',k=++swaps;
+var swap=function(){d.dataset.theme=next;localStorage.setItem('theme',next);};
+var end=function(){if(k===swaps)d.classList.remove('theme-swap');};
+d.classList.add('theme-swap');
+if(!document.startViewTransition){swap();requestAnimationFrame(function(){requestAnimationFrame(end);});return;}
+var r=b.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;
+d.style.setProperty('--swap-x',x+'px');
+d.style.setProperty('--swap-y',y+'px');
+d.style.setProperty('--swap-r',Math.hypot(Math.max(x,innerWidth-x),Math.max(y,innerHeight-y))+'px');
+document.startViewTransition(swap).finished.finally(end);
+});
+})();"#;
 
 /// The site description, shared by search results and link previews.
 const DESCRIPTION: &str =

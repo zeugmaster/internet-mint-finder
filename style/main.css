@@ -107,6 +107,9 @@
     --font-mono: 'TX-02', ui-monospace, 'SF Mono', Menlo, monospace;
     --ease: cubic-bezier(0.4, 0, 0.2, 1);
     --ease-out: cubic-bezier(0, 0, 0.2, 1);
+    /* Arrivals (reveals, tips, the light settling): fast, then a long, soft
+       deceleration. */
+    --ease-arrive: cubic-bezier(0.16, 1, 0.3, 1);
     /* One column for header, pages and footer, so every edge lines up. */
     --column: 960px;
     --gutter: 24px;
@@ -526,19 +529,23 @@ button.text-link {
 /* The sticker at the top of the directory: the whole seal. The light
    sweeps in once as the page arrives and settles at the hero light; then
    it follows the pointer, the sticker tilting toward it and the struck
-   edges turning with it, and springs back on leave. */
+   edges turning with it. The light and the tilt move together on one soft
+   curve, a beat behind the pointer, and glide home together on leave. */
 .brand-sticker.is-hero {
     --sticker-d: 176px;
     --sticker-art: url("/brand/imf-seal-mask.svg?v=2");
     --sticker-inset: 9.5%;
     transform: perspective(700px) rotateX(var(--metal-rx)) rotateY(var(--metal-ry));
-    transition: --metal-rx 600ms cubic-bezier(0.2, 0.8, 0.2, 1), --metal-ry 600ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    transition-property: --metal-px, --metal-py, --metal-bx, --metal-by, --metal-lx, --metal-ly, --metal-rx, --metal-ry;
+    transition-duration: 700ms;
+    transition-timing-function: var(--ease-arrive);
     animation: brand-sticker-arrive 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) 0.3s backwards;
 }
 
 .brand-sticker.is-hero.is-live {
     animation: none;
-    transition: --metal-rx 120ms linear, --metal-ry 120ms linear;
+    transition-duration: 260ms;
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* From the right to the hero light, and the struck edges turn with it. */
@@ -612,7 +619,7 @@ button.text-link {
     font-size: 13px;
     line-height: 20px;
     font-weight: 500;
-    transition: color 200ms ease-in-out, background-color 200ms ease-in-out, box-shadow 200ms ease-in-out;
+    transition: color 150ms var(--ease-out), background-color 150ms var(--ease-out), box-shadow 150ms var(--ease-out);
 }
 
 .nav-link:hover,
@@ -637,6 +644,82 @@ button.text-link {
 
 .theme-toggle > span {
     display: inline-flex;
+}
+
+/* Switching theme: the new theme opens from the switch as a soft-edged
+   circle, fast at first and settling as it reaches the far corner, like
+   light (or dusk) flooding the page, and the switch's icon turns in. The
+   theme script sets --swap-x and --swap-y (the switch's centre) and
+   --swap-r (the distance to the farthest corner). Transitions are off for
+   the swap, so every colour underneath changes at once. */
+@property --swap-reveal { syntax: "<length>"; inherits: false; initial-value: 0px; }
+
+.theme-swap,
+.theme-swap *,
+.theme-swap *::before,
+.theme-swap *::after {
+    transition: none !important;
+}
+
+/* Only one icon shows at a time, so both can carry the name. */
+.theme-swap .theme-toggle > span {
+    view-transition-name: theme-icon;
+}
+
+.theme-swap::view-transition-old(root),
+.theme-swap::view-transition-new(root) {
+    animation: none;
+    mix-blend-mode: normal;
+}
+
+.theme-swap::view-transition-new(root) {
+    -webkit-mask-image: radial-gradient(circle at var(--swap-x) var(--swap-y),
+        #000 calc(var(--swap-reveal) - 160px), transparent var(--swap-reveal));
+            mask-image: radial-gradient(circle at var(--swap-x) var(--swap-y),
+        #000 calc(var(--swap-reveal) - 160px), transparent var(--swap-reveal));
+    animation: theme-reveal 760ms cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+
+.theme-swap::view-transition-old(theme-icon) {
+    animation: theme-icon-out 160ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.theme-swap::view-transition-new(theme-icon) {
+    animation: theme-icon-in 480ms var(--ease-arrive) both;
+}
+
+@keyframes theme-reveal {
+    to { --swap-reveal: calc(var(--swap-r) + 160px); }
+}
+
+@keyframes theme-icon-out {
+    to { opacity: 0; transform: rotate(90deg) scale(0.6); }
+}
+
+@keyframes theme-icon-in {
+    from { opacity: 0; transform: rotate(-90deg) scale(0.6); }
+}
+
+@keyframes theme-fade {
+    from { opacity: 0; }
+}
+
+/* Reduced motion: no spreading circle or turning icon, a short crossfade. */
+@media (prefers-reduced-motion: reduce) {
+    .theme-swap::view-transition-new(root) {
+        -webkit-mask-image: none;
+                mask-image: none;
+        animation: theme-fade 200ms var(--ease) both;
+    }
+
+    .theme-swap::view-transition-old(theme-icon) {
+        animation: none;
+        opacity: 0;
+    }
+
+    .theme-swap::view-transition-new(theme-icon) {
+        animation: theme-fade 200ms var(--ease) both;
+    }
 }
 
 /* ---------------------------------------------------------------------------
@@ -1363,6 +1446,33 @@ button.text-link {
     margin-top: 20px;
 }
 
+/* Disclosures slide open on a soft deceleration and close a little faster,
+   where the browser can animate to auto height; elsewhere they open at
+   once, as before. */
+.review-compose,
+.reviews-more,
+.feed-error {
+    interpolate-size: allow-keywords;
+}
+
+.review-compose::details-content,
+.reviews-more::details-content,
+.feed-error::details-content {
+    display: flow-root;
+    block-size: 0;
+    overflow: clip;
+    overflow-clip-margin: 4px;
+    transition: block-size 200ms var(--ease), content-visibility 200ms var(--ease) allow-discrete;
+}
+
+.review-compose[open]::details-content,
+.reviews-more[open]::details-content,
+.feed-error[open]::details-content {
+    block-size: auto;
+    transition-duration: 340ms;
+    transition-timing-function: var(--ease-arrive);
+}
+
 .reviews-more[open] > summary {
     display: none;
 }
@@ -1774,13 +1884,15 @@ button.hallmark {
     pointer-events: none;
     opacity: 0;
     transform: translate(-50%, 4px) scale(0.95);
-    transition: opacity 200ms var(--ease), transform 200ms var(--ease);
+    transition: opacity 120ms var(--ease), transform 120ms var(--ease);
 }
 
+/* In on a soft deceleration, out faster. */
 .hallmark[data-tip]:hover::after,
 .hallmark[data-tip]:focus::after {
     opacity: 1;
     transform: translate(-50%, 0) scale(1);
+    transition: opacity 180ms var(--ease-arrive), transform 260ms var(--ease-arrive);
 }
 
 .auditor-cell {
@@ -2616,13 +2728,14 @@ a.mint-name:hover {
     opacity: 0;
     transform: translateY(-4px) scale(0.95);
     transform-origin: top left;
-    transition: opacity 200ms var(--ease), transform 200ms var(--ease);
+    transition: opacity 120ms var(--ease), transform 120ms var(--ease);
 }
 
 .help-tip:hover .help-tip-text,
 .help-tip:focus-within .help-tip-text {
     opacity: 1;
     transform: none;
+    transition: opacity 180ms var(--ease-arrive), transform 260ms var(--ease-arrive);
 }
 
 
