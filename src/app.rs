@@ -129,12 +129,12 @@ fn NotFound() -> impl IntoView {
     }
 }
 
-/// The brand's sign-off: a hairline of foil over the name in brushed steel,
-/// the tag's metal used quietly, and quiet links to Cashu itself. The light
-/// on the foil and the name follows the pointer across the footer.
+/// The brand's sign-off: the name in brushed steel and quiet links to Cashu
+/// itself, over the milled edge of a coin along the bottom of the page. The
+/// light on the steel follows the pointer across the footer.
 #[component]
 fn Footer() -> impl IntoView {
-    let footer = NodeRef::<leptos::html::Div>::new();
+    let footer = NodeRef::<leptos::html::Footer>::new();
     // How far across the footer the pointer is, in percent; None at rest.
     let light = RwSignal::new(None::<f64>);
     let on_move = move |ev: leptos::ev::PointerEvent| {
@@ -152,22 +152,22 @@ fn Footer() -> impl IntoView {
     };
 
     view! {
-        <footer class="site-footer">
-            <div
-                class="site-footer-inner"
-                node_ref=footer
-                style=move || light.get().map(|x| format!("--foil-x: {x:.1}%")).unwrap_or_default()
-                on:pointermove=on_move
-                on:pointerleave=move |_| light.set(None)
-            >
-                <span class="foil-rule" aria-hidden="true"></span>
+        <footer
+            class="site-footer"
+            node_ref=footer
+            style=move || light.get().map(|x| format!("--foil-x: {x:.1}%")).unwrap_or_default()
+            on:pointermove=on_move
+            on:pointerleave=move |_| light.set(None)
+        >
+            <div class="site-footer-inner">
                 <span class="foil-mark">"Internet Mint Finder"</span>
                 <nav class="foil-links" aria-label="Cashu">
-                    <a href="https://cashu.space">"cashu.space"</a>
-                    <a href="https://opencash.dev">"opencash.dev"</a>
+                    <a href="https://cashu.space">"Cashu"</a>
+                    <a href="https://opencash.dev">"OpenCash"</a>
                     <a href="https://github.com/cashubtc/nuts">"GitHub"</a>
                 </nav>
             </div>
+            <span class="footer-reed" aria-hidden="true"></span>
         </footer>
     }
 }

@@ -223,7 +223,7 @@ fn StarInput(disabled: bool) -> impl IntoView {
 /// clipped to the rating. The fill is measured in whole stars plus a fraction
 /// of one, so 4.4 fills four stars and 40% of the fifth.
 #[component]
-fn Stars(value: f64, #[prop(optional)] large: bool) -> impl IntoView {
+pub fn Stars(value: f64, #[prop(optional)] large: bool) -> impl IntoView {
     let value = value.clamp(0.0, 5.0);
     let full = value.floor();
     let style = format!("--full: {full}; --frac: {:.2}", value - full);

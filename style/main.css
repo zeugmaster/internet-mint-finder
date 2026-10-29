@@ -1032,20 +1032,22 @@ button.text-link {
 }
 
 /* A filled star cut from the tag's metal (see .brand-sticker): bands of steel,
-   the rainbow laid in, and a glint, all masked to the star. Steel in light
-   mode, so it reads against the grey empty stars on a white card; bright
-   chrome on black. Sized by --star; --foil-at (0 to 1) is where along a row
+   the rainbow laid in, and a glint, all masked to the star. Dark steel with
+   a soft glint in light mode, so a 14px star still reads on a white card and
+   stands clear of the grey empty ones; bright chrome on black. Sized by --star; --foil-at (0 to 1) is where along a row
    the star sits, so a row of them reads as one strip of foil, the colour
    running across it. */
 .foil-star {
     --foil-at: 0.4;
-    --foil-metal: linear-gradient(160deg, #a7afbb 0%, #6b7483 28%, #b9c0ca 50%, #545c6b 72%, #8f98a6 100%);
+    --foil-metal: linear-gradient(160deg, #5d6573 0%, #3a414e 28%, #6b7381 50%, #2f3541 72%, #535b69 100%);
+    --foil-glint: #ffffff59;
+    --foil-glint-mid: #ffffff14;
     flex: none;
     display: block;
     width: var(--star, 16px);
     height: var(--star, 16px);
     background-image:
-        radial-gradient(circle, #ffffffd9 0%, #ffffff40 22%, #ffffff00 46%),
+        radial-gradient(circle, var(--foil-glint) 0%, var(--foil-glint-mid) 22%, #ffffff00 46%),
         linear-gradient(118deg,
             #7a95ff73 0%, #b48cff73 14%, #f08ad873 28%, #ffc4a873 38%,
             #7fd8ff73 52%, #6fe0c073 66%, #8aa6ff73 80%, #c79bff73 100%),
@@ -1062,6 +1064,8 @@ button.text-link {
 
 :root[data-theme='dark'] .foil-star {
     --foil-metal: linear-gradient(160deg, #e6e9ed 0%, #9aa3af 28%, #ffffff 50%, #8d96a3 72%, #d3d8df 100%);
+    --foil-glint: #ffffffd9;
+    --foil-glint-mid: #ffffff40;
 }
 
 .stars-fill .foil-star:nth-child(1),
@@ -1871,7 +1875,7 @@ button.hallmark {
 .mint-row {
     position: relative;
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) 88px 112px;
+    grid-template-columns: auto minmax(0, 1fr) 160px 112px;
     grid-template-areas: "avatar id rating status";
     align-items: center;
     gap: 0 12px;
@@ -1934,25 +1938,17 @@ button.hallmark {
 
 .mint-rating {
     grid-area: rating;
-    justify-self: end;
+    justify-self: start;
 }
 
+/* Five stars, then the count in words. Left-aligned, so the stars line up
+   down the list. */
 .mint-rating-shown {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     font-size: 13px;
     line-height: 20px;
-}
-
-.mint-rating .foil-star {
-    --star: 13px;
-}
-
-.mint-rating-value {
-    font-family: var(--font-mono);
-    font-feature-settings: 'ss02';
-    font-variant-numeric: tabular-nums;
 }
 
 .mint-rating-count {
@@ -2800,55 +2796,69 @@ a.mint-name:hover {
    Footer
 --------------------------------------------------------------------------- */
 
-/* The brand's sign-off, the tag's metal used quietly: a hairline of foil,
-   the name stamped in brushed steel under it, centred like the legend on a
-   coin, and quiet links to Cashu itself. The light on the foil and the name
-   follows the pointer across the footer and eases back to rest. */
+/* The brand's sign-off, the tag's metal used quietly: the name stamped in
+   brushed steel, centred like the legend on a coin, and quiet links to Cashu
+   itself, over the milled edge of a coin along the bottom of the page. The
+   light on the steel follows the pointer across the footer and eases back to
+   rest. */
 @property --foil-x { syntax: "<percentage>"; inherits: true; initial-value: 30%; }
+
+.site-footer {
+    --reed-glint: #ffffff99;
+    --reed-steel: linear-gradient(100deg,
+        #4f5766 0%, #6b7483 14%, #3f4756 30%, #687180 46%, #4f5766 62%, #6b7483 80%, #4f5766 100%);
+    --reed-fade: linear-gradient(180deg, transparent, #000000a6);
+    transition: --foil-x 500ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* On black the reeding is chrome kept low, eased in, with wide bands of
+   light and shade, so it reads as brushed metal catching the light rather
+   than a bright stripe. */
+:root[data-theme='dark'] .site-footer {
+    --reed-glint: #ffffffd9;
+    --reed-steel: linear-gradient(100deg,
+        #7f8896 0%, #e6e9ed 12%, #5d6573 26%, #c9ced6 42%, #6b7483 58%, #f7f8fa 76%, #8d96a3 90%, #7f8896 100%);
+    --reed-fade: linear-gradient(180deg,
+        transparent 0%, #0000000a 30%, #00000024 55%, #0000004d 80%, #00000080 100%);
+}
 
 .site-footer-inner {
     display: grid;
     justify-items: center;
     gap: 20px;
-    padding-top: 40px;
-    padding-bottom: 56px;
-    transition: --foil-x 500ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    padding-top: 8px;
 }
 
-/* The foil and the name are decoration; the links take the pointer. */
-.foil-rule,
-.foil-mark {
+/* The name and the reeding are decoration; the links take the pointer. */
+.foil-mark,
+.footer-reed {
     pointer-events: none;
 }
 
-/* Two pixels of brushed chrome with the colour faintly laid in, fading out
-   at both ends; a glint rides it with the pointer. */
-.foil-rule {
-    position: relative;
-    width: 100%;
-    height: 2px;
-    border-radius: 1px;
-    isolation: isolate;
-    background:
-        radial-gradient(closest-side, #ffffff 0%, #ffffff00 100%) no-repeat,
-        repeating-linear-gradient(90deg,
-            #9aa3af 0px, #e6e9ed 46px, #7f8896 92px, #d3d8df 138px, #a6aeb9 184px, #9aa3af 230px);
-    background-size: 220px 100%, 100% 100%;
-    background-position: var(--foil-x) 0, 0 0;
-    -webkit-mask: linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent);
-            mask: linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent);
-}
-
-.foil-rule::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg,
-        #7a95ff 0%, #b48cff 16%, #f08ad8 30%, #ffc4a8 42%, #7fd8ff 56%, #6fe0c0 70%, #8aa6ff 84%, #c79bff 100%);
-    background-size: 200% 100%;
-    background-position: calc(100% - var(--foil-x)) 0;
-    mix-blend-mode: color;
-    opacity: 0.3;
+/* The milled edge, edge to edge across the window and the last thing on the
+   page: 1px steel lines every 4px with the colour laid in at 30%, fading in
+   toward the bottom; a glint rides it with the pointer. */
+.footer-reed {
+    display: block;
+    height: 64px;
+    margin-top: 48px;
+    background-image:
+        radial-gradient(closest-side, var(--reed-glint), #ffffff00),
+        linear-gradient(100deg,
+            #7a95ff4d 0%, #b48cff4d 18%, #f08ad84d 34%, #ffc4a84d 46%, #7fd8ff4d 60%, #6fe0c04d 76%, #8aa6ff4d 100%),
+        var(--reed-steel);
+    background-repeat: no-repeat, repeat, repeat;
+    background-size: 32% 180%, 240% 100%, 260% 100%;
+    background-position: var(--foil-x) 50%, calc(100% - var(--foil-x)) 0, var(--foil-x) 0;
+    background-blend-mode: screen, color, normal;
+    -webkit-mask:
+        repeating-linear-gradient(90deg, #000 0 1px, transparent 1px 4px),
+        var(--reed-fade);
+    -webkit-mask-composite: source-in;
+            mask:
+        repeating-linear-gradient(90deg, #000 0 1px, transparent 1px 4px),
+        var(--reed-fade);
+            mask-composite: intersect;
 }
 
 /* The name in brushed steel: bands that slide with the light, the rainbow
@@ -2911,10 +2921,6 @@ a.mint-name:hover {
         linear-gradient(100deg,
             #c9ced6 0%, #f7f8fa 14%, #9aa3af 30%, #e6e9ed 46%, #aeb5bf 62%, #ffffff 80%, #c9ced6 100%);
     filter: none;
-}
-
-:root[data-theme='dark'] .foil-rule {
-    filter: brightness(0.8);
 }
 
 :root[data-theme='dark'] .when-light,
@@ -2995,12 +3001,21 @@ a.mint-name:hover {
         letter-spacing: 0.1em;
     }
 
-    /* Phones: the rating sits under the status, both right-aligned. */
+    /* Phones: the rating is a third line under the URL, on the name's edge,
+       so the stars never squeeze the URL. Unrated rows stay two lines. */
     .mint-row {
         grid-template-columns: auto minmax(0, 1fr) auto;
         grid-template-areas:
             "avatar id status"
-            "avatar id rating";
+            "avatar rating rating";
+    }
+
+    .mint-rating {
+        margin-top: 4px;
+    }
+
+    .mint-rating:empty {
+        display: none;
     }
 
     .status-tabs {

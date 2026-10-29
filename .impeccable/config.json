@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "gradient-text",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/footer-ideas.html"
+        ],
+        "createdAt": "2026-10-29T22:02:51.947Z",
+        "reason": "DESIGN.md Foil Exception Rule: the footer name in brushed steel already ships (.foil-mark); this mock explores brand-foil footers at the owner's request"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/footer-ideas.html"
+        ],
+        "createdAt": "2026-10-29T22:06:29.278Z",
+        "reason": "DESIGN.md Segmented tabs: Interfere track with tabs flush inside it, as .site-nav and .segmented ship in style/main.css; padding lives inside each 28px tab"
+      }
+    ]
+  }
+}

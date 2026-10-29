@@ -1,8 +1,8 @@
 use crate::api::search_mints;
 use crate::components::badge::StateBadge;
-use crate::components::brand::FoilStar;
 use crate::components::icons::{Check, Copy, Cross};
 use crate::components::mint_avatar::MintAvatar;
+use crate::components::reviews::Stars;
 use crate::format::{relative_time, relative_time_from, short_url};
 use crate::hooks::use_poll;
 use crate::types::{MintPage, MintRead, MintSort, MintState};
@@ -289,7 +289,8 @@ fn MintRow(mint: MintRead) -> impl IntoView {
     }
 }
 
-/// A star, the average and the review count, or nothing for an unrated mint.
+/// Five stars filled to the average and the review count in words, or
+/// nothing for an unrated mint. The average itself is on the mint page.
 #[component]
 fn MintRating(avg: Option<f64>, count: u64) -> impl IntoView {
     let reviews = if count == 1 { "review" } else { "reviews" };
@@ -298,9 +299,8 @@ fn MintRating(avg: Option<f64>, count: u64) -> impl IntoView {
             <span class="mint-rating">
                 <span class="sr-only">{format!("Rated {avg:.1} out of 5 from {count} {reviews}")}</span>
                 <span class="mint-rating-shown" aria-hidden="true">
-                    <FoilStar/>
-                    <span class="mint-rating-value">{format!("{avg:.1}")}</span>
-                    <span class="mint-rating-count">{format!("({count})")}</span>
+                    <Stars value=avg/>
+                    <span class="mint-rating-count">{format!("{count} {reviews}")}</span>
                 </span>
             </span>
         }
@@ -389,7 +389,7 @@ fn DirectorySkeleton() -> impl IntoView {
                         <span class="skeleton" style=format!("width: {w}%; height: 14px;")></span>
                         <span class="skeleton" style=format!("width: {}%; height: 12px; margin-top: 6px;", w / 2 + 12)></span>
                     </span>
-                    <span class="mint-rating"><span class="skeleton" style="width: 48px; height: 14px;"></span></span>
+                    <span class="mint-rating"><span class="skeleton" style="width: 78px; height: 14px;"></span></span>
                     <span class="skeleton mint-status-skeleton" style="width: 72px; height: 20px;"></span>
                 </div></li>
             }).collect_view()}
