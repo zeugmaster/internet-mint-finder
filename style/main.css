@@ -254,7 +254,6 @@ kbd,
 
 /* Interfere text links: a quiet underline that darkens on hover. */
 .text-link,
-.site-footer-inner a,
 .stack-table td a:not(.btn) {
     color: inherit;
     text-decoration: underline solid 0.1em;
@@ -265,7 +264,6 @@ kbd,
 }
 
 .text-link:hover,
-.site-footer-inner a:hover,
 .stack-table td a:not(.btn):hover {
     color: var(--fg);
     text-decoration-color: var(--fg-2);
@@ -2262,7 +2260,7 @@ a.mint-name:hover {
    Footer
 --------------------------------------------------------------------------- */
 
-/* One sentence and the donate link. */
+/* One sentence. */
 .site-footer-inner {
     display: flex;
     flex-wrap: wrap;

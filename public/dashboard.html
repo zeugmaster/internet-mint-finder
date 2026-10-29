@@ -221,20 +221,13 @@
   }
   .tool-btn:hover { background: var(--surface-strong-hover); }
 
-  /* One sentence and the donate link. */
+  /* One sentence. */
   .site-footer-inner {
     display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline;
     gap: 8px 32px; padding-top: 24px; padding-bottom: 40px;
     color: var(--muted); font-size: 13px; line-height: 20px;
   }
   .site-footer-inner p { margin: 0; }
-  .site-footer-inner a {
-    color: inherit; text-decoration: underline solid 0.1em;
-    text-decoration-color: var(--border-strong); text-underline-offset: 20%;
-    text-decoration-skip-ink: none;
-    transition: text-decoration-color 150ms var(--ease), color 150ms var(--ease);
-  }
-  .site-footer-inner a:hover { color: var(--ink); text-decoration-color: var(--muted); }
 
   /* ===================================================================
      Layout
@@ -778,7 +771,6 @@
 <footer class="site-footer">
   <div class="site-footer-inner">
     <p>Audits move real ecash between mints. Results are measurements, not endorsements.</p>
-    <a href="/receive">Donate ecash to fund the audits</a>
   </div>
 </footer>
 

@@ -100,7 +100,6 @@ fn Footer() -> impl IntoView {
         <footer class="site-footer">
             <div class="site-footer-inner">
                 <p>"Audits move real ecash between mints. Results are measurements, not endorsements."</p>
-                <a href="/receive">"Donate ecash to fund the audits"</a>
             </div>
         </footer>
     }
