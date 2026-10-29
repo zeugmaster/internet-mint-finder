@@ -1,6 +1,6 @@
 use crate::api::search_mints;
 use crate::components::badge::StateBadge;
-use crate::components::icons::{Check, Copy, Star};
+use crate::components::icons::{Check, Copy, Cross, Star};
 use crate::components::mint_avatar::MintAvatar;
 use crate::format::{relative_time, short_url};
 use crate::hooks::use_poll;
@@ -147,15 +147,36 @@ pub fn MintList() -> impl IntoView {
             navigate("/", quiet());
         }
     };
+    // Once hydrated, Enter applies the search at once instead of reloading.
+    let on_search = {
+        let navigate = navigate.clone();
+        move |ev: leptos::ev::SubmitEvent| {
+            ev.prevent_default();
+            let url = view_url(
+                &search.get_untracked(),
+                state_filter.get_untracked(),
+                sort.get_untracked(),
+                0,
+            );
+            navigate(&url, quiet());
+        }
+    };
 
     view! {
         <div class="directory">
             <div class="directory-tools">
-                <div class="search-field">
+                // A plain GET form, so search works before (and without)
+                // hydration; the hidden fields keep the status and sort.
+                <form class="search-field" role="search" action="/" method="get" on:submit=on_search>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg>
-                    <input type="search" aria-label="Search mints by name or URL" placeholder="Search name or URL"
+                    // The attribute carries the search into the server's HTML; the
+                    // property keeps it live once hydrated.
+                    <input type="search" name="q" aria-label="Search mints by name or URL" placeholder="Search name or URL"
+                        value=search.get_untracked()
                         prop:value=move || search.get() on:input=move |ev| search.set(event_target_value(&ev))/>
-                </div>
+                    {move || state_filter.get().map(|state| view! { <input type="hidden" name="status" value=status_slug(state)/> })}
+                    {move || (sort.get() != MintSort::default()).then(|| view! { <input type="hidden" name="sort" value=sort_slug(sort.get())/> })}
+                </form>
                 <div class="directory-filters">
                     <nav class="segmented status-tabs" aria-label="Filter mints by status">{status_tabs}</nav>
                     <label class="sort-field">
@@ -258,7 +279,7 @@ fn MintRow(mint: MintRead) -> impl IntoView {
         <div class="mint-row">
             <MintAvatar name=name.clone() info=mint.info.clone()/>
             <span class="mint-id">
-                <a class="mint-name mint-link" href=href>{name}</a>
+                <a class="mint-name mint-link" href=href dir="auto">{name}</a>
                 <CopyUrl url=mint.url.clone()/>
             </span>
             <MintRating avg=mint.review_avg count=mint.review_count/>
@@ -295,7 +316,8 @@ pub fn CopyUrl(url: String) -> impl IntoView {
 }
 
 /// A value as a quiet button: shows `shown`, copies the full `text`, and
-/// turns to a check for a moment once it is on the clipboard.
+/// turns to a check for a moment once it is on the clipboard, or says
+/// "Couldn't copy" with a cross when the browser refuses.
 #[component]
 pub fn CopyText(text: String, shown: String) -> impl IntoView {
     // None: idle. Some(true): copied. Some(false): the browser refused.
@@ -327,15 +349,19 @@ pub fn CopyText(text: String, shown: String) -> impl IntoView {
             type="button"
             class="copy-url"
             class:is-copied=move || copied.get() == Some(true)
+            class:is-failed=move || copied.get() == Some(false)
             title=title
             on:click=on_click
         >
-            <span class="sr-only">"Copy "</span>
-            <span class="copy-url-text">{shown}</span>
-            {move || if copied.get() == Some(true) {
-                view! { <Check/> }.into_any()
-            } else {
-                view! { <Copy/> }.into_any()
+            // While it says "Couldn't copy", the button needs no "Copy" before it.
+            {move || (copied.get() != Some(false)).then(|| view! { <span class="sr-only">"Copy "</span> })}
+            <span class="copy-url-text">
+                {move || if copied.get() == Some(false) { "Couldn't copy".to_string() } else { shown.clone() }}
+            </span>
+            {move || match copied.get() {
+                Some(true) => view! { <Check/> }.into_any(),
+                Some(false) => view! { <Cross/> }.into_any(),
+                None => view! { <Copy/> }.into_any(),
             }}
         </button>
         <span class="sr-only" role="status">

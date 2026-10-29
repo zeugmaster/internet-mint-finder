@@ -114,7 +114,7 @@ fn ReviewItem(review: ReviewRead) -> impl IntoView {
                     </span>
                 </span>
             </div>
-            {(!review.content.trim().is_empty()).then(|| view! { <p class="review-text">{review.content}</p> })}
+            {(!review.content.trim().is_empty()).then(|| view! { <p class="review-text" dir="auto">{review.content}</p> })}
         </li>
     }
 }

@@ -6,7 +6,7 @@ use leptos::prelude::*;
 use leptos_meta::{provide_meta_context, HashedStylesheet, MetaTags, Title};
 use leptos_router::{
     components::{Route, Router, Routes},
-    ParamSegment, StaticSegment,
+    ParamSegment, SsrMode, StaticSegment,
 };
 
 /// Runs before first paint: the saved theme, else the system setting. The
@@ -96,9 +96,12 @@ pub fn App() -> impl IntoView {
                 <main id="main-content" class="flex-grow" tabindex="-1">
                     <Routes fallback=NotFound>
                         <Route path=StaticSegment("") view=HomePage/>
+                        // Rendered after its data, so an unknown mint can answer
+                        // 404 before the status is sent.
                         <Route
                             path=(StaticSegment("mints"), ParamSegment("id"))
                             view=MintDetailPage
+                            ssr=SsrMode::Async
                         />
                     </Routes>
                 </main>

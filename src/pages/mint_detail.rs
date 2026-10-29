@@ -16,9 +16,9 @@ use leptos_router::hooks::use_params_map;
 
 /// One mint for a wallet user: is it up, what people say, and what the mint
 /// says about itself. Audit detail (per-auditor results, swaps, funding) is
-/// left off. The one card holds the
-/// uptime chart, an instrument read as a whole; text sits on the page with
-/// 0.5px rules; headings sit outside.
+/// left off. Each section is a card with its heading outside, on the page.
+/// The page polls every 15 seconds and keeps the last good data through a
+/// failed refresh.
 #[component]
 pub fn MintDetailPage() -> impl IntoView {
     let params = use_params_map();
@@ -62,6 +62,55 @@ pub fn MintDetailPage() -> impl IntoView {
         |id| async move { get_mint_reviews(id).await },
     );
 
+    // The last good answer to each polled request. A failed refresh keeps
+    // showing it, with a note, instead of wiping the page; only a first load
+    // that fails shows an error. Effects run in the browser only, so the
+    // server renders straight from the requests.
+    let last_mint = RwSignal::new(None::<Option<MintRead>>);
+    let last_metrics = RwSignal::new(None::<MintMetrics>);
+    let last_uptime = RwSignal::new(None::<MintUptime>);
+    let updated_at = RwSignal::new(None::<DateTime<Utc>>);
+    Effect::new(move |_| {
+        if let Some(Ok(found)) = mint.get() {
+            last_mint.set(Some(found));
+            updated_at.set(Some(Utc::now()));
+        }
+    });
+    Effect::new(move |_| {
+        if let Some(Ok(data)) = metrics.get() {
+            last_metrics.set(Some(data));
+        }
+    });
+    Effect::new(move |_| {
+        if let Some(Ok(data)) = uptime.get() {
+            last_uptime.set(Some(data));
+        }
+    });
+    let current_mint = move || {
+        mint.get()
+            .map(|res| res.or_else(|e| last_mint.get().ok_or(e)))
+    };
+    let current_uptime = move || {
+        uptime
+            .get()
+            .and_then(|r| r.ok())
+            .or_else(|| last_uptime.get())
+    };
+    let stale_note = move || {
+        tick.track();
+        let failed = matches!(mint.get(), Some(Err(_)))
+            || matches!(metrics.get(), Some(Err(_)))
+            || matches!(uptime.get(), Some(Err(_)));
+        let when = updated_at.get().map(relative_time)?;
+        failed.then(|| {
+            view! {
+                <div class="callout mt-4" role="status">
+                    {format!("Couldn't refresh. Showing data from {when}, retrying.")}
+                </div>
+            }
+        })
+    };
+
     view! {
         <div class="shell">
             <Transition fallback=|| {
@@ -71,20 +120,33 @@ pub fn MintDetailPage() -> impl IntoView {
                 }
             }>
                 {move || {
-                    let metrics_data = metrics.get().and_then(|r| r.ok());
-                    let uptime_data = uptime.get().and_then(|r| r.ok());
-                    mint.get().map(|res| match res {
-                        Ok(Some(mint)) => {
-                            view! { <MintHead mint=mint metrics=metrics_data uptime=uptime_data/> }.into_any()
-                        }
-                        Ok(None) => view! {
-                            <Title text="Mint not found — Internet Mint Finder"/>
-                            <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">"Directory"</a></nav>
-                            <div class="empty-state">"This mint isn't in the directory."</div>
+                    let metrics_data = metrics.get().and_then(|r| r.ok()).or_else(|| last_metrics.get());
+                    let uptime_data = current_uptime();
+                    current_mint().map(|res| match res {
+                        Ok(Some(mint)) => view! {
+                            <MintHead mint=mint metrics=metrics_data uptime=uptime_data/>
+                            {stale_note}
                         }
                         .into_any(),
+                        Ok(None) => {
+                            // A real 404, so dead mint pages drop out of search
+                            // results. The route renders after its data (Async),
+                            // so the status is still unsent here.
+                            #[cfg(feature = "ssr")]
+                            if let Some(response) = use_context::<leptos_axum::ResponseOptions>() {
+                                response.set_status(axum::http::StatusCode::NOT_FOUND);
+                            }
+                            view! {
+                                <Title text="Mint not found — Internet Mint Finder"/>
+                                <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">"Directory"</a></nav>
+                                <div class="empty-state">"This mint isn't in the directory."</div>
+                            }
+                            .into_any()
+                        }
                         Err(e) => view! {
-                            <div class="callout callout-err" title=e.to_string()>"Couldn't load this mint. Refresh the page to try again."</div>
+                            <div class="callout callout-err" role="alert" title=e.to_string()>
+                                "Couldn't load this mint. Retrying every 15 seconds."
+                            </div>
                         }
                         .into_any(),
                     })
@@ -97,7 +159,7 @@ pub fn MintDetailPage() -> impl IntoView {
                     <section aria-labelledby="uptime-title">
                         <h2 class="section-title" id="uptime-title">"Observed uptime"</h2>
                         <Transition fallback=|| view! { <div class="skeleton" style="height: 136px;"></div> }>
-                            {move || uptime.get().map(|res| view! { <UptimePanel uptime=res.ok()/> })}
+                            {move || uptime.get().map(|_| view! { <UptimePanel uptime=current_uptime()/> })}
                         </Transition>
                     </section>
 
@@ -114,7 +176,7 @@ pub fn MintDetailPage() -> impl IntoView {
                     <section aria-labelledby="about-title">
                         <h2 class="section-title" id="about-title">"About this mint"</h2>
                         <Transition fallback=|| ()>
-                            {move || mint.get().and_then(|r| r.ok()).flatten().map(|mint| view! { <About mint/> })}
+                            {move || current_mint().and_then(|r| r.ok()).flatten().map(|mint| view! { <About mint/> })}
                         </Transition>
                     </section>
                 </div>
@@ -128,7 +190,6 @@ pub fn MintDetailPage() -> impl IntoView {
 /// verbatim when the mint is not healthy.
 #[component]
 fn MintHead(mint: MintRead, metrics: Option<MintMetrics>, uptime: Option<MintUptime>) -> impl IntoView {
-    let metrics_available = metrics.is_some();
     let metrics = metrics.unwrap_or_default();
     let display_name = if mint.name.trim().is_empty() {
         short_url(&mint.url)
@@ -165,22 +226,19 @@ fn MintHead(mint: MintRead, metrics: Option<MintMetrics>, uptime: Option<MintUpt
         <nav class="breadcrumb" aria-label="Breadcrumb">
             <a href="/">"Directory"</a>
             <span class="breadcrumb-sep" aria-hidden="true">"/"</span>
-            <span aria-current="page">{display_name.clone()}</span>
+            <span aria-current="page" dir="auto">{display_name.clone()}</span>
         </nav>
         <div class="detail-head">
             <MintAvatar name=display_name.clone() info=mint.info.clone()/>
             <div class="detail-id">
                 <div class="detail-title">
-                    <h1 class="page-title">{display_name}</h1>
+                    <h1 class="page-title" dir="auto">{display_name}</h1>
                     <StateBadge state=mint.state/>
                 </div>
                 <CopyUrl url=mint.url.clone()/>
             </div>
         </div>
         {incident}
-        <Show when=move || !metrics_available>
-            <div class="callout mt-4" role="status">"Some audit data didn't load. Retrying every 15 seconds."</div>
-        </Show>
     }
 }
 
@@ -220,11 +278,11 @@ fn About(mint: MintRead) -> impl IntoView {
 
     view! {
         <div class="about">
-            {description.map(|d| view! { <p class="about-text">{d}</p> })}
+            {description.map(|d| view! { <p class="about-text" dir="auto">{d}</p> })}
             {motd.map(|m| view! {
                 <div class="callout about-notice">
                     <span class="about-notice-label">"Notice from the mint"</span>
-                    <p>{m}</p>
+                    <p dir="auto">{m}</p>
                 </div>
             })}
             {match features {

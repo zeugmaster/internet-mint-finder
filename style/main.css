@@ -1932,6 +1932,12 @@ button.hallmark {
     color: var(--fg-2);
 }
 
+/* The browser refused the clipboard: say so on the button itself. */
+.copy-url.is-failed,
+.copy-url.is-failed .icon {
+    color: var(--danger-fg);
+}
+
 .copy-url.is-copied .icon {
     color: var(--success-fg);
 }
@@ -2410,6 +2416,14 @@ a.mint-name:hover {
     align-items: center;
     flex-wrap: wrap;
     gap: 8px 12px;
+    max-width: 100%;
+}
+
+/* A mint names itself, sometimes in one long unbroken word: it wraps
+   rather than pushing the page wider than a phone. */
+.detail-title .page-title {
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .detail-head .badge {
