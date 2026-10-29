@@ -97,8 +97,9 @@
     --ok-solid: #30a46c;              /* green-9 */
     --warn-solid: #f76b15;            /* orange-9 */
     --err-solid: #e54d2e;             /* tomato-9 */
-    /* shadow-default: a hairline ring plus a 1-2px drop. */
-    --s-default: 0 0 0 0.5px #0000 inset, 0 0 0 0.5px #0000000f, 0 1px 1px -1px #0000001a, 0 1px 2px 0 #0000000d;
+    /* shadow-default: only a hairline ring, as in dark. Nothing casts a
+       shadow; surfaces are flat. */
+    --s-default: 0 0 0 0.5px #0000 inset, 0 0 0 0.5px #0000000f, 0 1px 1px -1px #0000, 0 1px 2px 0 #0000;
     --s-large: 0 0 0 0.5px #0000000f, 0 2px 3px -2px #0000000f, 0 3px 12px -4px #0000001a, 0 4px 16px -8px #0000000d;
     --focus-ring: inset 0 0 0 0.5px var(--focus), 0 0 0 1px var(--focus);
 
@@ -1382,21 +1383,21 @@ button.hallmark {
     line-height: 20px;
 }
 
+/* The list is one card, its rows split by hairlines. */
 .mint-list {
     margin: 0;
     padding: 0;
     list-style: none;
-    border-top: 0.5px solid var(--border);
 }
 
-.mint-list > li {
-    border-bottom: 0.5px solid var(--border);
+.mint-list > li + li {
+    border-top: 0.5px solid var(--border);
 }
 
 /* A mint row: avatar, name over a copyable URL, status. The name's link is
    stretched over the row so the whole row opens the mint; the URL button sits
-   above that link. The hover tint bleeds 12px past the column so the avatar
-   stays on the shared edge. */
+   above that link. Rows run edge to edge in the card, so the hover tint does
+   too, clipped by the card's corners. */
 .mint-row {
     position: relative;
     display: grid;
@@ -1404,9 +1405,7 @@ button.hallmark {
     grid-template-areas: "avatar id rating status";
     align-items: center;
     gap: 0 12px;
-    margin-inline: -12px;
-    padding: 10px 12px;
-    border-radius: 8px;
+    padding: 12px 16px;
     transition: background-color 150ms var(--ease);
 }
 
@@ -1418,7 +1417,6 @@ button.hallmark {
     content: '';
     position: absolute;
     inset: 0;
-    border-radius: 8px;
 }
 
 /* The row tint is the hover cue; no underline on the name. */
@@ -1430,8 +1428,9 @@ button.hallmark {
     outline: none;
 }
 
+/* The focus ring's full width, drawn inside so the card doesn't clip it. */
 .mint-link:focus-visible::after {
-    box-shadow: var(--focus-ring);
+    box-shadow: inset 0 0 0 1.5px var(--focus);
 }
 
 .mint-id {
@@ -2352,7 +2351,8 @@ a.mint-name:hover {
     }
 
     .card-pad,
-    .feed-toolbar {
+    .feed-toolbar,
+    .mint-row {
         padding-left: 12px;
         padding-right: 12px;
     }

@@ -177,7 +177,7 @@ pub fn MintList() -> impl IntoView {
                     };
                     let Some(data) = data else {
                         return view! {
-                            <div class="empty-state" role="alert">
+                            <div class="card card-pad empty-state" role="alert">
                                 <h3>"Couldn't load mints"</h3>
                                 <p>"Check your connection. This retries every 15 seconds."</p>
                                 <button type="button" class="btn btn-secondary mt-4" on:click=move |_| mints.refetch()>"Try again"</button>
@@ -199,7 +199,7 @@ pub fn MintList() -> impl IntoView {
                         {if data.mints.is_empty() {
                             if filtered {
                                 view! {
-                                    <div class="empty-state">
+                                    <div class="card card-pad empty-state">
                                         <h3>"No mints match"</h3>
                                         <p>"Try another name, or clear the filters."</p>
                                         <button type="button" class="btn btn-secondary mt-4" on:click=clear.clone()>"Clear filters"</button>
@@ -207,7 +207,7 @@ pub fn MintList() -> impl IntoView {
                                 }.into_any()
                             } else {
                                 view! {
-                                    <div class="empty-state">
+                                    <div class="card card-pad empty-state">
                                         <h3>"No mints yet"</h3>
                                         <p>"Mints show up here once they're listed on Nostr."</p>
                                     </div>
@@ -215,7 +215,7 @@ pub fn MintList() -> impl IntoView {
                             }
                         } else {
                             view! {
-                                <ul class="mint-list" aria-label="Mints">
+                                <ul class="card mint-list" aria-label="Mints">
                                     {data.mints.into_iter().map(|mint| view! { <li><MintRow mint/></li> }).collect_view()}
                                 </ul>
                             }.into_any()
@@ -348,7 +348,7 @@ pub fn CopyUrl(url: String) -> impl IntoView {
 fn DirectorySkeleton() -> impl IntoView {
     view! {
         <div class="directory-meta"><span class="skeleton" style="width: 72px; height: 12px;"></span></div>
-        <ul class="mint-list" role="status" aria-label="Loading mints">
+        <ul class="card mint-list" role="status" aria-label="Loading mints">
             {[46, 32, 40, 28, 36, 44].into_iter().map(|w| view! {
                 <li><div class="mint-row is-skeleton">
                     <span class="skeleton mint-avatar"></span>
