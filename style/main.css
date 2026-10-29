@@ -972,9 +972,9 @@ button.text-link {
 }
 
 /* ---------------------------------------------------------------------------
-   Reviews: the overall rating and the audit figures on the left; the
-   write-a-review card and the reviews on the right. Monochrome stars: hue is
-   for state only.
+   Reviews, in one card like the rest of the mint page: the overall rating
+   on the left, the reviews on the right, and the write-a-review row across
+   the card's foot. Monochrome stars: hue is for state only.
 --------------------------------------------------------------------------- */
 
 .reviews {
@@ -982,6 +982,7 @@ button.text-link {
     grid-template-columns: 280px minmax(0, 1fr);
     gap: 32px 56px;
     align-items: start;
+    padding: 24px;
 }
 
 
@@ -1099,21 +1100,31 @@ button.text-link {
     display: none;
 }
 
-/* Under the reviews, ruled off above. */
+/* The card's foot, under a rule that runs edge to edge. */
 .review-compose {
-    margin-top: 8px;
-    padding-top: 20px;
+    padding: 14px 24px;
     border-top: 0.5px solid var(--border);
 }
 
-.reviews-more + .review-compose {
-    margin-top: 24px;
+/* White buttons and fields vanish on the white card, so here they take the
+   grey control fill instead; fields keep their ring and focus ring. */
+.reviews-card .btn:not(.btn-primary):not(.btn-ghost) {
+    background: var(--component);
+    box-shadow: none;
 }
 
-/* With no reviews the row is the whole section: no rule above it. */
+.reviews-card .field-input,
+.reviews-card .field-textarea {
+    background-color: var(--component);
+}
+
+.reviews-card .btn:not(.btn-primary):not(.btn-ghost):hover {
+    background: var(--component-hover);
+}
+
+/* With no reviews the row is the whole card: no rule above it. */
 .review-compose.is-empty {
-    margin-top: 0;
-    padding-top: 0;
+    padding-block: 16px;
     border-top: 0;
 }
 
@@ -1205,9 +1216,15 @@ button.text-link {
     padding: 20px 0;
 }
 
-/* The first review lines up with "Overall rating" across the gutter. */
+/* The first review lines up with the average across the gutter, and the
+   last one ends on the card's padding. */
 .reviews-main > .review-list > .review:first-child {
     padding-top: 0;
+}
+
+.reviews-main > .review-list > .review:last-child,
+.reviews-more .review:last-child {
+    padding-bottom: 0;
 }
 
 .review + .review,
@@ -1260,7 +1277,7 @@ button.text-link {
 
 
 .reviews-more {
-    margin-top: 8px;
+    margin-top: 20px;
 }
 
 .reviews-more[open] > summary {
@@ -1278,6 +1295,14 @@ button.text-link {
 }
 
 @media (max-width: 640px) {
+    .reviews {
+        padding: 16px 12px;
+    }
+
+    .review-compose {
+        padding-inline: 12px;
+    }
+
     .review-compose > summary {
         flex-direction: column;
         align-items: flex-start;

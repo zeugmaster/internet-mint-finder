@@ -12,19 +12,27 @@ const FIRST_REVIEWS: usize = 4;
 // section uses three text styles: its heading, body text, and small grey meta
 // (plus the average as the one large figure).
 
-/// The reviews section body. With reviews: the average on the left, the
-/// reviews and the write-a-review row on the right. Without: one line and the
-/// button, so nothing says "none yet" twice.
+/// The reviews section body, in one card like the rest of the mint page.
+/// With reviews: the average on the left, the reviews on the right, and the
+/// write-a-review row across the card's foot. Without: that row alone, so
+/// nothing says "none yet" twice.
 #[component]
 pub fn ReviewsBlock(data: MintReviews) -> impl IntoView {
-    if data.reviews.is_empty() {
-        return view! { <ReviewCompose context=data.context empty=true/> }.into_any();
+    let MintReviews { reviews, context } = data;
+    if reviews.is_empty() {
+        return view! {
+            <div class="card reviews-card"><ReviewCompose context empty=true/></div>
+        }
+        .into_any();
     }
-    let for_summary = data.reviews.clone();
+    let for_summary = reviews.clone();
     view! {
-        <div class="reviews">
-            <div class="reviews-summary"><RatingSummary reviews=for_summary/></div>
-            <div class="reviews-main"><ReviewList data/></div>
+        <div class="card reviews-card">
+            <div class="reviews">
+                <div class="reviews-summary"><RatingSummary reviews=for_summary/></div>
+                <div class="reviews-main"><ReviewList reviews/></div>
+            </div>
+            <ReviewCompose context/>
         </div>
     }
     .into_any()
@@ -51,11 +59,12 @@ fn RatingSummary(reviews: Vec<ReviewRead>) -> impl IntoView {
     }
 }
 
-/// The first reviews, a "Show all" for the rest, then the write-a-review row:
-/// read what others say before adding your own.
+/// The first reviews and a "Show all" for the rest. The write-a-review row
+/// follows across the card's foot: read what others say before adding your
+/// own.
 #[component]
-fn ReviewList(data: MintReviews) -> impl IntoView {
-    let mut first = data.reviews;
+fn ReviewList(reviews: Vec<ReviewRead>) -> impl IntoView {
+    let mut first = reviews;
     let rest = if first.len() > FIRST_REVIEWS {
         first.split_off(FIRST_REVIEWS)
     } else {
@@ -75,7 +84,6 @@ fn ReviewList(data: MintReviews) -> impl IntoView {
                 </ol>
             </details>
         })}
-        <ReviewCompose context=data.context/>
     }
 }
 
