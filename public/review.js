@@ -13,9 +13,21 @@ const EXTENSION_KEY = 'imf.extension';
 let extensionPubkey = null;
 try { extensionPubkey = localStorage.getItem(EXTENSION_KEY); } catch (_) { /* not kept */ }
 
+// The line beside Post review starts as a hint; a message replaces it and
+// quiet() puts the hint back.
 function say(msg, ok) {
   const status = document.getElementById('review-status');
-  if (status) { status.textContent = msg; status.dataset.ok = ok ? '1' : '0'; }
+  if (!status) return;
+  if (status.dataset.hint === undefined) status.dataset.hint = status.textContent.trim();
+  status.textContent = msg;
+  status.dataset.ok = ok ? '1' : '0';
+}
+
+function quiet() {
+  const status = document.getElementById('review-status');
+  if (!status || status.dataset.hint === undefined) return;
+  status.textContent = status.dataset.hint;
+  delete status.dataset.ok;
 }
 
 function storedKey() {
@@ -76,7 +88,7 @@ async function signInWithExtension(button) {
     if (!/^[0-9a-f]{64}$/.test(pubkey)) throw new Error('not a public key');
     signInWith(pubkey);
     render();
-    say('Signed in with your extension.', true);
+    quiet();
   } catch (_) {
     say('Your extension didn’t sign you in. Try again, or paste your nsec.', false);
   } finally {
@@ -96,13 +108,14 @@ document.addEventListener('click', (ev) => {
     input.value = '';
     signInWith(null);
     render();
-    say('Signed in.', true);
+    quiet();
   } else if (id === 'review-extension') {
     signInWithExtension(ev.target);
   } else if (id === 'review-signout') {
     try { localStorage.removeItem(NSEC_KEY); } catch (_) { /* nothing stored */ }
     signInWith(null);
     render();
+    quiet();
   }
 });
 

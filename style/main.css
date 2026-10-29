@@ -361,7 +361,7 @@ button.text-link {
     padding-bottom: 16px;
 }
 
-/* The name set like the masthead's: capitals in 700, tracked open. */
+/* The name in capitals in 700, tracked open. */
 .brand {
     grid-area: brand;
     min-width: 0;
@@ -526,52 +526,103 @@ button.text-link {
     to { --metal-bx: 92%; --metal-px: 90%; }
 }
 
-/* The sticker at the top of the directory: the whole seal. The light
-   sweeps in once as the page arrives and settles at the hero light; then
-   it follows the pointer, the sticker tilting toward it and the struck
-   edges turning with it. The light and the tilt move together on one soft
-   curve, a beat behind the pointer, and glide home together on leave. */
-.brand-sticker.is-hero {
-    --sticker-d: 176px;
-    --sticker-art: url("/brand/imf-seal-mask.svg?v=2");
-    --sticker-inset: 9.5%;
-    transform: perspective(700px) rotateX(var(--metal-rx)) rotateY(var(--metal-ry));
-    transition-property: --metal-px, --metal-py, --metal-bx, --metal-by, --metal-lx, --metal-ly, --metal-rx, --metal-ry;
+/* The directory's masthead, after the IMF's, and the one peak on the page:
+   the whole seal at full size with the name under it in display capitals,
+   both struck in the same metal and lit by one light, so they read as one
+   mark. The masthead holds the light: it sweeps in once as the page
+   arrives and settles at the hero light; then it follows the pointer
+   anywhere over the mark, the sticker tilting toward it, the bands sliding
+   along the name and every struck edge turning with it. The light and the
+   tilt move together on one soft curve, a beat behind the pointer, and
+   glide home together on leave. The masthead is as wide as the mark, so
+   the light answers only over it. */
+@property --name-x { syntax: "<percentage>"; inherits: true; initial-value: 22%; }
+
+.masthead {
+    display: grid;
+    justify-items: center;
+    width: fit-content;
+    max-width: 100%;
+    margin: 40px auto 44px;
+    text-align: center;
+    transition-property: --metal-px, --metal-py, --metal-bx, --metal-by, --metal-lx, --metal-ly, --metal-rx, --metal-ry, --name-x;
     transition-duration: 700ms;
     transition-timing-function: var(--ease-arrive);
-    animation: brand-sticker-arrive 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) 0.3s backwards;
+    animation: masthead-arrive 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) 0.3s backwards;
 }
 
-.brand-sticker.is-hero.is-live {
+.masthead.is-live {
     animation: none;
     transition-duration: 260ms;
     transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* From the right to the hero light, and the struck edges turn with it. */
-@keyframes brand-sticker-arrive {
-    from { --metal-bx: 90%; --metal-by: 46%; --metal-px: 92%; --metal-py: 40%; --metal-lx: 0.8; --metal-ly: -0.6; }
+@keyframes masthead-arrive {
+    from { --metal-bx: 90%; --metal-by: 46%; --metal-px: 92%; --metal-py: 40%; --metal-lx: 0.8; --metal-ly: -0.6; --name-x: 90%; }
 }
 
-/* The directory's masthead, after the IMF's: the sticker with the name
-   under it as its caption, held close (about 17px from the sticker's edge
-   to the capitals) and set well apart from the toolbar (about 43px), so
-   the two read as one mark. The sticker leads; the name is its caption. */
-.masthead {
-    display: grid;
-    justify-items: center;
-    margin: 40px 0 36px;
-    text-align: center;
+.brand-sticker.is-hero {
+    --sticker-d: 240px;
+    --sticker-art: url("/brand/imf-seal-mask.svg?v=2");
+    --sticker-inset: 9.5%;
+    transform: perspective(900px) rotateX(var(--metal-rx)) rotateY(var(--metal-ry));
 }
 
+/* The name, struck in the seal's steel at display size: capitals in Inter
+   820 like the seal's legend, the seal's steel bands running across the
+   letters and moving with the same light, its cool colour laid in faintly,
+   a streak of light passing along the name with the pointer, a lit lip
+   toward the light and a soft shade away from it. In light mode the steel
+   stays dark enough to read on the page (about 4.4:1 at its lightest, 3:1
+   under the streak); on black it is the sticker's chrome. A long instance
+   name wraps, balanced. */
 .masthead-title {
-    margin-top: 10px;
-    margin-right: -0.12em;
-    font-size: 20px;
-    line-height: 28px;
-    font-weight: 700;
-    letter-spacing: 0.12em;
+    --name-steel: linear-gradient(176deg,
+        #6b7483 0%, #4f5766 22%, #3a4150 42%, #646d7c 58%, #434b5a 78%, #5d6674 100%);
+    --name-streak: #ffffff2e;
+    --name-lip: #ffffff;
+    --name-shade: #1c222f59;
+    margin-top: 22px;
+    margin-right: -0.05em;
+    color: transparent;
+    font-size: 48px;
+    line-height: 52px;
+    font-weight: 820;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
+    text-wrap: balance;
+    overflow-wrap: break-word;
+    background-image:
+        linear-gradient(112deg, #ffffff00 42%, var(--name-streak) 48%, #ffffff00 54%),
+        linear-gradient(100deg,
+            #6f8fff1a 0%, #a685ff1a 18%, #52b0ff1a 36%, #5fdca61a 52%, #ef6fd01a 70%, #6f8fff1a 86%, #52b0ff1a 100%),
+        var(--name-steel);
+    background-repeat: no-repeat, repeat, repeat;
+    background-size: 260% 100%, 260% 100%, 100% 220%;
+    background-position: calc(100% - var(--name-x)) 0, var(--metal-bx) 0, 0 var(--metal-by);
+    background-blend-mode: screen, color, normal;
+    -webkit-background-clip: text;
+    background-clip: text;
+    filter:
+        drop-shadow(calc(var(--metal-lx) * 1px) calc(var(--metal-ly) * 1px) 0 var(--name-lip))
+        drop-shadow(calc(var(--metal-lx) * -1.5px) calc(var(--metal-ly) * -1.5px) 0.5px var(--name-shade));
+}
+
+:root[data-theme='dark'] .masthead-title {
+    --name-steel: linear-gradient(176deg,
+        #f7f8fa 0%, #c9ced6 20%, #8d96a3 40%, #e6e9ed 56%, #a6aeb9 76%, #d3d8df 100%);
+    --name-streak: #ffffffcc;
+    --name-lip: #ffffff40;
+    --name-shade: #00000000;
+}
+
+@media (forced-colors: active) {
+    .masthead-title {
+        color: CanvasText;
+        background: none;
+        filter: none;
+    }
 }
 
 /* On the directory the header holds only the theme switch, so it lies over
@@ -588,8 +639,11 @@ button.text-link {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .brand-sticker.is-hero {
+    .masthead {
         animation: none;
+    }
+
+    .brand-sticker.is-hero {
         transform: none;
     }
 }
@@ -1368,16 +1422,41 @@ button.text-link {
     cursor: not-allowed;
 }
 
-.review-compose-body .field + .btn {
-    margin-top: 16px;
-}
-
-/* Who is signed in, then the way out, set apart by space alone. */
-.signer-in {
+/* The form's foot: what becomes of the review (or what went wrong) on the
+   left, Post review at the right, under Close. A long message takes the row
+   and the button keeps the right edge below it. */
+.review-submit {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 4px 12px;
+    gap: 8px 16px;
+    margin-top: 16px;
+}
+
+.review-submit .field-hint {
+    flex: 1 1 16rem;
+}
+
+.review-submit .btn {
+    margin-left: auto;
+}
+
+/* Who is signed in on the left, the way out at the right, in line with
+   Close and Post review. On a phone the words wrap and Sign out keeps its
+   place beside them. */
+.signer-in {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.signer-in > span {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.signer-in .btn {
+    flex: none;
 }
 
 /* Sign-in: the extension first when there is one, then the key to paste. */
@@ -1530,9 +1609,15 @@ button.text-link {
         padding-inline: 12px;
     }
 
+    /* The line takes the row and the button drops below it at the right,
+       where Sign out and Post review sit. */
     .review-compose > summary {
         flex-direction: column;
         align-items: flex-start;
+    }
+
+    .review-compose > summary .btn {
+        align-self: flex-end;
     }
 }
 
@@ -3130,22 +3215,20 @@ a.mint-name:hover {
         line-height: 32px;
     }
 
-    /* Phones: the seal and its caption a size down; the caption holds one
-       line at 320px. */
+    /* Phones: the seal and the name a size down; the name breaks onto two
+       balanced lines rather than shrinking to fit one. */
     .masthead {
-        margin: 32px 0 24px;
+        margin: 32px auto 32px;
     }
 
     .brand-sticker.is-hero {
-        --sticker-d: 136px;
+        --sticker-d: 184px;
     }
 
     .masthead-title {
-        margin-top: 6px;
-        margin-right: -0.1em;
-        font-size: 18px;
-        line-height: 24px;
-        letter-spacing: 0.1em;
+        margin-top: 18px;
+        font-size: clamp(30px, 9vw, 36px);
+        line-height: 1.1;
     }
 
     /* Phones: the rating is a third line under the URL, on the name's edge,

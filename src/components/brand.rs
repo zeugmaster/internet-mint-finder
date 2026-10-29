@@ -5,7 +5,6 @@
 //! the metal and the struck art.
 
 use leptos::prelude::*;
-use leptos::web_sys::HtmlElement;
 
 /// The layers every sticker is made of, bottom to top: chrome, colour laid
 /// into it, a glint, grain, the art struck in steel (a shade away from the
@@ -39,42 +38,58 @@ pub fn BrandSticker() -> impl IntoView {
     }
 }
 
-/// The sticker at full size heading the directory, the whole seal struck
-/// on it. The light sweeps in once as the page arrives and settles at the
-/// hero light. After that it follows the pointer: the sticker tilts, the
-/// light moves with it and the struck edges turn to face it, then it
-/// springs back on leave.
+/// The directory's masthead, one mark under one light: the sticker at full
+/// size with the whole seal struck on it, and the name under it (the
+/// children, the page's h1) struck in the seal's steel. The light sweeps in
+/// once as the page arrives and settles at the hero light. After that it
+/// follows the pointer anywhere over the mark: the sticker tilts, the light
+/// moves across the metal and along the name, and the struck edges turn to
+/// face it, then it glides home on leave.
 #[component]
-pub fn HeroSticker() -> impl IntoView {
-    // The pointer over the sticker, as fractions of its box; None when away.
-    let pointer = RwSignal::new(None::<(f64, f64)>);
+pub fn Masthead(children: Children) -> impl IntoView {
+    let sticker = NodeRef::<leptos::html::Span>::new();
+    let name = NodeRef::<leptos::html::H1>::new();
+    // The pointer against the sticker (clamped to it) and across the name,
+    // as fractions of their boxes; None when away.
+    let pointer = RwSignal::new(None::<((f64, f64), f64)>);
 
     let on_move = move |ev: leptos::ev::PointerEvent| {
-        let sticker = event_target::<HtmlElement>(&ev);
-        let (w, h) = (
-            f64::from(sticker.client_width()),
-            f64::from(sticker.client_height()),
+        let (Some(sticker), Some(name)) = (sticker.get(), name.get()) else {
+            return;
+        };
+        // Layout boxes, which the tilt doesn't move. Nothing above the
+        // masthead is positioned, so their offsets are the page's.
+        let fraction = |at: i32, start: i32, size: i32| {
+            (f64::from(at - start) / f64::from(size.max(1))).clamp(0.0, 1.0)
+        };
+        let at = (
+            fraction(ev.page_x(), sticker.offset_left(), sticker.offset_width()),
+            fraction(ev.page_y(), sticker.offset_top(), sticker.offset_height()),
         );
-        if w > 0.0 && h > 0.0 {
-            let x = (f64::from(ev.offset_x()) / w).clamp(0.0, 1.0);
-            let y = (f64::from(ev.offset_y()) / h).clamp(0.0, 1.0);
-            pointer.set(Some((x, y)));
-        }
+        let along = fraction(ev.page_x(), name.offset_left(), name.offset_width());
+        pointer.set(Some((at, along)));
     };
 
-    let style = move || pointer.get().map(light).unwrap_or_default();
+    let style = move || {
+        pointer
+            .get()
+            .map(|(at, along)| format!("{}; --name-x: {:.1}%", light(at), 8.0 + along * 84.0))
+            .unwrap_or_default()
+    };
 
     view! {
-        <span
-            class="brand-sticker is-hero"
+        <div
+            class="masthead"
             class:is-live=move || pointer.get().is_some()
             style=style
-            aria-hidden="true"
             on:pointermove=on_move
             on:pointerleave=move |_| pointer.set(None)
         >
-            <Layers/>
-        </span>
+            <span class="brand-sticker is-hero" node_ref=sticker aria-hidden="true">
+                <Layers/>
+            </span>
+            <h1 class="masthead-title" node_ref=name>{children()}</h1>
+        </div>
     }
 }
 

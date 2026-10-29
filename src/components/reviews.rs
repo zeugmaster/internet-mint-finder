@@ -179,10 +179,12 @@ fn ReviewCompose(context: ReviewContext, #[prop(optional)] empty: bool) -> impl 
                         <label class="field-label" for="review-content">"Your experience"</label>
                         <textarea id="review-content" name="content" class="field-textarea" rows="3" maxlength="1000" disabled=!can_review></textarea>
                     </div>
-                    <button type="submit" class="btn btn-primary" disabled=!can_review>"Post review"</button>
-                    <p id="review-status" class="field-hint mt-2">
-                        {if can_review { "Posted to Nostr, not to this site." } else { "Reviews open once this mint shares its public key, which it hasn't yet." }}
-                    </p>
+                    <div class="review-submit">
+                        <p id="review-status" class="field-hint" aria-live="polite">
+                            {if can_review { "Posted to Nostr, not to this site." } else { "Reviews open once this mint shares its public key, which it hasn't yet." }}
+                        </p>
+                        <button type="submit" class="btn btn-primary" disabled=!can_review>"Post review"</button>
+                    </div>
                 </form>
             </div>
         </details>
