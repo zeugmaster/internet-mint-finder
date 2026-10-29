@@ -122,12 +122,44 @@ fn NotFound() -> impl IntoView {
     }
 }
 
+/// The brand's sign-off: a hairline of foil over the name in brushed steel,
+/// the tag's metal used quietly, and quiet links to Cashu itself. The light
+/// on the foil and the name follows the pointer across the footer.
 #[component]
 fn Footer() -> impl IntoView {
+    let footer = NodeRef::<leptos::html::Div>::new();
+    // How far across the footer the pointer is, in percent; None at rest.
+    let light = RwSignal::new(None::<f64>);
+    let on_move = move |ev: leptos::ev::PointerEvent| {
+        let Some(footer) = footer.get() else {
+            return;
+        };
+        let width = f64::from(footer.client_width());
+        if width > 0.0 {
+            // Against the footer, not whatever is under the pointer (a link,
+            // say). Nothing above it is positioned, so its offset is the
+            // page's.
+            let x = f64::from(ev.client_x() - footer.offset_left()) / width * 100.0;
+            light.set(Some(x.clamp(0.0, 100.0)));
+        }
+    };
+
     view! {
         <footer class="site-footer">
-            <div class="site-footer-inner">
-                <p>"Uptime is measured by this server every hour. Results are measurements, not endorsements."</p>
+            <div
+                class="site-footer-inner"
+                node_ref=footer
+                style=move || light.get().map(|x| format!("--foil-x: {x:.1}%")).unwrap_or_default()
+                on:pointermove=on_move
+                on:pointerleave=move |_| light.set(None)
+            >
+                <span class="foil-rule" aria-hidden="true"></span>
+                <span class="foil-mark">"Internet Mint Finder"</span>
+                <nav class="foil-links" aria-label="Cashu">
+                    <a href="https://cashu.space">"cashu.space"</a>
+                    <a href="https://opencash.dev">"opencash.dev"</a>
+                    <a href="https://github.com/cashubtc/nuts">"GitHub"</a>
+                </nav>
             </div>
         </footer>
     }
