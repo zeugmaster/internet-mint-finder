@@ -302,10 +302,161 @@ def favicon16_svg():
     )
 
 
+# The seal, after the IMF's, on a 240 box: a legend round a ring, a star at
+# each side, and a shield with IMF and a sprig of mint (where the IMF has
+# olive) cut through. The files are cropped to the ink, INK from the centre.
+S, SC = 240, 120
+INK = 102
+# The legend's band: INTERNET stands out from radius 84, MINT FINDER stands
+# in from 101, so both fill 84 to 101.5. Spacing is measured along the middle
+# of the band, so the two arcs are set alike.
+TOP_R, BOTTOM_R, MID = 84, 101, 92.75
+LEGEND = 24
+TRACK, WORD = 10.5, 23
+SHIELD = ("M71 70 H169 Q173 70 173 74 V126 C173 158 152 177 120 190 "
+          "C88 177 67 158 67 126 V74 Q67 70 71 70 Z")
+
+
+def ring_text(face, text, size, radius, top):
+    """Text round the seal, centred on the top or the bottom, with TRACK
+    between letters and WORD between words, both measured along the middle
+    of the band: over the top reading clockwise with the letters standing
+    out from the centre, or under the bottom reading left to right with them
+    standing in toward it. Returns the outlines and the arc's span in
+    degrees."""
+    s = size / face.upm
+    advs = [WORD - 2 * TRACK if ch == " " else face.advance(ch) * s for ch in text]
+    span = (sum(advs) + TRACK * (len(text) - 1)) / MID
+    start = -math.pi / 2 - span / 2 if top else math.pi / 2 + span / 2
+    parts, d = [], 0.0
+    for ch, adv in zip(text, advs):
+        if ch != " ":
+            t = start + (d + adv / 2) / MID * (1 if top else -1)
+            # Along the reading direction, and the letters' up.
+            tx, ty = (-math.sin(t), math.cos(t)) if top else (math.sin(t), -math.cos(t))
+            ux, uy = (math.cos(t), math.sin(t)) if top else (-math.cos(t), -math.sin(t))
+            px, py = SC + radius * math.cos(t), SC + radius * math.sin(t)
+            parts.append(face.path(ch, (s * tx, s * ty, s * ux, s * uy,
+                                        px - tx * adv / 2, py - ty * adv / 2)))
+        d += adv + TRACK
+    return " ".join(parts), math.degrees(span)
+
+
+def line_text(face, text, size, track, centre_x, baseline):
+    """A line of text centred on `centre_x`, the trailing tracking removed."""
+    s = size / face.upm
+    advs = [face.advance(ch) * s for ch in text]
+    x = centre_x - (sum(advs) + track * (len(text) - 1)) / 2
+    parts = []
+    for ch, adv in zip(text, advs):
+        parts.append(face.path(ch, (s, 0, 0, -s, x, baseline)))
+        x += adv + track
+    return " ".join(parts)
+
+
+def star(x, y, r):
+    pts = []
+    for i in range(10):
+        rr = r * 0.48 if i % 2 else r
+        a = -math.pi / 2 + i * math.pi / 5
+        pts.append(f"{x + rr * math.cos(a):.2f} {y + rr * math.sin(a):.2f}")
+    return "M" + " L".join(pts) + "Z"
+
+
+def leaf(x, y, angle, length, width):
+    """A leaf from its base along `angle`."""
+    a = math.radians(angle)
+    ux, uy = math.cos(a), math.sin(a)
+
+    def at(k, side):
+        return f"{x + ux * length * k - uy * width * side:.2f} {y + uy * length * k + ux * width * side:.2f}"
+
+    tip = f"{x + ux * length:.2f} {y + uy * length:.2f}"
+    return (f"M{x:.2f} {y:.2f} C{at(0.25, 1.05)} {at(0.7, 0.85)} {tip} "
+            f"C{at(0.7, -0.85)} {at(0.25, -1.05)} {x:.2f} {y:.2f}Z")
+
+
+def sprig(x0, y0, x1, y1):
+    """A sprig of mint: a gently rising stem with broad leaves in opposite
+    pairs, shrinking toward a pair at the tip."""
+    def at(t):
+        return x0 + (x1 - x0) * t, y0 + (y1 - y0) * t - 14 * t * (1 - t)
+
+    def heading(t):
+        (ax, ay), (bx, by) = at(max(0, t - 0.01)), at(min(1, t + 0.01))
+        return math.degrees(math.atan2(by - ay, bx - ax))
+
+    stem = "M" + " L".join(f"{x:.2f} {y:.2f}" for x, y in (at(i / 20) for i in range(21)))
+    leaves = []
+    for t, spread, length, width in ((0.22, 55, 13, 5.2), (0.5, 55, 12, 4.8),
+                                     (0.76, 52, 10, 4.2), (1, 30, 8.5, 3.6)):
+        x, y = at(t)
+        leaves += [leaf(x, y, heading(t) - spread, length, width),
+                   leaf(x, y, heading(t) + spread, length, width)]
+    return stem, " ".join(leaves)
+
+
+def shield(inter, small=False):
+    """The shield with IMF and the sprig cut through it: the mask that cuts
+    them, and the shield drawn through it. `small` is the header's: no
+    sprig, which is a smudge at that size, and IMF opened up and centred."""
+    if small:
+        imf = line_text(inter, "IMF", 48, 1.5, SC + 0.5, 135.5)
+        sprig_cut = ""
+    else:
+        imf = line_text(inter, "IMF", 46, 1, SC + 0.5, 133)
+        stem, leaves = sprig(90, 162, 150, 153)
+        sprig_cut = (f'<path d="{stem}" fill="none" stroke="#000" stroke-width="2.5"/>'
+                     f'<path d="{leaves}" fill="#000"/>')
+    cut = (f'<mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="{S}" height="{S}">'
+           f'<rect width="{S}" height="{S}" fill="#fff"/>'
+           f'<path d="{imf}" fill="#000"/>{sprig_cut}</mask>')
+    return cut, f'<path d="{SHIELD}" mask="url(#cut)"/>'
+
+
+def seal_mask_svg(inter):
+    """The seal's shape alone, for the live seal: the site lays the tag's
+    metal into it with a CSS mask (.brand-seal in style/main.css). Each star
+    sits in the middle of the gap between the two arcs, and the shield is
+    set a size down inside the ring so it clears it all round."""
+    top, top_span = ring_text(inter, "INTERNET", LEGEND, TOP_R, top=True)
+    bottom, bottom_span = ring_text(inter, "MINT FINDER", LEGEND, BOTTOM_R, top=False)
+    lift = math.radians((bottom_span - top_span) / 4)
+    stars = " ".join(star(SC + side * MID * math.cos(lift), SC - MID * math.sin(lift), 8.5)
+                     for side in (-1, 1))
+    cut, body = shield(inter)
+    lo = SC - INK
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{lo} {lo} {2 * INK} {2 * INK}" '
+        f'width="{2 * INK}" height="{2 * INK}">'
+        f'<defs>{cut}</defs>'
+        f'<path d="{top} {bottom} {stars}"/>'
+        f'<circle cx="{SC}" cy="{SC}" r="78" fill="none" stroke="#000" stroke-width="3.2"/>'
+        f'<g transform="translate({SC} {SC + 3}) scale(.9) translate({-SC} {-SC})">{body}</g>'
+        '</svg>'
+    )
+
+
+# The shield alone, cropped to its bounds, for the header.
+SHIELD_BOX = (66, 69, 108, 122)
+
+
+def shield_mask_svg(inter):
+    """The header's shield alone, for the live header mark (.brand-shield)."""
+    x, y, w, h = SHIELD_BOX
+    cut, body = shield(inter, small=True)
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{x} {y} {w} {h}" width="{w}" height="{h}">'
+        f'<defs>{cut}</defs>{body}</svg>'
+    )
+
+
 def main():
     inter, tx = load_faces()
     OUT.mkdir(exist_ok=True)
     files = {
+        OUT / "imf-seal-mask.svg": seal_mask_svg(inter),
+        OUT / "imf-shield-mask.svg": shield_mask_svg(inter),
         OUT / "imf-tag.svg": sticker_svg(inter, tx, with_arc=True),
         OUT / "imf-mark.svg": sticker_svg(inter, tx, with_arc=False),
         OUT / "imf-mark-small.svg": sticker_svg(inter, tx, with_arc=False, grain=False, small=True),

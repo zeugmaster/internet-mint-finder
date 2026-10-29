@@ -1,51 +1,59 @@
-//! The IMF tag, the brand: a holographic metal sticker. Both sizes are built
-//! from the same layers as the files in public/brand (see scripts/brand) and
-//! styled by .brand-tag in style/main.css.
+//! The brand, after the IMF's seal: a round sticker of holographic metal
+//! with the seal struck on it in steel, the whole seal heading the
+//! directory and the shield alone in the header. The art is a file in
+//! public/brand (see scripts/brand); .brand-sticker in style/main.css lays
+//! the metal and the struck art.
 
 use leptos::prelude::*;
 use leptos::web_sys::HtmlElement;
 
-/// The layers every tag is made of, bottom to top: chrome, colour laid into
-/// it, a glint, grain, and the bevelled edge.
+/// The layers every sticker is made of, bottom to top: chrome, colour laid
+/// into it, a glint, grain, the art struck in steel (a shade away from the
+/// light, a lit lip toward it, the steel, the colour in it), and the
+/// bevelled edge.
 #[component]
 fn Layers() -> impl IntoView {
     view! {
-        <span class="brand-tag-layer metal"></span>
-        <span class="brand-tag-layer holo"></span>
-        <span class="brand-tag-layer glint"></span>
-        <span class="brand-tag-layer grain"></span>
-        <span class="brand-tag-layer bevel"></span>
+        <span class="metal"></span>
+        <span class="holo"></span>
+        <span class="glint"></span>
+        <span class="grain"></span>
+        <span class="art shade"></span>
+        <span class="art lip"></span>
+        <span class="art steel"></span>
+        <span class="art tint"></span>
+        <span class="bevel"></span>
     }
 }
 
-/// The header mark: IMF engraved solid, the size where shaded steel would
-/// melt into the silver. Decoration beside the name, so hidden from screen
-/// readers; the light sweeps across it once on hover or focus of the link.
+/// The header mark: the sticker with the shield alone, the legend being
+/// unreadable at this size. Decoration beside the name, so hidden from
+/// screen readers; the light sweeps across it once on hover or focus of the
+/// link.
 #[component]
-pub fn BrandTag() -> impl IntoView {
+pub fn BrandSticker() -> impl IntoView {
     view! {
-        <span class="brand-tag" aria-hidden="true">
+        <span class="brand-sticker" aria-hidden="true">
             <Layers/>
-            <span class="brand-tag-imf">"IMF"</span>
         </span>
     }
 }
 
-/// The tag at full size, set like a sticker pressed onto the directory's
-/// head: IMF struck in raised steel and the name pressed along the bottom.
-/// The light sweeps in once as the page arrives and settles at the angle the
-/// files are rendered at. After that it follows the pointer: the sticker
-/// tilts and the light moves with it, then springs back on leave.
+/// The sticker at full size heading the directory, the whole seal struck
+/// on it. The light sweeps in once as the page arrives and settles at the
+/// hero light. After that it follows the pointer: the sticker tilts, the
+/// light moves with it and the struck edges turn to face it, then it
+/// springs back on leave.
 #[component]
-pub fn HeroTag() -> impl IntoView {
-    // The pointer over the tag, as fractions of its box; None when away.
+pub fn HeroSticker() -> impl IntoView {
+    // The pointer over the sticker, as fractions of its box; None when away.
     let pointer = RwSignal::new(None::<(f64, f64)>);
 
     let on_move = move |ev: leptos::ev::PointerEvent| {
-        let tag = event_target::<HtmlElement>(&ev);
+        let sticker = event_target::<HtmlElement>(&ev);
         let (w, h) = (
-            f64::from(tag.client_width()),
-            f64::from(tag.client_height()),
+            f64::from(sticker.client_width()),
+            f64::from(sticker.client_height()),
         );
         if w > 0.0 && h > 0.0 {
             let x = (f64::from(ev.offset_x()) / w).clamp(0.0, 1.0);
@@ -58,7 +66,7 @@ pub fn HeroTag() -> impl IntoView {
 
     view! {
         <span
-            class="brand-tag is-hero"
+            class="brand-sticker is-hero"
             class:is-live=move || pointer.get().is_some()
             style=style
             aria-hidden="true"
@@ -66,23 +74,6 @@ pub fn HeroTag() -> impl IntoView {
             on:pointerleave=move |_| pointer.set(None)
         >
             <Layers/>
-            <svg class="brand-tag-arc" viewBox="0 0 100 72">
-                <path id="hero-tag-arc" d="M 10 37 A 40 28 0 0 0 90 37" fill="none"></path>
-                <text class="hi">
-                    <textPath href="#hero-tag-arc" startOffset="50%" text-anchor="middle">"INTERNET MINT FINDER"</textPath>
-                </text>
-                <text class="lo">
-                    <textPath href="#hero-tag-arc" startOffset="50%" text-anchor="middle">"INTERNET MINT FINDER"</textPath>
-                </text>
-            </svg>
-            <span class="brand-tag-face">
-                <span class="brand-tag-struck">
-                    <span class="lo">"IMF"</span>
-                    <span class="hi">"IMF"</span>
-                    <span class="steel">"IMF"</span>
-                    <span class="tint">"IMF"</span>
-                </span>
-            </span>
         </span>
     }
 }
@@ -96,8 +87,8 @@ pub fn FoilStar() -> impl IntoView {
 }
 
 /// The custom properties that place the light for a pointer at (x, y): the
-/// glint and the metal's bands follow it, the letters' lit edge faces it,
-/// and the sticker tilts toward it.
+/// glint and the metal's bands follow it, the struck edges' lit side faces
+/// it, and the sticker tilts toward it.
 fn light((x, y): (f64, f64)) -> String {
     let (dx, dy) = (x - 0.5, y - 0.5);
     let n = dx.hypot(dy);
@@ -108,8 +99,8 @@ fn light((x, y): (f64, f64)) -> String {
         (dx / n, dy / n)
     };
     format!(
-        "--tag-px: {:.1}%; --tag-py: {:.1}%; --tag-bx: {:.1}%; --tag-by: {:.1}%; \
-         --tag-lx: {lx:.3}; --tag-ly: {ly:.3}; --tag-rx: {:.2}deg; --tag-ry: {:.2}deg",
+        "--metal-px: {:.1}%; --metal-py: {:.1}%; --metal-bx: {:.1}%; --metal-by: {:.1}%; \
+         --metal-lx: {lx:.3}; --metal-ly: {ly:.3}; --metal-rx: {:.2}deg; --metal-ry: {:.2}deg",
         x * 100.0,
         y * 100.0,
         8.0 + x * 84.0,
@@ -126,9 +117,10 @@ mod tests {
     #[test]
     fn the_light_faces_the_pointer_and_overhead_reads_as_above() {
         let corner = light((0.0, 0.0));
-        assert!(corner.contains("--tag-lx: -0.707") && corner.contains("--tag-ly: -0.707"));
-        assert!(corner.contains("--tag-rx: 8.00deg") && corner.contains("--tag-ry: -10.00deg"));
+        assert!(corner.contains("--metal-px: 0.0%") && corner.contains("--metal-bx: 8.0%"));
+        assert!(corner.contains("--metal-lx: -0.707") && corner.contains("--metal-ly: -0.707"));
+        assert!(corner.contains("--metal-rx: 8.00deg") && corner.contains("--metal-ry: -10.00deg"));
         let centre = light((0.5, 0.52));
-        assert!(centre.contains("--tag-lx: 0.000") && centre.contains("--tag-ly: -1.000"));
+        assert!(centre.contains("--metal-lx: 0.000") && centre.contains("--metal-ly: -1.000"));
     }
 }

@@ -68,6 +68,18 @@ pub fn Cross() -> impl IntoView {
     }
 }
 
+/// A question mark in a ring, for "what does this mean?".
+#[component]
+pub fn Help() -> impl IntoView {
+    view! {
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="8" cy="8" r="6.25"/>
+            <path d="M6.25 6.25a1.75 1.75 0 1 1 2.5 1.6c-.45.2-.75.6-.75 1.1v.3"/>
+            <path d="M8 11.25h.01"/>
+        </svg>
+    }
+}
+
 #[component]
 pub fn Star() -> impl IntoView {
     view! {

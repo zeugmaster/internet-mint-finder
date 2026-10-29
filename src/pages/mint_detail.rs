@@ -2,7 +2,7 @@ use crate::api::{
     get_mint_by_id, get_mint_metrics, get_mint_reviews, get_mint_uptime,
 };
 use crate::components::badge::{CategoryPill, StateBadge};
-use crate::components::icons::{Check, Cross};
+use crate::components::icons::{Check, Cross, Help};
 use crate::components::mint_avatar::MintAvatar;
 use crate::components::mint_list::{CopyText, CopyUrl};
 use crate::components::reviews::ReviewsBlock;
@@ -13,6 +13,7 @@ use crate::hooks::use_poll;
 use crate::types::{MintMetrics, MintRead, MintState, MintUptime};
 use chrono::{DateTime, Utc};
 use leptos::prelude::*;
+use leptos::web_sys::HtmlElement;
 use leptos_meta::Title;
 use leptos_router::hooks::use_params_map;
 
@@ -606,8 +607,8 @@ fn contacts(info: &serde_json::Value) -> Vec<Contact> {
         .collect()
 }
 
-/// The 24-hour strip of hourly results, its figure, and one line on what it
-/// rests on.
+/// The 24-hour strip of hourly results and its figure, with what the figure
+/// rests on behind a question mark beside it.
 #[component]
 fn UptimePanel(uptime: Option<MintUptime>) -> impl IntoView {
     let Some(uptime) = uptime else {
@@ -653,7 +654,27 @@ fn UptimePanel(uptime: Option<MintUptime>) -> impl IntoView {
     view! {
         <div class="card card-pad uptime-card">
             <div class="uptime-head">
-                <span class="uptime-value">{value}</span>
+                <span class="uptime-figure">
+                    <span class="uptime-value">{value}</span>
+                    // Shown on hover or focus (a tap focuses it on touch);
+                    // Escape hides it again.
+                    <span class="help-tip">
+                        <button
+                            type="button"
+                            class="help-tip-button"
+                            aria-describedby="uptime-note"
+                            on:keydown=|ev: leptos::ev::KeyboardEvent| {
+                                if ev.key() == "Escape" {
+                                    let _ = event_target::<HtmlElement>(&ev).blur();
+                                }
+                            }
+                        >
+                            <Help/>
+                            <span class="sr-only">"How this is measured"</span>
+                        </button>
+                        <span class="help-tip-text" role="tooltip" id="uptime-note">{note}</span>
+                    </span>
+                </span>
                 <span class="uptime-state">{state}</span>
             </div>
             <div class="uptime-bars" style=style role="img" aria-label=label>
@@ -690,7 +711,6 @@ fn UptimePanel(uptime: Option<MintUptime>) -> impl IntoView {
                 <span>{format!("{window} ago")}</span>
                 <span>"Now"</span>
             </div>
-            <p class="uptime-note">{note}</p>
         </div>
     }
     .into_any()

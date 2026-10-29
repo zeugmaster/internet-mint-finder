@@ -358,13 +358,16 @@ button.text-link {
     padding-bottom: 16px;
 }
 
+/* The name set like the masthead's: capitals in 700, tracked open. */
 .brand {
     grid-area: brand;
     min-width: 0;
     display: flex;
     align-items: center;
     gap: 10px;
-    font-weight: 600;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
     white-space: nowrap;
 }
 
@@ -373,260 +376,214 @@ button.text-link {
     text-overflow: ellipsis;
 }
 
-/* The IMF tag, the brand: a holographic metal sticker and the one place
-   the brand carries colour. Bottom to top: chrome, colour laid into it, a
-   glint, grain and a bevelled edge. --tag-w sets every measure, so the
-   header mark and the hero tag share it all. The same sticker, held at the
-   hero light, is in public/brand (scripts/brand builds it). */
-@property --tag-px { syntax: "<percentage>"; inherits: true; initial-value: 28%; }
-@property --tag-py { syntax: "<percentage>"; inherits: true; initial-value: 18%; }
-@property --tag-bx { syntax: "<percentage>"; inherits: true; initial-value: 22%; }
-@property --tag-by { syntax: "<percentage>"; inherits: true; initial-value: 30%; }
-@property --tag-lx { syntax: "<number>"; inherits: true; initial-value: -0.57; }
-@property --tag-ly { syntax: "<number>"; inherits: true; initial-value: -0.82; }
-@property --tag-rx { syntax: "<angle>"; inherits: true; initial-value: 0deg; }
-@property --tag-ry { syntax: "<angle>"; inherits: true; initial-value: 0deg; }
+/* The brand, after the IMF's seal and the one place it carries colour: a
+   round sticker of holographic metal with the seal struck on it in steel.
+   Bottom to top: chrome, colour laid into it, a glint, grain, the struck
+   art (a soft shade away from the light, a lit lip toward it, steel with
+   the colour faintly in it) and the die-cut bevel. The art is a CSS mask:
+   public/brand/imf-seal-mask.svg at full size, imf-shield-mask.svg (the
+   shield alone, the legend being unreadable small) in the header;
+   scripts/brand builds them. --sticker-d sets every measure. The --metal
+   properties place the light: the glint, the bands and colour, the struck
+   edges (--metal-lx and --metal-ly point at the light) and the tilt. */
+@property --metal-px { syntax: "<percentage>"; inherits: true; initial-value: 28%; }
+@property --metal-py { syntax: "<percentage>"; inherits: true; initial-value: 18%; }
+@property --metal-bx { syntax: "<percentage>"; inherits: true; initial-value: 22%; }
+@property --metal-by { syntax: "<percentage>"; inherits: true; initial-value: 30%; }
+@property --metal-lx { syntax: "<number>"; inherits: true; initial-value: -0.57; }
+@property --metal-ly { syntax: "<number>"; inherits: true; initial-value: -0.82; }
+@property --metal-rx { syntax: "<angle>"; inherits: true; initial-value: 0deg; }
+@property --metal-ry { syntax: "<angle>"; inherits: true; initial-value: 0deg; }
 
-.brand-tag {
-    --tag-w: 44px;
-    --tag-edge: #3a425252;
+.brand-sticker {
+    --sticker-d: 34px;
+    --sticker-art: url("/brand/imf-shield-mask.svg?v=2");
+    --sticker-inset: 22%;
+    --sticker-edge: #3a425252;
+    --e: calc(var(--sticker-d) * 0.0045);
     position: relative;
     flex: none;
-    display: grid;
-    place-items: center;
-    width: var(--tag-w);
-    height: calc(var(--tag-w) * 0.72);
+    display: block;
+    width: var(--sticker-d);
+    height: var(--sticker-d);
     border-radius: 50%;
     isolation: isolate;
 }
 
-.brand-tag > * {
+.brand-sticker > span {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
     pointer-events: none;
 }
 
-.brand-tag-layer {
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-}
-
-.brand-tag .metal {
+.brand-sticker .metal {
     background: linear-gradient(158deg,
         #fbfcfd 0%, #d3d8df 8%, #98a1ad 16%, #e6e9ed 24%, #ffffff 31%, #bcc3cc 40%,
         #7f8896 49%, #cfd4db 57%, #f7f8fa 65%, #a6aeb9 74%, #eef0f3 82%, #8d96a3 91%, #e4e7eb 100%);
     background-size: 200% 200%;
-    background-position: var(--tag-bx) var(--tag-by);
+    background-position: var(--metal-bx) var(--metal-by);
 }
 
-/* Hue from the rainbow, light and shade from the metal. Cool-led with one
-   soft peach: warm hues turn olive on the dark bands. */
-.brand-tag .holo {
+/* Hue from the rainbow, light and shade from the metal: a sheen of colour
+   that shifts with the light, kept low so the metal leads. Cool-led with
+   one soft peach: warm hues turn olive on the dark bands. */
+.brand-sticker .holo {
     background: linear-gradient(118deg,
         #7a95ff 0%, #b48cff 12%, #f08ad8 23%, #ffc4a8 31%, #7fd8ff 42%, #6fe0c0 52%,
         #8aa6ff 63%, #c79bff 74%, #ff9fcf 84%, #8fe6d4 93%, #7a95ff 100%);
     background-size: 300% 300%;
-    background-position: calc(100% - var(--tag-bx)) var(--tag-by);
+    background-position: calc(100% - var(--metal-bx)) var(--metal-by);
     mix-blend-mode: color;
-    opacity: 0.38;
+    opacity: 0.2;
 }
 
-.brand-tag .glint {
+.brand-sticker .glint {
     background:
-        radial-gradient(circle at var(--tag-px) var(--tag-py), #ffffffe6 0%, #ffffff59 14%, #ffffff00 38%),
+        radial-gradient(circle at var(--metal-px) var(--metal-py), #ffffffe6 0%, #ffffff59 14%, #ffffff00 38%),
         linear-gradient(112deg, #ffffff00 38%, #ffffffb3 47%, #ffffff00 56%);
     background-size: 100% 100%, 260% 100%;
-    background-position: center, calc(100% - var(--tag-px)) center;
+    background-position: center, calc(100% - var(--metal-px)) center;
     background-repeat: no-repeat;
     mix-blend-mode: screen;
 }
 
-.brand-tag .grain {
+.brand-sticker .grain {
     background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
     background-size: 180px;
     mix-blend-mode: overlay;
     opacity: 0.38;
 }
 
-/* The die-cut edge: a lit top lip, a shaded bottom, and a 1px outline that
-   holds on a light page. */
-.brand-tag .bevel {
-    box-shadow:
-        inset 0 max(1px, calc(var(--tag-w) * 0.008)) 0 #ffffffe6,
-        inset 0 min(-0.5px, calc(var(--tag-w) * -0.008)) 0 #3a425240,
-        inset 0 0 0 max(1px, calc(var(--tag-w) * 0.006)) #ffffff73,
-        inset 0 calc(var(--tag-w) * -0.04) calc(var(--tag-w) * 0.08) #2a324314,
-        0 0 0 1px var(--tag-edge);
+/* The seal, struck: each layer is the art's shape. */
+.brand-sticker .art {
+    inset: var(--sticker-inset);
+    border-radius: 0;
+    -webkit-mask: var(--sticker-art) center / contain no-repeat;
+            mask: var(--sticker-art) center / contain no-repeat;
 }
 
-/* Header size: IMF engraved solid, where shaded steel would melt into the
-   silver. */
-.brand-tag-imf {
-    position: relative;
-    margin-right: -0.035em;
-    color: #3a4352eb;
-    font-size: calc(var(--tag-w) * 0.27);
-    line-height: 1;
-    font-weight: 820;
-    letter-spacing: -0.035em;
+.brand-sticker .shade {
+    background: #1c222f;
+    opacity: 0.55;
+    filter: blur(calc(var(--e) * 0.7));
+    transform: translate(calc(var(--e) * -1.4 * var(--metal-lx)), calc(var(--e) * -1.4 * var(--metal-ly)));
+}
+
+.brand-sticker .lip {
+    background: #ffffff;
+    opacity: 0.95;
+    transform: translate(calc(var(--e) * 1.1 * var(--metal-lx)), calc(var(--e) * 1.1 * var(--metal-ly)));
+}
+
+.brand-sticker .steel {
+    background: linear-gradient(172deg, #8a93a1 0%, #4d5564 28%, #9aa2ae 50%, #3c4351 72%, #6f7886 100%);
+    background-size: 100% 220%;
+    background-position: 0 var(--metal-by);
+}
+
+.brand-sticker .tint {
+    background: linear-gradient(118deg,
+        #6f8fff 0%, #a685ff 18%, #52b0ff 36%, #5fdca6 52%, #ef6fd0 70%, #6f8fff 86%, #52b0ff 100%);
+    background-size: 260% 100%;
+    background-position: var(--metal-bx) 0;
+    mix-blend-mode: color;
+    opacity: 0.16;
+}
+
+/* The die-cut edge: a lit top lip, a shaded bottom, and a 1px outline that
+   holds on a light page. */
+.brand-sticker .bevel {
+    box-shadow:
+        inset 0 max(1px, calc(var(--sticker-d) * 0.008)) 0 #ffffffe6,
+        inset 0 min(-0.5px, calc(var(--sticker-d) * -0.008)) 0 #3a425240,
+        inset 0 0 0 max(1px, calc(var(--sticker-d) * 0.006)) #ffffff73,
+        inset 0 calc(var(--sticker-d) * -0.04) calc(var(--sticker-d) * 0.08) #2a324314,
+        0 0 0 1px var(--sticker-edge);
 }
 
 /* On black: a light edge, and the chrome a step down so it doesn't glare. */
-:root[data-theme='dark'] .brand-tag {
-    --tag-edge: #ffffff2e;
+:root[data-theme='dark'] .brand-sticker {
+    --sticker-edge: #ffffff2e;
 }
 
-:root[data-theme='dark'] .brand-tag .metal {
+:root[data-theme='dark'] .brand-sticker .metal {
     filter: brightness(0.88);
 }
 
-.brand:hover .brand-tag,
-.brand:focus-visible .brand-tag {
-    animation: brand-tag-sweep 1.3s cubic-bezier(0.2, 0.7, 0.2, 1);
+/* The header mark: still at rest; the light sweeps across it once on hover
+   or focus of the link. */
+.brand:hover .brand-sticker,
+.brand:focus-visible .brand-sticker {
+    animation: brand-sticker-sweep 1.3s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
-@keyframes brand-tag-sweep {
-    from { --tag-bx: 8%; --tag-px: 10%; }
-    to { --tag-bx: 92%; --tag-px: 90%; }
+@keyframes brand-sticker-sweep {
+    from { --metal-bx: 8%; --metal-px: 10%; }
+    to { --metal-bx: 92%; --metal-px: 90%; }
 }
 
-/* The hero: the tag at full size in the directory's head, set at a slight
-   angle like a sticker pressed onto the page. The light sweeps in once as
-   the page arrives and settles at the hero light; then it follows the
-   pointer, the sticker tilting toward it, and springs back on leave. */
-.brand-tag.is-hero {
-    --tag-w: 184px;
-    --e: calc(var(--tag-w) * 0.006);
-    grid-area: tag;
-    justify-self: end;
-    transform: rotate(-6deg) perspective(700px) rotateX(var(--tag-rx)) rotateY(var(--tag-ry));
-    transition: --tag-rx 600ms cubic-bezier(0.2, 0.8, 0.2, 1), --tag-ry 600ms cubic-bezier(0.2, 0.8, 0.2, 1);
-    animation: brand-tag-arrive 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) 0.3s backwards;
+/* The sticker at the top of the directory: the whole seal. The light
+   sweeps in once as the page arrives and settles at the hero light; then
+   it follows the pointer, the sticker tilting toward it and the struck
+   edges turning with it, and springs back on leave. */
+.brand-sticker.is-hero {
+    --sticker-d: 176px;
+    --sticker-art: url("/brand/imf-seal-mask.svg?v=2");
+    --sticker-inset: 9.5%;
+    transform: perspective(700px) rotateX(var(--metal-rx)) rotateY(var(--metal-ry));
+    transition: --metal-rx 600ms cubic-bezier(0.2, 0.8, 0.2, 1), --metal-ry 600ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    animation: brand-sticker-arrive 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) 0.3s backwards;
 }
 
-.brand-tag.is-hero.is-live {
+.brand-sticker.is-hero.is-live {
     animation: none;
-    transition: --tag-rx 120ms linear, --tag-ry 120ms linear;
+    transition: --metal-rx 120ms linear, --metal-ry 120ms linear;
 }
 
 /* From the right to the hero light, and the struck edges turn with it. */
-@keyframes brand-tag-arrive {
-    from { --tag-bx: 90%; --tag-by: 46%; --tag-px: 92%; --tag-py: 40%; --tag-lx: 0.8; --tag-ly: -0.6; }
+@keyframes brand-sticker-arrive {
+    from { --metal-bx: 90%; --metal-by: 46%; --metal-px: 92%; --metal-py: 40%; --metal-lx: 0.8; --metal-ly: -0.6; }
 }
 
-/* IMF struck in raised steel: a lit lip toward the light, a soft shade
-   away from it, steel inside with the colour laid in. */
-.brand-tag-face {
-    position: relative;
+/* The directory's masthead, after the IMF's: the sticker with the name
+   under it as its caption, held close (about 17px from the sticker's edge
+   to the capitals) and set well apart from the toolbar (about 43px), so
+   the two read as one mark. The sticker leads; the name is its caption. */
+.masthead {
     display: grid;
-    place-items: center;
-    transform: translateY(calc(var(--tag-w) * -0.045));
+    justify-items: center;
+    margin: 40px 0 36px;
+    text-align: center;
 }
 
-.brand-tag-struck {
-    display: inline-grid;
-    /* Centred on the letters, not their trailing tracking, and nudged
-       right for the F's open side. */
-    margin-right: -0.035em;
-    transform: translateX(calc(var(--tag-w) * 0.004));
-    font-size: calc(var(--tag-w) * 0.25);
-    line-height: 1;
-    font-weight: 820;
-    letter-spacing: -0.035em;
-    white-space: nowrap;
+.masthead-title {
+    margin-top: 10px;
+    margin-right: -0.12em;
+    font-size: 20px;
+    line-height: 28px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
 }
 
-/* Positioned, so they stack in source order: transforms would otherwise
-   lift the lips above the steel. */
-.brand-tag-struck > span {
-    position: relative;
-    grid-area: 1 / 1;
-}
-
-.brand-tag-struck .lo {
-    color: #1c222f8c;
-    transform: translate(calc(var(--e) * -1.4 * var(--tag-lx)), calc(var(--e) * -1.4 * var(--tag-ly)));
-    filter: blur(calc(var(--e) * 0.8));
-}
-
-.brand-tag-struck .hi {
-    color: #fffffff0;
-    transform: translate(calc(var(--e) * 1.1 * var(--tag-lx)), calc(var(--e) * 1.1 * var(--tag-ly)));
-}
-
-.brand-tag-struck .steel,
-.brand-tag-struck .tint {
-    color: transparent;
-    -webkit-background-clip: text;
-    background-clip: text;
-}
-
-/* background-image, not the shorthand: the shorthand resets the clip. */
-.brand-tag-struck .steel {
-    background-image: linear-gradient(172deg, #a7afbb 0%, #6b7483 28%, #b9c0ca 50%, #545c6b 72%, #8f98a6 100%);
-    background-size: 100% 220%;
-    background-position: 0 var(--tag-by);
-}
-
-.brand-tag-struck .tint {
-    background-image: linear-gradient(118deg,
-        #6f8fff 0%, #a685ff 18%, #52b0ff 36%, #5fdca6 52%, #ef6fd0 70%, #6f8fff 86%, #52b0ff 100%);
-    background-size: calc(var(--tag-w) * 2.6) 100%;
-    background-position: var(--tag-bx) 0;
-    mix-blend-mode: color;
-    opacity: 0.285;
-}
-
-/* The name, pressed in: shade on the upper lip, light on the lower, both
-   turning with the light. */
-.brand-tag-arc {
+/* On the directory the header holds only the theme switch, so it lies over
+   the page instead of taking a row of its own. */
+.site-header.is-bare {
     position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    overflow: visible;
+    inset: 0 0 auto;
+    z-index: 1;
+    pointer-events: none;
 }
 
-.brand-tag-arc text {
-    font-family: var(--font-mono);
-    font-feature-settings: 'ss02';
-    font-size: 5px;
-    letter-spacing: 0.6px;
-}
-
-.brand-tag-arc .lo {
-    fill: #1c222fb8;
-}
-
-.brand-tag-arc .hi {
-    fill: #fffffff2;
-    transform: translate(calc(var(--tag-lx) * -0.35px), calc(var(--tag-ly) * -0.35px));
-}
-
-/* The head beside it: the title and intro on the left, the tag on the
-   right across both. */
-.page-head.has-tag {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-        "title tag"
-        "subtitle tag";
-    align-items: center;
-    gap: 0 48px;
-}
-
-.page-head.has-tag .page-title {
-    grid-area: title;
-    align-self: end;
-}
-
-.page-head.has-tag .page-subtitle {
-    grid-area: subtitle;
-    align-self: start;
+.site-header.is-bare .theme-toggle {
+    pointer-events: auto;
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .brand-tag.is-hero {
-        transform: rotate(-6deg);
+    .brand-sticker.is-hero {
+        animation: none;
+        transform: none;
     }
 }
 
@@ -1074,7 +1031,7 @@ button.text-link {
     height: var(--star);
 }
 
-/* A filled star cut from the tag's metal (see .brand-tag): bands of steel,
+/* A filled star cut from the tag's metal (see .brand-sticker): bands of steel,
    the rainbow laid in, and a glint, all masked to the star. Steel in light
    mode, so it reads against the grey empty stars on a white card; bright
    chrome on black. Sized by --star; --foil-at (0 to 1) is where along a row
@@ -2598,11 +2555,78 @@ a.mint-name:hover {
 
 /* The figure at the left, the current state across from it. */
 .uptime-head {
+    position: relative;
     display: flex;
     justify-content: space-between;
     align-items: baseline;
     flex-wrap: wrap;
     gap: 4px 12px;
+}
+
+.uptime-figure {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* A question mark beside a figure, and what the figure rests on in a
+   tooltip on hover or focus (a tap focuses it on touch). The tip opens
+   downward over the bars, since the card clips anything above its edge,
+   and is placed against the start of the row, not the mark, so it stays on
+   screen on a phone. Interfere tooltip: always dark, 12/16 medium, 8px
+   radius. */
+.help-tip-button {
+    display: inline-grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--fg-3);
+    cursor: help;
+    transition: color 150ms var(--ease), background-color 150ms var(--ease);
+}
+
+.help-tip-button:hover,
+.help-tip-button:focus-visible {
+    background: var(--component);
+    color: var(--fg);
+}
+
+.help-tip-button .icon {
+    width: 16px;
+    height: 16px;
+}
+
+.help-tip-text {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: -4px;
+    z-index: 50;
+    width: max-content;
+    max-width: min(320px, calc(100% + 8px));
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: #222222;
+    box-shadow: 0 0 0 0.5px #ffffff12 inset;
+    color: #ffffffed;
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 500;
+    text-wrap: pretty;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(-4px) scale(0.95);
+    transform-origin: top left;
+    transition: opacity 200ms var(--ease), transform 200ms var(--ease);
+}
+
+.help-tip:hover .help-tip-text,
+.help-tip:focus-within .help-tip-text {
+    opacity: 1;
+    transform: none;
 }
 
 
@@ -2670,13 +2694,6 @@ a.mint-name:hover {
     line-height: 20px;
 }
 
-.uptime-note {
-    max-width: 75ch;
-    margin-top: 12px;
-    color: var(--fg-2);
-    font-size: 13px;
-    line-height: 20px;
-}
 
 .donation-list {
     display: flex;
@@ -2960,21 +2977,22 @@ a.mint-name:hover {
         line-height: 32px;
     }
 
-    /* Phones: a smaller tag beside the title, the intro full width under
-       both. */
-    .page-head.has-tag {
-        grid-template-areas:
-            "title tag"
-            "subtitle subtitle";
-        gap: 12px 16px;
+    /* Phones: the seal and its caption a size down; the caption holds one
+       line at 320px. */
+    .masthead {
+        margin: 32px 0 24px;
     }
 
-    .page-head.has-tag .page-title {
-        align-self: center;
+    .brand-sticker.is-hero {
+        --sticker-d: 136px;
     }
 
-    .brand-tag.is-hero {
-        --tag-w: 104px;
+    .masthead-title {
+        margin-top: 6px;
+        margin-right: -0.1em;
+        font-size: 18px;
+        line-height: 24px;
+        letter-spacing: 0.1em;
     }
 
     /* Phones: the rating sits under the status, both right-aligned. */
