@@ -325,29 +325,41 @@ fn Offers(
                 }
                 .into_any(),
             }}
+            // Two small ledgers on the card's two columns: how to reach the
+            // operator, then the mint's own facts.
             {has_contact.then(|| view! {
-                <dl class="offers-contact">
-                    {contacts.into_iter().map(|contact| view! {
-                        <div>
-                            <dt>{contact.label}</dt>
-                            <dd><CopyText text=contact.value shown=contact.shown/></dd>
-                        </div>
-                    }).collect_view()}
-                    {software.map(|s| view! { <div><dt>"Software"</dt><dd class="mono">{s}</dd></div> })}
-                    // The link says what it is, so its label is for screen
-                    // readers only.
-                    {terms.map(|url| view! {
-                        <div>
-                            <dt class="sr-only">"Terms"</dt>
-                            <dd>
-                                <a class="text-link" href=url target="_blank" rel="noopener noreferrer">
-                                    "Terms of service"
-                                    <span class="sr-only">" (opens in a new tab)"</span>
-                                </a>
-                            </dd>
-                        </div>
+                <div class="offers-meta">
+                    {(!contacts.is_empty()).then(|| view! {
+                        <dl class="offers-ledger">
+                            {contacts.into_iter().map(|contact| view! {
+                                <div>
+                                    <dt>{contact.label}</dt>
+                                    <dd><CopyText text=contact.value shown=contact.shown/></dd>
+                                </div>
+                            }).collect_view()}
+                        </dl>
                     })}
-                </dl>
+                    {(software.is_some() || terms.is_some()).then(|| view! {
+                        <dl class="offers-ledger">
+                            {software.map(|s| view! { <div><dt>"Software"</dt><dd class="mono">{s}</dd></div> })}
+                            // The address the link opens, like the mint's own.
+                            {terms.map(|url| {
+                                let shown = short_url(&url);
+                                view! {
+                                    <div>
+                                        <dt>"Terms"</dt>
+                                        <dd>
+                                            <a class="text-link mono" href=url target="_blank" rel="noopener noreferrer">
+                                                {shown}
+                                                <span class="sr-only">" (opens in a new tab)"</span>
+                                            </a>
+                                        </dd>
+                                    </div>
+                                }
+                            })}
+                        </dl>
+                    })}
+                </div>
             })}
             <p class="offers-note" title=fetched>{note}</p>
         </div>

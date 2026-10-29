@@ -704,6 +704,19 @@ button.text-link {
     from { opacity: 0; }
 }
 
+/* Changing page: the new page fades in as it arrives, opacity only, so the
+   header, the scroll position and late data all change inside the fade
+   rather than around it. Not on the first load. (A view transition was
+   tried and dropped as jumpy: the router changes the header before the old
+   page is captured, and the scroll and data land after the new one is.) */
+.is-navigated > * {
+    animation: page-in 180ms var(--ease-out) both;
+}
+
+@keyframes page-in {
+    from { opacity: 0; }
+}
+
 /* Reduced motion: no spreading circle or turning icon, a short crossfade. */
 @media (prefers-reduced-motion: reduce) {
     .theme-swap::view-transition-new(root) {
@@ -965,41 +978,61 @@ button.text-link {
     color: var(--fg-2);
 }
 
-/* Contact and software: a row of label and value pairs under the features. */
-.offers-contact {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px 24px;
-    margin: 0;
-    padding: 12px 16px;
+/* How to reach the operator, then the mint's own facts: two small ledgers
+   on the card's two columns, so the second starts under "Pay out" like the
+   checklist's second column; a grey label, then the value, with rows lined
+   up across both. */
+.offers-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 4px 32px;
+    padding: 14px 16px;
     font-size: 13px;
     line-height: 20px;
 }
 
-.offers-contact > div {
-    display: flex;
+.offers-ledger {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    grid-auto-rows: minmax(24px, auto);
     align-items: center;
-    gap: 8px;
-    min-width: 0;
+    gap: 4px 12px;
+    margin: 0;
 }
 
-.offers-contact dt {
+.offers-ledger > div {
+    display: contents;
+}
+
+.offers-ledger dt {
     color: var(--fg-2);
 }
 
-.offers-contact dd {
+.offers-ledger dd {
     min-width: 0;
     margin: 0;
 }
 
-/* Ink and a darker rule, so it reads as a link beside the copy buttons. */
-.offers-contact .text-link {
+/* Values in ink, like Software beside them; the copy icon stays quiet. */
+.offers-ledger .copy-url {
     color: var(--fg);
-    text-decoration-color: var(--fg-3);
 }
 
-.offers-contact .text-link:hover {
+/* Ink and a darker rule, so it reads as a link beside the copy buttons; a
+   long address is cut short rather than wrapping. */
+.offers-ledger .text-link {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    color: var(--fg);
+    text-decoration-color: var(--fg-3);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+}
+
+.offers-ledger .text-link:hover {
     text-decoration-color: var(--fg);
 }
 
@@ -1009,7 +1042,8 @@ button.text-link {
 
 @media (max-width: 640px) {
     .offers-lightning,
-    .offers-list {
+    .offers-list,
+    .offers-meta {
         grid-template-columns: minmax(0, 1fr);
     }
 
@@ -1026,7 +1060,7 @@ button.text-link {
     .offers-cell,
     .offers-list,
     .offers-empty,
-    .offers-contact,
+    .offers-meta,
     .offers-note {
         padding-inline: 12px;
     }

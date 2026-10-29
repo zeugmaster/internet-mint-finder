@@ -6,6 +6,7 @@ use leptos::prelude::*;
 use leptos_meta::{provide_meta_context, HashedStylesheet, MetaTags, Title};
 use leptos_router::{
     components::{Route, Router, Routes},
+    hooks::use_location,
     ParamSegment, SsrMode, StaticSegment,
 };
 
@@ -115,7 +116,7 @@ pub fn App() -> impl IntoView {
             <div class="page-wrapper">
                 <Header/>
                 <a href="#main-content" class="skip-link">"Skip to content"</a>
-                <main id="main-content" class="flex-grow" tabindex="-1">
+                <PageArea>
                     <Routes fallback=NotFound>
                         <Route path=StaticSegment("") view=HomePage/>
                         // Rendered after its data, so an unknown mint can answer
@@ -126,10 +127,26 @@ pub fn App() -> impl IntoView {
                             ssr=SsrMode::Async
                         />
                     </Routes>
-                </main>
+                </PageArea>
                 <Footer/>
             </div>
         </Router>
+    }
+}
+
+/// The page area. Once the page has changed, each new page fades in as it
+/// arrives (`.is-navigated` in main.css); the first page load doesn't.
+#[component]
+fn PageArea(children: Children) -> impl IntoView {
+    let location = use_location();
+    let first = location.pathname.get_untracked();
+    let navigated = Memo::new(move |was: Option<&bool>| {
+        was.copied().unwrap_or(false) || location.pathname.get() != first
+    });
+    view! {
+        <main id="main-content" class="flex-grow" class:is-navigated=move || navigated.get() tabindex="-1">
+            {children()}
+        </main>
     }
 }
 
