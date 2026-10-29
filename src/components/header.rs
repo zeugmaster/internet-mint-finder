@@ -2,12 +2,22 @@ use crate::components::icons::{Moon, Sun};
 use crate::types::AppConfig;
 use leptos::prelude::*;
 
-/// The brand mark: an assay hallmark, a shield punch struck with an M. Inlined
-/// as raw SVG in the inverted colors so it follows the theme.
-const BRAND_MARK_SVG: &str = r##"<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-  <path d="M3 3h18v11c0 4-4 6.6-9 8-5-1.4-9-4-9-8z" fill="var(--inverted)"/>
-  <path d="M7.5 15.5v-7l4.5 4.5 4.5-4.5v7" fill="none" stroke="var(--on-inverted)" stroke-width="2" stroke-linejoin="round"/>
-</svg>"##;
+/// The brand mark: the IMF tag, a holographic metal sticker, built from the
+/// same layers as the files in public/brand. Decoration beside the name, so
+/// hidden from screen readers.
+#[component]
+fn BrandTag() -> impl IntoView {
+    view! {
+        <span class="brand-tag" aria-hidden="true">
+            <span class="brand-tag-layer metal"></span>
+            <span class="brand-tag-layer holo"></span>
+            <span class="brand-tag-layer glint"></span>
+            <span class="brand-tag-layer grain"></span>
+            <span class="brand-tag-layer bevel"></span>
+            <span class="brand-tag-imf">"IMF"</span>
+        </span>
+    }
+}
 
 /// Brand and the theme switch. The directory is the only section, so there is
 /// no nav; the brand links home. public/dashboard.html carries its own copy
@@ -20,7 +30,7 @@ pub fn Header() -> impl IntoView {
         <header class="site-header">
             <div class="site-header-inner">
                 <a href="/" class="brand">
-                    <span class="brand-mark" inner_html=BRAND_MARK_SVG></span>
+                    <BrandTag/>
                     <span>
                         <Suspense fallback=|| "Mint Finder".to_string()>
                             {move || {

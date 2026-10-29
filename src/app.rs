@@ -14,7 +14,29 @@ use leptos_router::{
 /// without) hydration.
 const THEME_SCRIPT: &str = r#"(function(){var d=document.documentElement;d.dataset.theme=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.addEventListener('click',function(e){if(!e.target.closest('[data-theme-toggle]'))return;var next=d.dataset.theme==='dark'?'light':'dark';d.dataset.theme=next;localStorage.setItem('theme',next);});})();"#;
 
+/// The site description, shared by search results and link previews.
+const DESCRIPTION: &str =
+    "Find a Cashu mint that works: hourly uptime checks and reviews from people who use them.";
+
+/// An Open Graph tag. The view macro doesn't know the `property` attribute,
+/// so the tag is built directly, as leptos_meta does.
+fn og(property: &'static str, content: impl Into<String>) -> impl IntoView {
+    leptos::html::meta()
+        .attr("property", property)
+        .content(content.into())
+}
+
 pub fn shell(options: LeptosOptions) -> impl IntoView {
+    // Link previews want an absolute image URL; without BASE_URL a path is
+    // the best there is, and most previewers resolve it.
+    #[cfg(feature = "ssr")]
+    let preview_image = use_context::<crate::server::state::AppState>()
+        .and_then(|state| state.base_url.clone())
+        .map(|base| format!("{}/brand/og-image.png", base.trim_end_matches('/')))
+        .unwrap_or_else(|| "/brand/og-image.png".to_string());
+    #[cfg(not(feature = "ssr"))]
+    let preview_image = "/brand/og-image.png".to_string();
+
     view! {
         <!DOCTYPE html>
         <html lang="en">
@@ -25,11 +47,21 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
                 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6f6f6"/>
                 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000"/>
                 <script inner_html=THEME_SCRIPT></script>
-                <meta
-                    name="description"
-                    content="Find a Cashu mint that works: hourly uptime checks and reviews from people who use them."
-                />
+                <meta name="description" content=DESCRIPTION/>
+                // The favicon is drawn on the 16px pixel grid; the PNGs are for
+                // browsers without SVG icons. All of them come from scripts/brand.
                 <link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
+                <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png"/>
+                <link rel="icon" href="/favicon-16.png" sizes="16x16" type="image/png"/>
+                <link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
+                {og("og:site_name", "Internet Mint Finder")}
+                {og("og:title", "Internet Mint Finder")}
+                {og("og:description", DESCRIPTION)}
+                {og("og:image", preview_image)}
+                {og("og:image:width", "1200")}
+                {og("og:image:height", "630")}
+                {og("og:image:alt", "The Internet Mint Finder tag: IMF struck in a holographic metal sticker")}
+                <meta name="twitter:card" content="summary_large_image"/>
                 <AutoReload options=options.clone() />
                 <HashedStylesheet id="leptos" options=options.clone()/>
                 <HydrationScripts options/>

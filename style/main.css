@@ -373,16 +373,107 @@ button.text-link {
     text-overflow: ellipsis;
 }
 
-.brand-mark {
+/* The brand mark: the IMF tag, a holographic metal sticker, and the one
+   place the brand carries colour. Bottom to top: chrome, colour laid into
+   it, a glint, grain and a bevelled edge, with IMF engraved solid at this
+   size. Still at rest; the light sweeps across once on hover or keyboard
+   focus. The same sticker, held at the hero light, is in public/brand. */
+@property --tag-px { syntax: "<percentage>"; inherits: true; initial-value: 28%; }
+@property --tag-bx { syntax: "<percentage>"; inherits: true; initial-value: 22%; }
+
+.brand-tag {
+    --tag-edge: #3a425252;
+    position: relative;
     flex: none;
-    display: flex;
-    width: 20px;
-    height: 20px;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 32px;
+    border-radius: 50%;
+    isolation: isolate;
 }
 
-.brand-mark svg {
-    width: 100%;
-    height: 100%;
+.brand-tag-layer {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+}
+
+.brand-tag .metal {
+    background: linear-gradient(158deg,
+        #fbfcfd 0%, #d3d8df 8%, #98a1ad 16%, #e6e9ed 24%, #ffffff 31%, #bcc3cc 40%,
+        #7f8896 49%, #cfd4db 57%, #f7f8fa 65%, #a6aeb9 74%, #eef0f3 82%, #8d96a3 91%, #e4e7eb 100%);
+    background-size: 200% 200%;
+    background-position: var(--tag-bx) 30%;
+}
+
+/* Hue from the rainbow, light and shade from the metal. Cool-led with one
+   soft peach: warm hues turn olive on the dark bands. */
+.brand-tag .holo {
+    background: linear-gradient(118deg,
+        #7a95ff 0%, #b48cff 12%, #f08ad8 23%, #ffc4a8 31%, #7fd8ff 42%, #6fe0c0 52%,
+        #8aa6ff 63%, #c79bff 74%, #ff9fcf 84%, #8fe6d4 93%, #7a95ff 100%);
+    background-size: 300% 300%;
+    background-position: calc(100% - var(--tag-bx)) 30%;
+    mix-blend-mode: color;
+    opacity: 0.38;
+}
+
+.brand-tag .glint {
+    background:
+        radial-gradient(circle at var(--tag-px) 18%, #ffffffe6 0%, #ffffff59 14%, #ffffff00 38%),
+        linear-gradient(112deg, #ffffff00 38%, #ffffffb3 47%, #ffffff00 56%);
+    background-size: 100% 100%, 260% 100%;
+    background-position: center, calc(100% - var(--tag-px)) center;
+    background-repeat: no-repeat;
+    mix-blend-mode: screen;
+}
+
+.brand-tag .grain {
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+    background-size: 180px;
+    mix-blend-mode: overlay;
+    opacity: 0.38;
+}
+
+/* The die-cut edge: a lit top lip, a shaded bottom, and a 1px outline that
+   holds on the light header. */
+.brand-tag .bevel {
+    box-shadow:
+        inset 0 1px 0 #ffffffe6,
+        inset 0 -0.5px 0 #3a425240,
+        inset 0 0 0 1px #ffffff73,
+        inset 0 -2px 4px #2a324314,
+        0 0 0 1px var(--tag-edge);
+}
+
+.brand-tag-imf {
+    position: relative;
+    margin-right: -0.035em;
+    color: #3a4352eb;
+    font-size: 12px;
+    line-height: 1;
+    font-weight: 820;
+    letter-spacing: -0.035em;
+}
+
+/* On black: a light edge, and the chrome a step down so it doesn't glare. */
+:root[data-theme='dark'] .brand-tag {
+    --tag-edge: #ffffff2e;
+}
+
+:root[data-theme='dark'] .brand-tag .metal {
+    filter: brightness(0.88);
+}
+
+.brand:hover .brand-tag,
+.brand:focus-visible .brand-tag {
+    animation: brand-tag-sweep 1.3s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+@keyframes brand-tag-sweep {
+    from { --tag-bx: 8%; --tag-px: 10%; }
+    to { --tag-bx: 92%; --tag-px: 90%; }
 }
 
 /* Interfere tabs: a component track; the active tab is a raised pill with a
