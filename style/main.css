@@ -373,24 +373,35 @@ button.text-link {
     text-overflow: ellipsis;
 }
 
-/* The brand mark: the IMF tag, a holographic metal sticker, and the one
-   place the brand carries colour. Bottom to top: chrome, colour laid into
-   it, a glint, grain and a bevelled edge, with IMF engraved solid at this
-   size. Still at rest; the light sweeps across once on hover or keyboard
-   focus. The same sticker, held at the hero light, is in public/brand. */
+/* The IMF tag, the brand: a holographic metal sticker and the one place
+   the brand carries colour. Bottom to top: chrome, colour laid into it, a
+   glint, grain and a bevelled edge. --tag-w sets every measure, so the
+   header mark and the hero tag share it all. The same sticker, held at the
+   hero light, is in public/brand (scripts/brand builds it). */
 @property --tag-px { syntax: "<percentage>"; inherits: true; initial-value: 28%; }
+@property --tag-py { syntax: "<percentage>"; inherits: true; initial-value: 18%; }
 @property --tag-bx { syntax: "<percentage>"; inherits: true; initial-value: 22%; }
+@property --tag-by { syntax: "<percentage>"; inherits: true; initial-value: 30%; }
+@property --tag-lx { syntax: "<number>"; inherits: true; initial-value: -0.57; }
+@property --tag-ly { syntax: "<number>"; inherits: true; initial-value: -0.82; }
+@property --tag-rx { syntax: "<angle>"; inherits: true; initial-value: 0deg; }
+@property --tag-ry { syntax: "<angle>"; inherits: true; initial-value: 0deg; }
 
 .brand-tag {
+    --tag-w: 44px;
     --tag-edge: #3a425252;
     position: relative;
     flex: none;
     display: grid;
     place-items: center;
-    width: 44px;
-    height: 32px;
+    width: var(--tag-w);
+    height: calc(var(--tag-w) * 0.72);
     border-radius: 50%;
     isolation: isolate;
+}
+
+.brand-tag > * {
+    pointer-events: none;
 }
 
 .brand-tag-layer {
@@ -404,7 +415,7 @@ button.text-link {
         #fbfcfd 0%, #d3d8df 8%, #98a1ad 16%, #e6e9ed 24%, #ffffff 31%, #bcc3cc 40%,
         #7f8896 49%, #cfd4db 57%, #f7f8fa 65%, #a6aeb9 74%, #eef0f3 82%, #8d96a3 91%, #e4e7eb 100%);
     background-size: 200% 200%;
-    background-position: var(--tag-bx) 30%;
+    background-position: var(--tag-bx) var(--tag-by);
 }
 
 /* Hue from the rainbow, light and shade from the metal. Cool-led with one
@@ -414,14 +425,14 @@ button.text-link {
         #7a95ff 0%, #b48cff 12%, #f08ad8 23%, #ffc4a8 31%, #7fd8ff 42%, #6fe0c0 52%,
         #8aa6ff 63%, #c79bff 74%, #ff9fcf 84%, #8fe6d4 93%, #7a95ff 100%);
     background-size: 300% 300%;
-    background-position: calc(100% - var(--tag-bx)) 30%;
+    background-position: calc(100% - var(--tag-bx)) var(--tag-by);
     mix-blend-mode: color;
     opacity: 0.38;
 }
 
 .brand-tag .glint {
     background:
-        radial-gradient(circle at var(--tag-px) 18%, #ffffffe6 0%, #ffffff59 14%, #ffffff00 38%),
+        radial-gradient(circle at var(--tag-px) var(--tag-py), #ffffffe6 0%, #ffffff59 14%, #ffffff00 38%),
         linear-gradient(112deg, #ffffff00 38%, #ffffffb3 47%, #ffffff00 56%);
     background-size: 100% 100%, 260% 100%;
     background-position: center, calc(100% - var(--tag-px)) center;
@@ -437,21 +448,23 @@ button.text-link {
 }
 
 /* The die-cut edge: a lit top lip, a shaded bottom, and a 1px outline that
-   holds on the light header. */
+   holds on a light page. */
 .brand-tag .bevel {
     box-shadow:
-        inset 0 1px 0 #ffffffe6,
-        inset 0 -0.5px 0 #3a425240,
-        inset 0 0 0 1px #ffffff73,
-        inset 0 -2px 4px #2a324314,
+        inset 0 max(1px, calc(var(--tag-w) * 0.008)) 0 #ffffffe6,
+        inset 0 min(-0.5px, calc(var(--tag-w) * -0.008)) 0 #3a425240,
+        inset 0 0 0 max(1px, calc(var(--tag-w) * 0.006)) #ffffff73,
+        inset 0 calc(var(--tag-w) * -0.04) calc(var(--tag-w) * 0.08) #2a324314,
         0 0 0 1px var(--tag-edge);
 }
 
+/* Header size: IMF engraved solid, where shaded steel would melt into the
+   silver. */
 .brand-tag-imf {
     position: relative;
     margin-right: -0.035em;
     color: #3a4352eb;
-    font-size: 12px;
+    font-size: calc(var(--tag-w) * 0.27);
     line-height: 1;
     font-weight: 820;
     letter-spacing: -0.035em;
@@ -474,6 +487,147 @@ button.text-link {
 @keyframes brand-tag-sweep {
     from { --tag-bx: 8%; --tag-px: 10%; }
     to { --tag-bx: 92%; --tag-px: 90%; }
+}
+
+/* The hero: the tag at full size in the directory's head, set at a slight
+   angle like a sticker pressed onto the page. The light sweeps in once as
+   the page arrives and settles at the hero light; then it follows the
+   pointer, the sticker tilting toward it, and springs back on leave. */
+.brand-tag.is-hero {
+    --tag-w: 184px;
+    --e: calc(var(--tag-w) * 0.006);
+    grid-area: tag;
+    justify-self: end;
+    transform: rotate(-6deg) perspective(700px) rotateX(var(--tag-rx)) rotateY(var(--tag-ry));
+    transition: --tag-rx 600ms cubic-bezier(0.2, 0.8, 0.2, 1), --tag-ry 600ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    animation: brand-tag-arrive 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) 0.3s backwards;
+}
+
+.brand-tag.is-hero.is-live {
+    animation: none;
+    transition: --tag-rx 120ms linear, --tag-ry 120ms linear;
+}
+
+/* From the right to the hero light, and the struck edges turn with it. */
+@keyframes brand-tag-arrive {
+    from { --tag-bx: 90%; --tag-by: 46%; --tag-px: 92%; --tag-py: 40%; --tag-lx: 0.8; --tag-ly: -0.6; }
+}
+
+/* IMF struck in raised steel: a lit lip toward the light, a soft shade
+   away from it, steel inside with the colour laid in. */
+.brand-tag-face {
+    position: relative;
+    display: grid;
+    place-items: center;
+    transform: translateY(calc(var(--tag-w) * -0.045));
+}
+
+.brand-tag-struck {
+    display: inline-grid;
+    /* Centred on the letters, not their trailing tracking, and nudged
+       right for the F's open side. */
+    margin-right: -0.035em;
+    transform: translateX(calc(var(--tag-w) * 0.004));
+    font-size: calc(var(--tag-w) * 0.25);
+    line-height: 1;
+    font-weight: 820;
+    letter-spacing: -0.035em;
+    white-space: nowrap;
+}
+
+/* Positioned, so they stack in source order: transforms would otherwise
+   lift the lips above the steel. */
+.brand-tag-struck > span {
+    position: relative;
+    grid-area: 1 / 1;
+}
+
+.brand-tag-struck .lo {
+    color: #1c222f8c;
+    transform: translate(calc(var(--e) * -1.4 * var(--tag-lx)), calc(var(--e) * -1.4 * var(--tag-ly)));
+    filter: blur(calc(var(--e) * 0.8));
+}
+
+.brand-tag-struck .hi {
+    color: #fffffff0;
+    transform: translate(calc(var(--e) * 1.1 * var(--tag-lx)), calc(var(--e) * 1.1 * var(--tag-ly)));
+}
+
+.brand-tag-struck .steel,
+.brand-tag-struck .tint {
+    color: transparent;
+    -webkit-background-clip: text;
+    background-clip: text;
+}
+
+/* background-image, not the shorthand: the shorthand resets the clip. */
+.brand-tag-struck .steel {
+    background-image: linear-gradient(172deg, #a7afbb 0%, #6b7483 28%, #b9c0ca 50%, #545c6b 72%, #8f98a6 100%);
+    background-size: 100% 220%;
+    background-position: 0 var(--tag-by);
+}
+
+.brand-tag-struck .tint {
+    background-image: linear-gradient(118deg,
+        #6f8fff 0%, #a685ff 18%, #52b0ff 36%, #5fdca6 52%, #ef6fd0 70%, #6f8fff 86%, #52b0ff 100%);
+    background-size: calc(var(--tag-w) * 2.6) 100%;
+    background-position: var(--tag-bx) 0;
+    mix-blend-mode: color;
+    opacity: 0.285;
+}
+
+/* The name, pressed in: shade on the upper lip, light on the lower, both
+   turning with the light. */
+.brand-tag-arc {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+.brand-tag-arc text {
+    font-family: var(--font-mono);
+    font-feature-settings: 'ss02';
+    font-size: 5px;
+    letter-spacing: 0.6px;
+}
+
+.brand-tag-arc .lo {
+    fill: #1c222fb8;
+}
+
+.brand-tag-arc .hi {
+    fill: #fffffff2;
+    transform: translate(calc(var(--tag-lx) * -0.35px), calc(var(--tag-ly) * -0.35px));
+}
+
+/* The head beside it: the title and intro on the left, the tag on the
+   right across both. */
+.page-head.has-tag {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+        "title tag"
+        "subtitle tag";
+    align-items: center;
+    gap: 0 48px;
+}
+
+.page-head.has-tag .page-title {
+    grid-area: title;
+    align-self: end;
+}
+
+.page-head.has-tag .page-subtitle {
+    grid-area: subtitle;
+    align-self: start;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .brand-tag.is-hero {
+        transform: rotate(-6deg);
+    }
 }
 
 /* Interfere tabs: a component track; the active tab is a raised pill with a
@@ -2537,6 +2691,23 @@ a.mint-name:hover {
     .page-title {
         font-size: 24px;
         line-height: 32px;
+    }
+
+    /* Phones: a smaller tag beside the title, the intro full width under
+       both. */
+    .page-head.has-tag {
+        grid-template-areas:
+            "title tag"
+            "subtitle subtitle";
+        gap: 12px 16px;
+    }
+
+    .page-head.has-tag .page-title {
+        align-self: center;
+    }
+
+    .brand-tag.is-hero {
+        --tag-w: 104px;
     }
 
     /* Phones: the rating sits under the status, both right-aligned. */

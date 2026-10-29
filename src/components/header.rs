@@ -1,23 +1,7 @@
+use crate::components::brand::BrandTag;
 use crate::components::icons::{Moon, Sun};
 use crate::types::AppConfig;
 use leptos::prelude::*;
-
-/// The brand mark: the IMF tag, a holographic metal sticker, built from the
-/// same layers as the files in public/brand. Decoration beside the name, so
-/// hidden from screen readers.
-#[component]
-fn BrandTag() -> impl IntoView {
-    view! {
-        <span class="brand-tag" aria-hidden="true">
-            <span class="brand-tag-layer metal"></span>
-            <span class="brand-tag-layer holo"></span>
-            <span class="brand-tag-layer glint"></span>
-            <span class="brand-tag-layer grain"></span>
-            <span class="brand-tag-layer bevel"></span>
-            <span class="brand-tag-imf">"IMF"</span>
-        </span>
-    }
-}
 
 /// Brand and the theme switch. The directory is the only section, so there is
 /// no nav; the brand links home. public/dashboard.html carries its own copy
