@@ -23,6 +23,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     use leptos_axum::{generate_route_list, LeptosRoutes};
     use std::sync::Arc;
 
+    // AUDITOR_PAID_SWAPS=true previews the full auditor: swaps, peer auditors,
+    // donations and Analytics. Unset, the preview is the directory only.
+    let config = AuditorConfig::from_env();
     let db = Arc::new(AuditorDatabase::open_in_memory()?);
     let wallets = Arc::new(
         WalletRepositoryBuilder::new()
@@ -75,14 +78,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         wallets
             .create_wallet(url.parse()?, CurrencyUnit::Sat, None)
             .await?;
+        // Hourly checks chosen so every strip state shows: steady, gaps (no
+        // data), degraded now, a past outage, down now, newly listed, and
+        // never checked.
         for hour in 0..24 {
-            let state = if i == 4 && hour < 5 { "ERROR" } else { "OK" };
+            let (state, error, category) = match (i, hour) {
+                (1, 7 | 8) | (5, 6..) | (6, _) => continue,
+                (2, 0..=2) => (
+                    "WARN",
+                    Some("HTTP 429 Too Many Requests".to_string()),
+                    Some("rate_limit"),
+                ),
+                (3, 15) | (4, 0..=4) => (
+                    "ERROR",
+                    Some(format!(
+                        "error sending request for url ({url}/v1/info): connection refused"
+                    )),
+                    Some("network"),
+                ),
+                _ => ("OK", None, None),
+            };
             let at = (Utc::now() - Duration::hours(hour))
                 .format("%Y-%m-%dT%H:%M:%SZ")
                 .to_string();
             let url = url.clone();
             let id = mint.id;
-            db.run(move |conn| { conn.execute("INSERT INTO mint_checks(mint_id, mint_url, state, created_at) VALUES (?1, ?2, ?3, ?4)", rusqlite::params![id, url, state, at])?; Ok(()) }).await?;
+            db.run(move |conn| { conn.execute("INSERT INTO mint_checks(mint_id, mint_url, state, error, category, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)", rusqlite::params![id, url, state, error, category, at])?; Ok(()) }).await?;
         }
         mints.push(mint);
     }
@@ -109,85 +130,93 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         })
         .await?;
     }
-    for i in 0..100 {
-        let from = &mints[i % 7];
-        let to = &mints[(i + 1) % 7];
-        let mut swap = SwapEvent::success(
-            from,
-            to,
-            20 + i as u64 % 80,
-            1,
-            850.0 + (i % 12) as f64 * 230.0,
-        );
-        swap.created_at = Utc::now() - Duration::minutes(i as i64 * 13 + 2);
-        if i % 6 == 1 {
-            swap.state = MintState::Error;
-            swap.error = Some("Mint did not respond within 30 seconds. A later audit will retry after the cooldown.".into());
-            swap.category = Some("timeout".into());
-            swap.failed_mint_id = Some(to.id);
-            swap.stage = Some("paying invoice".into());
-            swap.fee = 0;
+    // Paid swaps and peer auditors feed the audit pages. A directory-only
+    // instance has neither, so its uptime comes from the checks alone.
+    if config.paid_swaps {
+        for i in 0..100 {
+            let from = &mints[i % 7];
+            let to = &mints[(i + 1) % 7];
+            let mut swap = SwapEvent::success(
+                from,
+                to,
+                20 + i as u64 % 80,
+                1,
+                850.0 + (i % 12) as f64 * 230.0,
+            );
+            swap.created_at = Utc::now() - Duration::minutes(i as i64 * 13 + 2);
+            if i % 6 == 1 {
+                swap.state = MintState::Error;
+                swap.error = Some("Mint did not respond within 30 seconds. A later audit will retry after the cooldown.".into());
+                swap.category = Some("timeout".into());
+                swap.failed_mint_id = Some(to.id);
+                swap.stage = Some("paying invoice".into());
+                swap.fee = 0;
+            }
+            db.insert_swap(&swap).await?;
         }
-        db.insert_swap(&swap).await?;
-    }
-    // Two synthetic peer auditors, so each mint shows several hallmarks.
-    let peers = ["3f".repeat(32), "a9".repeat(32)];
-    for (peer, name) in peers.iter().zip(["Harbor auditor", "Ridge auditor"]) {
-        db.upsert_auditor(&Auditor {
-            pubkey: peer.clone(),
-            name: name.into(),
-            urls: vec![format!(
-                "https://{}.example",
-                name.split(' ').next().unwrap_or("peer").to_lowercase()
-            )],
-            donate: None,
-            software: "imf 0.1.0".into(),
-            frequency_secs: 600,
-            contact: None,
-            announced_at: Some(Utc::now() - Duration::hours(6)),
-            last_seen: Utc::now() - Duration::minutes(4),
-        })
-        .await?;
-    }
-    for i in 0..60 {
-        let peer = &peers[i % 2];
-        let from = &mints[(i * 3) % 7];
-        let to = &mints[(i * 3 + 2) % 7];
-        let mut swap = SwapEvent::success(
-            from,
-            to,
-            30 + i as u64 % 50,
-            1,
-            900.0 + (i % 9) as f64 * 310.0,
-        );
-        swap.created_at = Utc::now() - Duration::minutes(i as i64 * 19 + 4);
-        swap.auditor_pubkey = peer.clone();
-        swap.event_id = Some(format!("{i:064x}"));
-        if i % 7 == 3 {
-            swap.state = MintState::Error;
-            swap.error = Some("Lightning payment failed: no route found.".into());
-            swap.category = Some("network".into());
-            swap.failed_mint_id = Some(to.id);
-            swap.fee = 0;
+        // Two synthetic peer auditors, so each mint shows several hallmarks.
+        let peers = ["3f".repeat(32), "a9".repeat(32)];
+        for (peer, name) in peers.iter().zip(["Harbor auditor", "Ridge auditor"]) {
+            db.upsert_auditor(&Auditor {
+                pubkey: peer.clone(),
+                name: name.into(),
+                urls: vec![format!(
+                    "https://{}.example",
+                    name.split(' ').next().unwrap_or("peer").to_lowercase()
+                )],
+                donate: None,
+                software: "imf 0.1.0".into(),
+                frequency_secs: 600,
+                contact: None,
+                announced_at: Some(Utc::now() - Duration::hours(6)),
+                last_seen: Utc::now() - Duration::minutes(4),
+            })
+            .await?;
         }
-        db.insert_swap(&swap).await?;
+        for i in 0..60 {
+            let peer = &peers[i % 2];
+            let from = &mints[(i * 3) % 7];
+            let to = &mints[(i * 3 + 2) % 7];
+            let mut swap = SwapEvent::success(
+                from,
+                to,
+                30 + i as u64 % 50,
+                1,
+                900.0 + (i % 9) as f64 * 310.0,
+            );
+            swap.created_at = Utc::now() - Duration::minutes(i as i64 * 19 + 4);
+            swap.auditor_pubkey = peer.clone();
+            swap.event_id = Some(format!("{i:064x}"));
+            if i % 7 == 3 {
+                swap.state = MintState::Error;
+                swap.error = Some("Lightning payment failed: no route found.".into());
+                swap.category = Some("network".into());
+                swap.failed_mint_id = Some(to.id);
+                swap.fee = 0;
+            }
+            db.insert_swap(&swap).await?;
+        }
     }
     let state = AppState {
         leptos_options: get_configuration(Some("Cargo.toml"))?.leptos_options,
         wallet_repository: wallets,
         app_name: "Internet Mint Finder".into(),
         auditor_db: db,
-        auditor_config: AuditorConfig::default(),
+        auditor_config: config,
         cache: Arc::new(ResponseCache::new()),
         base_url: None,
         mint_url_aliases: Arc::new(Vec::new()),
         nostr: Arc::new(Default::default()),
         started_at: std::time::Instant::now(),
     };
+    // Routes as the real server mounts them: donations and Analytics only
+    // with paid swaps on.
+    let mut app = axum::Router::new().merge(api_router());
+    if state.auditor_config.paid_swaps {
+        app = app.merge(paid_router());
+    }
     // Reject value-moving requests in the preview, including server functions.
-    let app = axum::Router::new()
-        .merge(api_router())
-        .merge(paid_router())
+    let app = app
         .leptos_routes(&state, generate_route_list(App), {
             let state = state.clone();
             move || {
