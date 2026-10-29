@@ -1,9 +1,7 @@
 use crate::api::get_app_config;
 use crate::components::header::Header;
-use crate::pages::auditors::AuditorsPage;
 use crate::pages::home::HomePage;
 use crate::pages::mint_detail::MintDetailPage;
-use crate::pages::receive::ReceivePage;
 use leptos::prelude::*;
 use leptos_meta::{provide_meta_context, HashedStylesheet, MetaTags, Title};
 use leptos_router::{
@@ -29,7 +27,7 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
                 <script inner_html=THEME_SCRIPT></script>
                 <meta
                     name="description"
-                    content="Find a Cashu mint that works: uptime, user reviews and real test payments by independent auditors."
+                    content="Find a Cashu mint that works: hourly uptime checks and reviews from people who use them."
                 />
                 <link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
                 <AutoReload options=options.clone() />
@@ -64,8 +62,6 @@ pub fn App() -> impl IntoView {
                 <main id="main-content" class="flex-grow" tabindex="-1">
                     <Routes fallback=NotFound>
                         <Route path=StaticSegment("") view=HomePage/>
-                        <Route path=StaticSegment("receive") view=ReceivePage/>
-                        <Route path=StaticSegment("auditors") view=AuditorsPage/>
                         <Route
                             path=(StaticSegment("mints"), ParamSegment("id"))
                             view=MintDetailPage
@@ -99,7 +95,7 @@ fn Footer() -> impl IntoView {
     view! {
         <footer class="site-footer">
             <div class="site-footer-inner">
-                <p>"Audits move real ecash between mints. Results are measurements, not endorsements."</p>
+                <p>"Uptime is measured by this server every hour. Results are measurements, not endorsements."</p>
             </div>
         </footer>
     }

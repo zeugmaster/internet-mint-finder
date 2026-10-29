@@ -13,7 +13,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     use cdk_cashu_auditor::server::{
         auditor::AuditorConfig,
         cache::ResponseCache,
-        http::api_router,
+        http::{api_router, paid_router},
         state::AppState,
         storage::{Auditor, AuditorDatabase, Review, SwapEvent},
     };
@@ -187,6 +187,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Reject value-moving requests in the preview, including server functions.
     let app = axum::Router::new()
         .merge(api_router())
+        .merge(paid_router())
         .leptos_routes(&state, generate_route_list(App), {
             let state = state.clone();
             move || {

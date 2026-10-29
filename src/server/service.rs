@@ -96,6 +96,13 @@ async fn receive_for_mint(
     token_str: &str,
     via: &str,
 ) -> Result<ReceiveOutcome, AuditorError> {
+    // Every donation path ends here, so this one check keeps a directory-only
+    // instance from ever holding ecash.
+    if !state.auditor_config.paid_swaps {
+        return Err(AuditorError::InvalidInput(
+            "this server doesn't accept donations".into(),
+        ));
+    }
     let wallet = state.wallet_for_mint(mint_url).await?;
 
     // CDK returns the amount actually received, after fees. A balance delta

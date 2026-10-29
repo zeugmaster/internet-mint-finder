@@ -1393,14 +1393,14 @@ button.hallmark {
     border-bottom: 0.5px solid var(--border);
 }
 
-/* A mint row: avatar, name over a copyable URL, status. The name's link is
-   stretched over the row so the whole row opens the mint; the URL button sits
-   above that link. The hover tint bleeds 12px past the column so the avatar
-   stays on the shared edge. */
+/* A mint row: avatar, name over a copyable URL, rating, uptime. The name's
+   link is stretched over the row so the whole row opens the mint; the URL
+   button sits above that link. The hover tint bleeds 12px past the column so
+   the avatar stays on the shared edge. */
 .mint-row {
     position: relative;
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) 88px 112px;
+    grid-template-columns: auto minmax(0, 1fr) 88px 120px;
     grid-template-areas: "avatar id rating status";
     align-items: center;
     gap: 0 12px;
@@ -1457,10 +1457,41 @@ button.hallmark {
     grid-area: id;
 }
 
-.mint-row .badge,
+.mint-uptime,
 .mint-status-skeleton {
     grid-area: status;
     justify-self: end;
+}
+
+/* The 24 h strip over its figure, right-aligned: the mint page's uptime
+   chart in small. */
+.mint-uptime {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    width: 120px;
+}
+
+.uptime-strip {
+    display: grid;
+    grid-template-columns: repeat(var(--uptime-columns, 24), minmax(0, 1fr));
+    gap: 1px;
+    width: 100%;
+    height: 16px;
+}
+
+.uptime-strip .uptime-bar {
+    border-radius: 1px;
+}
+
+.mint-uptime-figure {
+    color: var(--fg-2);
+    font-family: var(--font-mono);
+    font-feature-settings: 'ss02';
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+    line-height: 20px;
 }
 
 .mint-rating {
@@ -2334,12 +2365,35 @@ a.mint-name:hover {
         line-height: 32px;
     }
 
-    /* Phones: the rating sits under the status, both right-aligned. */
+    /* Phones: the rating across from the name, and the uptime strip full
+       width under both, its figure at the end. */
     .mint-row {
         grid-template-columns: auto minmax(0, 1fr) auto;
         grid-template-areas:
-            "avatar id status"
-            "avatar id rating";
+            "avatar id rating"
+            "avatar status status";
+        align-items: start;
+    }
+
+    .mint-rating {
+        align-self: center;
+    }
+
+    .mint-uptime,
+    .mint-status-skeleton {
+        justify-self: stretch;
+        margin-top: 8px;
+    }
+
+    .mint-uptime {
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+        width: auto;
+    }
+
+    .mint-uptime .uptime-strip {
+        flex: 1;
     }
 
     .status-tabs {

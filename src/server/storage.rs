@@ -229,6 +229,8 @@ impl From<Mint> for MintRead {
             auditors_ok_24h: 0,
             success_rate_24h: None,
             auditor_marks: Vec::new(),
+            uptime_bars: Vec::new(),
+            uptime_percent: None,
         }
     }
 }

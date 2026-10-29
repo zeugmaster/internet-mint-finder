@@ -2,8 +2,7 @@ use crate::components::mint_list::MintList;
 use leptos::prelude::*;
 use leptos_meta::Title;
 
-/// The directory: just the mints. Totals live on Analytics; audit activity
-/// and how the audit works live on Auditors.
+/// The directory: just the mints, with their ratings and uptime.
 #[component]
 pub fn HomePage() -> impl IntoView {
     view! {
@@ -13,8 +12,8 @@ pub fn HomePage() -> impl IntoView {
                 <div>
                     <h1 class="page-title">"Find a Cashu mint."</h1>
                     <p class="page-subtitle">
-                        "Cashu mints found on Nostr. Independent auditors check that each one is online "
-                        "and send real payments through the ones they fund."
+                        "Cashu mints found on Nostr, rated by the people who use them. "
+                        "Each one is checked every hour to see if it's online."
                     </p>
                 </div>
             </div>

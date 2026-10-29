@@ -15,7 +15,7 @@ use leptos_router::hooks::use_params_map;
 
 /// One mint for a wallet user: is it up, what people say, and what the mint
 /// says about itself. Audit detail (per-auditor results, swaps, funding) is
-/// left off; the Auditors page carries audit activity. The one card holds the
+/// left off. The one card holds the
 /// uptime chart, an instrument read as a whole; text sits on the page with
 /// 0.5px rules; headings sit outside.
 #[component]

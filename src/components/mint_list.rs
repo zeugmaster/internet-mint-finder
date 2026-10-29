@@ -1,5 +1,4 @@
 use crate::api::search_mints;
-use crate::components::badge::StateBadge;
 use crate::components::icons::{Check, Copy, Star};
 use crate::components::mint_avatar::MintAvatar;
 use crate::format::{relative_time, short_url};
@@ -21,7 +20,7 @@ const STATUS_TABS: [(Option<MintState>, &str); 5] = [
     (Some(MintState::Unknown), "Not checked"),
 ];
 
-/// The directory: one row per mint with its rating and plain status. Search,
+/// The directory: one row per mint with its rating and 24 h uptime. Search,
 /// status, sort and page live in the URL (`?q=&status=&sort=&page=`) so Back
 /// and shared links keep the view.
 #[component]
@@ -209,8 +208,7 @@ pub fn MintList() -> impl IntoView {
                                 view! {
                                     <div class="empty-state">
                                         <h3>"No mints yet"</h3>
-                                        <p>"Mints show up here once they're listed on Nostr or someone donates ecash from one."</p>
-                                        <a href="/receive" class="text-link">"Donate ecash"</a>
+                                        <p>"Mints show up here once they're listed on Nostr."</p>
                                     </div>
                                 }.into_any()
                             }
@@ -243,7 +241,7 @@ pub fn MintList() -> impl IntoView {
     }
 }
 
-/// One mint: avatar, name over its URL, its Nostr rating, status. The name's
+/// One mint: avatar, name over its URL, its Nostr rating, uptime. The name's
 /// link is stretched over the row, so the row opens the mint; the URL sits
 /// above that link as a button, because copying it is what most visitors
 /// come for.
@@ -263,8 +261,50 @@ fn MintRow(mint: MintRead) -> impl IntoView {
                 <CopyUrl url=mint.url.clone()/>
             </span>
             <MintRating avg=mint.review_avg count=mint.review_count/>
-            <StateBadge state=mint.state/>
+            <UptimeStrip bars=mint.uptime_bars percent=mint.uptime_percent state=mint.state/>
         </div>
+    }
+}
+
+/// The mint page's uptime chart in small: one bar per hour of the last 24,
+/// over the share of checks that passed. The state word is kept for screen
+/// readers and the tooltip, since the colours alone can't carry it.
+#[component]
+fn UptimeStrip(bars: Vec<MintState>, percent: Option<f64>, state: MintState) -> impl IntoView {
+    let figure = match (percent, bars.is_empty()) {
+        (Some(percent), _) => format!("{percent:.1}%"),
+        (None, false) => "Not checked".to_string(),
+        (None, true) => "No data".to_string(),
+    };
+    let word = match state {
+        MintState::Ok => "Healthy",
+        MintState::Warn => "Degraded",
+        MintState::Error => "Failing",
+        MintState::Unknown => "Not checked",
+    };
+    let label = format!("Uptime, last 24 hours: {figure}. {word}.");
+    // Grey bars when the strip didn't load: no data, not downtime.
+    let bars = if bars.is_empty() {
+        vec![MintState::Unknown; 24]
+    } else {
+        bars
+    };
+    let style = format!("--uptime-columns: {}", bars.len());
+    view! {
+        <span class="mint-uptime" role="img" aria-label=label.clone() title=label>
+            <span class="uptime-strip" style=style>
+                {bars.into_iter().map(|state| {
+                    let class = match state {
+                        MintState::Ok => "uptime-bar ok",
+                        MintState::Warn => "uptime-bar warn",
+                        MintState::Error => "uptime-bar err",
+                        MintState::Unknown => "uptime-bar unknown",
+                    };
+                    view! { <span class=class></span> }
+                }).collect_view()}
+            </span>
+            <span class="mint-uptime-figure">{figure}</span>
+        </span>
     }
 }
 
@@ -344,7 +384,7 @@ pub fn CopyUrl(url: String) -> impl IntoView {
 }
 
 /// Loading rows shaped like the real ones: an avatar, a name over a URL, and
-/// a status.
+/// an uptime strip.
 #[component]
 fn DirectorySkeleton() -> impl IntoView {
     view! {
@@ -358,7 +398,7 @@ fn DirectorySkeleton() -> impl IntoView {
                         <span class="skeleton" style=format!("width: {}%; height: 12px; margin-top: 6px;", w / 2 + 12)></span>
                     </span>
                     <span class="mint-rating"><span class="skeleton" style="width: 48px; height: 14px;"></span></span>
-                    <span class="skeleton mint-status-skeleton" style="width: 72px; height: 20px;"></span>
+                    <span class="skeleton mint-status-skeleton" style="width: 120px; height: 16px;"></span>
                 </div></li>
             }).collect_view()}
         </ul>

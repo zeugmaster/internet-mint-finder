@@ -82,6 +82,7 @@ All configuration is via environment variables (a `.env` file is loaded):
 | `APP_NAME` | `Cashu Mint Auditor` | Display name; also derives the data directory `~/.<name>`. |
 | `SITE_ADDR` | `127.0.0.1:3000` | Listen address. |
 | `BASE_URL` | unset | Public base URL; enables the NUT-18 HTTP-POST transport (`/api/donate`). |
+| `AUDITOR_PAID_SWAPS` | off | Turns on the real-money side: the swap and snapshot loops, donations (`/api/pr`, `/api/donate`, `/receive-token`) and `/dashboard`. Off, the instance is a directory: NIP-87 mints and reviews plus the free hourly checks, holding no ecash. |
 | `AUDITOR_MIN_DELAY_SECS` / `AUDITOR_MAX_DELAY_SECS` | 300 / 900 | Delay range between swap rounds. |
 | `AUDITOR_MIN_AMOUNT` / `AUDITOR_MAX_AMOUNT` | 5 / 100 | Swap amount range (sats). |
 | `AUDITOR_MAX_FEE_PERCENT` | 2.0 | Reject melt quotes above this fee reserve. |

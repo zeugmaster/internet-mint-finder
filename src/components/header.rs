@@ -1,7 +1,6 @@
 use crate::components::icons::{Moon, Sun};
 use crate::types::AppConfig;
 use leptos::prelude::*;
-use leptos_router::hooks::use_location;
 
 /// The brand mark: an assay hallmark, a shield punch struck with an M. Inlined
 /// as raw SVG in the inverted colors so it follows the theme.
@@ -10,26 +9,12 @@ const BRAND_MARK_SVG: &str = r##"<svg viewBox="0 0 24 24" xmlns="http://www.w3.o
   <path d="M7.5 15.5v-7l4.5 4.5 4.5-4.5v7" fill="none" stroke="var(--on-inverted)" stroke-width="2" stroke-linejoin="round"/>
 </svg>"##;
 
-/// Brand, the three sections, and the theme switch. public/dashboard.html
-/// repeats this markup, so keep the two in step.
+/// Brand and the theme switch. The directory is the only section, so there is
+/// no nav; the brand links home. public/dashboard.html carries its own copy
+/// of this markup, with the nav it needs.
 #[component]
 pub fn Header() -> impl IntoView {
     let config = use_context::<Resource<AppConfig>>();
-    let location = use_location();
-
-    let active = move |path: &'static str| {
-        let current = location.pathname.get();
-        let is_active = if path == "/" {
-            current == "/" || current.starts_with("/mints/")
-        } else {
-            current.starts_with(path)
-        };
-        if is_active {
-            Some("page")
-        } else {
-            None
-        }
-    };
 
     view! {
         <header class="site-header">
@@ -47,18 +32,6 @@ pub fn Header() -> impl IntoView {
                         </Suspense>
                     </span>
                 </a>
-
-                <nav class="site-nav" aria-label="Main navigation">
-                    <a href="/" class="nav-link" aria-current=move || active("/")>
-                        "Directory"
-                    </a>
-                    <a href="/auditors" class="nav-link" aria-current=move || active("/auditors")>
-                        "Auditors"
-                    </a>
-                    <a href="/dashboard" class="nav-link" rel="external">
-                        "Analytics"
-                    </a>
-                </nav>
 
                 // The click is handled by the theme script in the shell, so the
                 // switch works before (and without) hydration.
