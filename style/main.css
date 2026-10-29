@@ -243,7 +243,6 @@ kbd,
 .feed-amount,
 .feed-fee,
 .pr-string,
-.tag,
 .hallmark,
 .uptime-value,
 .incident-msg,
@@ -577,33 +576,155 @@ button.text-link {
     color: var(--fg-2);
 }
 
-/* Label and value rows, a rule above each. */
-.kv-ledger {
+/* About this mint, one column in reading order: the mint's own words, what
+   it offers in one card, then a quiet line of how to reach it. */
+.about {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.about-text {
+    max-width: 75ch;
+}
+
+.about-notice-label {
+    display: block;
+    margin-bottom: 2px;
+    color: var(--fg-2);
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 500;
+}
+
+/* Lightning in and out lead, side by side, their limits as the values. */
+.offers-lightning {
     display: grid;
-    grid-template-columns: 160px minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     margin: 0;
-    border-bottom: 0.5px solid var(--border);
+}
+
+.offers-cell {
+    padding: 14px 16px;
+}
+
+.offers-cell + .offers-cell {
+    border-left: 0.5px solid var(--border);
+}
+
+.offers-cell dt {
+    color: var(--fg-2);
     font-size: 13px;
     line-height: 20px;
 }
 
-.kv-ledger dt,
-.kv-ledger dd {
-    margin: 0;
-    padding: 10px 0;
-    border-top: 0.5px solid var(--border);
+.offers-cell dd {
+    margin: 2px 0 0;
 }
 
-.kv-ledger dt {
-    padding-right: 24px;
+.offers-cell.is-off dd {
     color: var(--fg-2);
 }
 
-.kv-ledger dd {
-    overflow-wrap: anywhere;
+/* The rest as a checklist, read down the first column, then the second. */
+.offers-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(3, auto);
+    grid-auto-flow: column;
+    /* 32px puts the second column under "Pay out" above. */
+    gap: 6px 32px;
+    margin: 0;
+    padding: 14px 16px;
+    border-top: 0.5px solid var(--border);
+    list-style: none;
 }
 
+.offers-item {
+    display: grid;
+    grid-template-columns: 16px minmax(0, 1fr);
+    gap: 0 10px;
+}
 
+/* Centred on the first 24px line. */
+.offers-item .icon {
+    margin-top: 4px;
+    color: var(--fg);
+}
+
+.offers-item.is-off {
+    color: var(--fg-2);
+}
+
+.offers-item.is-off .icon {
+    color: var(--fg-3);
+}
+
+.offers-item-detail {
+    grid-column: 2;
+    color: var(--fg-2);
+    font-size: 13px;
+    line-height: 20px;
+}
+
+/* Where it all comes from, at the foot of the claims it covers. */
+.offers-note {
+    padding: 8px 16px;
+    border-top: 0.5px solid var(--border);
+    color: var(--fg-2);
+    font-size: 13px;
+    line-height: 20px;
+}
+
+/* Contact and software: one quiet line of label and value pairs. */
+.about-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 24px;
+    margin: 0;
+    font-size: 13px;
+    line-height: 20px;
+}
+
+.about-meta > div {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.about-meta dt {
+    color: var(--fg-2);
+}
+
+.about-meta dd {
+    min-width: 0;
+    margin: 0;
+}
+
+@media (max-width: 640px) {
+    .offers-lightning,
+    .offers-list {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .offers-cell + .offers-cell {
+        border-left: 0;
+        border-top: 0.5px solid var(--border);
+    }
+
+    .offers-list {
+        grid-template-rows: none;
+        grid-auto-flow: row;
+    }
+
+    .offers-cell,
+    .offers-list,
+    .offers-note {
+        padding-inline: 12px;
+    }
+}
 
 /* ---------------------------------------------------------------------------
    Reviews: the overall rating and the audit figures on the left; the
@@ -1160,8 +1281,7 @@ h4.field-label {
 }
 
 .badge,
-.cat-pill,
-.tag {
+.cat-pill {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -2149,12 +2269,6 @@ a.mint-name:hover {
     line-height: 20px;
 }
 
-.tag-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-}
-
 .donation-list {
     display: flex;
     flex-direction: column;
@@ -2412,19 +2526,6 @@ a.mint-name:hover {
     .hallmark[data-tip]:hover::after,
     .hallmark[data-tip]:focus::after {
         transform: none;
-    }
-
-    .kv-ledger {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .kv-ledger dt {
-        padding-bottom: 0;
-    }
-
-    .kv-ledger dd {
-        padding-top: 2px;
-        border-top: 0;
     }
 }
 

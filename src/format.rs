@@ -90,3 +90,18 @@ pub fn short_pubkey(id: &str) -> String {
         format!("{}…", id.chars().take(KEEP).collect::<String>())
     }
 }
+
+/// A long key cut in the middle, so both ends stay checkable:
+/// "npub1qe3e5w…ezefe".
+pub fn middle_ellipsis(id: &str) -> String {
+    const HEAD: usize = 11;
+    const TAIL: usize = 5;
+    let chars: Vec<char> = id.chars().collect();
+    if chars.len() <= HEAD + TAIL + 1 {
+        id.to_string()
+    } else {
+        let head: String = chars[..HEAD].iter().collect();
+        let tail: String = chars[chars.len() - TAIL..].iter().collect();
+        format!("{head}…{tail}")
+    }
+}

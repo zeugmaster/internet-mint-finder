@@ -287,21 +287,27 @@ fn MintRating(avg: Option<f64>, count: u64) -> impl IntoView {
     }
 }
 
-/// The mint's address: shows the short form, copies the full URL, and turns
-/// to a check for a moment once it is on the clipboard.
+/// The mint's address: shows the short form, copies the full URL.
 #[component]
 pub fn CopyUrl(url: String) -> impl IntoView {
+    let shown = short_url(&url);
+    view! { <CopyText text=url shown/> }
+}
+
+/// A value as a quiet button: shows `shown`, copies the full `text`, and
+/// turns to a check for a moment once it is on the clipboard.
+#[component]
+pub fn CopyText(text: String, shown: String) -> impl IntoView {
     // None: idle. Some(true): copied. Some(false): the browser refused.
     let copied = RwSignal::new(None::<bool>);
-    let title = format!("Copy {url}");
-    let short = short_url(&url);
+    let title = format!("Copy {text}");
     let on_click = move |_| {
         #[cfg(feature = "hydrate")]
         {
-            let url = url.clone();
+            let text = text.clone();
             leptos::task::spawn_local(async move {
                 let result = wasm_bindgen_futures::JsFuture::from(
-                    window().navigator().clipboard().write_text(&url),
+                    window().navigator().clipboard().write_text(&text),
                 )
                 .await;
                 copied.try_set(Some(result.is_ok()));
@@ -314,7 +320,7 @@ pub fn CopyUrl(url: String) -> impl IntoView {
             });
         }
         #[cfg(not(feature = "hydrate"))]
-        let _ = &url;
+        let _ = &text;
     };
     view! {
         <button
@@ -325,7 +331,7 @@ pub fn CopyUrl(url: String) -> impl IntoView {
             on:click=on_click
         >
             <span class="sr-only">"Copy "</span>
-            <span class="copy-url-text">{short}</span>
+            <span class="copy-url-text">{shown}</span>
             {move || if copied.get() == Some(true) {
                 view! { <Check/> }.into_any()
             } else {

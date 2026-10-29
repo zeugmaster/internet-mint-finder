@@ -58,6 +58,16 @@ pub fn Check() -> impl IntoView {
     }
 }
 
+/// The check's opposite, for something not offered: a cross reads as "no".
+#[component]
+pub fn Cross() -> impl IntoView {
+    view! {
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true">
+            <path d="M4.75 4.75l6.5 6.5M11.25 4.75l-6.5 6.5"/>
+        </svg>
+    }
+}
+
 #[component]
 pub fn Star() -> impl IntoView {
     view! {

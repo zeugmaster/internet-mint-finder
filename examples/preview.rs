@@ -61,7 +61,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         mint.n_mints = 90 + i as u64 * 23;
         mint.n_melts = 85 + i as u64 * 19;
         mint.n_errors = if i == 4 { 12 } else { i as u64 };
-        let mut info = serde_json::json!({"version": "Preview/1.0", "description": "Synthetic mint for interface development. No real funds.", "nuts": {"4": {}, "5": {}, "7": {}, "18": {}}});
+        // NUT-06 info shaped like a real mint's, varied so the About section
+        // shows each case: limits, another unit, a paused payout, a notice,
+        // an account requirement, contacts and terms, and a bare mint.
+        let lightning = |min: u64, max: u64| serde_json::json!({"methods": [{"method": "bolt11", "unit": "sat", "min_amount": min, "max_amount": max}], "disabled": false});
+        let yes = serde_json::json!({"supported": true});
+        let host = url.trim_start_matches("https://");
+        let mut info = serde_json::json!({
+            "name": name,
+            "version": "Nutshell/0.16.3",
+            "description": "Synthetic mint for interface development. No real funds.",
+            "contact": [
+                {"method": "email", "info": format!("ops@{host}")},
+                {"method": "nostr", "info": "npub1qe3e5wrvnsgpggtkytxteaqfprz0rgxr8c3l34kk3a9t7e2l3acslezefe"}
+            ],
+            "nuts": {
+                "4": lightning(1, 500_000), "5": lightning(1, 500_000),
+                "7": yes, "8": yes, "9": yes, "10": yes, "11": yes, "12": yes
+            }
+        });
         // One real icon, one that fails to load (the initial shows), the rest none.
         // Northstar also has a key, so its review form is open in the preview.
         match i {
@@ -69,8 +87,37 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 info["icon_url"] = "https://northstar.example/icon.png".into();
                 info["pubkey"] =
                     "02a9acc1e48c25eeeb9289b5031cc57da9fe72f3fe2861d264bdc074209b107ba2".into();
+                info["description_long"] = "A community mint run by two people in Lisbon since 2024. Lightning in and out, no account needed, and fees kept as low as routing allows.".into();
+                info["tos_url"] = "https://northstar.example/terms".into();
+                info["contact"]
+                    .as_array_mut()
+                    .unwrap()
+                    .push(serde_json::json!({"method": "twitter", "info": "@northstarmint"}));
             }
-            1 => info["icon_url"] = "https://github.com/cashubtc.png".into(),
+            1 => {
+                info["icon_url"] = "https://github.com/cashubtc.png".into();
+                info["version"] = "cdk-mintd/0.9.1".into();
+                info["nuts"]["4"]["methods"]
+                    .as_array_mut()
+                    .unwrap()
+                    .push(serde_json::json!({"method": "bolt11", "unit": "usd"}));
+                info["nuts"]["12"] = serde_json::json!({"supported": false});
+            }
+            2 => {
+                info["motd"] = "Payouts are paused while we move to a new Lightning node. Deposits still work.".into();
+                info["nuts"]["5"]["disabled"] = true.into();
+            }
+            3 => info["contact"] = serde_json::json!([]),
+            4 => {
+                info["nuts"]["22"] =
+                    serde_json::json!({"bat_max_mint": 50, "protected_endpoints": []})
+            }
+            5 => info["nuts"]["4"] = lightning(1_000, 2_000_000),
+            6 => {
+                info["description"] = serde_json::Value::Null;
+                info["contact"] = serde_json::json!([]);
+                info["nuts"] = serde_json::json!({"4": lightning(1, 100_000), "5": lightning(1, 100_000), "7": yes});
+            }
             _ => {}
         }
         mint.info = Some(info.to_string());
