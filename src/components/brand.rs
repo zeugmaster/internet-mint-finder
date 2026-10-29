@@ -87,6 +87,14 @@ pub fn HeroTag() -> impl IntoView {
     }
 }
 
+/// A filled star cut from the tag's metal: steel with the colour laid in and
+/// a glint, in the star's shape. Sized by `--star`; the empty star beside or
+/// behind it stays a plain grey icon.
+#[component]
+pub fn FoilStar() -> impl IntoView {
+    view! { <span class="foil-star" aria-hidden="true"></span> }
+}
+
 /// The custom properties that place the light for a pointer at (x, y): the
 /// glint and the metal's bands follow it, the letters' lit edge faces it,
 /// and the sticker tilts toward it.

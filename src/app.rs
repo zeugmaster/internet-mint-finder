@@ -69,7 +69,9 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
                 <HydrationScripts options/>
                 <MetaTags/>
                 <script src="/nostr-tools.js" defer></script>
-                <script src="/review.js" defer></script>
+                // Versioned like the icons: browsers keep scripts too, so bump
+                // ?v= whenever review.js changes or visitors run the old one.
+                <script src="/review.js?v=2" defer></script>
             </head>
             <body>
                 <App/>

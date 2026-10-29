@@ -1,3 +1,4 @@
+use crate::components::brand::FoilStar;
 use crate::components::icons::{Star, User};
 use crate::format::{absolute_time, short_pubkey};
 use crate::types::{MintReviews, ReviewContext, ReviewRead};
@@ -141,16 +142,31 @@ fn ReviewCompose(context: ReviewContext, #[prop(optional)] empty: bool) -> impl 
                 </span>
             </summary>
             <div class="review-compose-body">
-                <div class="field" data-signer="out">
-                    <label class="field-label" for="review-nsec">"Your Nostr key (nsec)"</label>
-                    <div class="flex gap-2">
-                        <input id="review-nsec" type="password" class="field-input" placeholder="nsec1…" autocomplete="off" spellcheck="false"/>
-                        <button type="button" id="review-signin" class="btn">"Sign in"</button>
+                <div class="signer" data-signer="out">
+                    // Shown by review.js once it finds a Nostr extension
+                    // (NIP-07): one click, and the key never leaves it.
+                    <div class="signer-extension" data-extension="on" hidden=true>
+                        <button type="button" id="review-extension" class="btn">"Sign in with your Nostr extension"</button>
+                        <p class="field-hint">"It asks you to approve, and your key stays in the extension."</p>
+                        <p class="signer-or" aria-hidden="true">"or"</p>
                     </div>
-                    <p class="field-hint">"It stays in this browser and is only used to sign reviews. With a Nostr extension like Alby or nos2x, you can skip this."</p>
+                    <div class="field">
+                        <label class="field-label" for="review-nsec">"Your Nostr key (nsec)"</label>
+                        <div class="flex gap-2">
+                            <input id="review-nsec" type="password" class="field-input" placeholder="nsec1…" autocomplete="off" spellcheck="false"/>
+                            <button type="button" id="review-signin" class="btn">"Sign in"</button>
+                        </div>
+                        <p class="field-hint">
+                            "It stays in this browser and is only used to sign reviews."
+                            <span data-extension="off">" With a Nostr extension like Alby or nos2x, you won't need to paste it."</span>
+                        </p>
+                    </div>
                 </div>
-                <p class="field-hint" data-signer="in" hidden=true>
-                    "Signed in as " <span id="review-npub" class="mono"></span> " · "
+                <p class="field-hint signer-in" data-signer="in" hidden=true>
+                    <span>
+                        "Signed in as " <span id="review-npub" class="mono"></span>
+                        <span id="review-via"></span>
+                    </span>
                     <button type="button" id="review-signout" class="btn btn-ghost btn-small">"Sign out"</button>
                 </p>
                 <form id="review-form" class="mt-4"
@@ -190,8 +206,10 @@ fn StarInput(disabled: bool) -> impl IntoView {
                     let name = format!("{n} {}, {word}", if n == 1 { "star" } else { "stars" });
                     view! {
                         <input type="radio" name="rating" id=id.clone() value=n.to_string() required=true/>
+                        // The grey star, with the metal one over it shown once
+                        // the star is picked or previewed.
                         <label for=id title=word>
-                            <Star/>
+                            <span class="star-pick"><Star/><FoilStar/></span>
                             <span class="sr-only">{name}</span>
                         </label>
                     }
@@ -201,18 +219,20 @@ fn StarInput(disabled: bool) -> impl IntoView {
     }
 }
 
-/// Five stars filled to `value` (0–5). The fill is measured in whole stars
-/// plus a fraction of one, so 4.4 fills four stars and 40% of the fifth.
+/// Five stars filled to `value` (0–5): grey stars under a row of metal ones
+/// clipped to the rating. The fill is measured in whole stars plus a fraction
+/// of one, so 4.4 fills four stars and 40% of the fifth.
 #[component]
 fn Stars(value: f64, #[prop(optional)] large: bool) -> impl IntoView {
     let value = value.clamp(0.0, 5.0);
     let full = value.floor();
     let style = format!("--full: {full}; --frac: {:.2}", value - full);
-    let stars = || (0..5).map(|_| view! { <Star/> }).collect_view();
+    let track = (0..5).map(|_| view! { <Star/> }).collect_view();
+    let fill = (0..5).map(|_| view! { <FoilStar/> }).collect_view();
     view! {
         <span class=if large { "stars stars-lg" } else { "stars" } aria-hidden="true">
-            <span class="stars-track">{stars()}</span>
-            <span class="stars-fill" style=style>{stars()}</span>
+            <span class="stars-track">{track}</span>
+            <span class="stars-fill" style=style>{fill}</span>
         </span>
     }
 }

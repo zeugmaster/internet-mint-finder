@@ -1062,7 +1062,7 @@ async function renderSLA() {
     $("sla-meta").textContent = `${g.rows.length} mints, ${compact(totalChecks)} checks`;
     const cells = agg.map((a, i) => {
       const cls = bucketClass(a.checks, a.failures);
-      const tip = a.checks ? `${g.buckets[i]}\n${a.checks} checks · ${a.failures} failed · ${((a.checks-a.failures)/a.checks*100).toFixed(1)}%` : `${g.buckets[i]}\nno data`;
+      const tip = a.checks ? `${g.buckets[i]}\n${a.checks} checks, ${a.failures} failed, ${((a.checks-a.failures)/a.checks*100).toFixed(1)}%` : `${g.buckets[i]}\nno data`;
       return `<div class="sla-cell ${cls}" title="${tip}"></div>`;
     }).join("");
     const pct = (uptime * 100).toFixed(uptime >= 0.9995 ? 1 : 2);
@@ -1122,7 +1122,7 @@ async function renderBlame() {
       type: "bar", orientation: "h",
       marker: { color: C.err },
       customdata: rows.map(r => r.top_category),
-      hovertemplate: "%{y}<br>%{x} failures · %{customdata}<extra></extra>",
+      hovertemplate: "%{y}<br>%{x} failures, %{customdata}<extra></extra>",
     }], baseLayout({ bargap: 0.3, margin: { l: 150, r: 16, t: 10, b: 34 },
           xaxis: { title: "failures" },
           yaxis: { type: "category", automargin: true, autorange: "reversed" } }), config);
@@ -1214,7 +1214,7 @@ async function renderFlow() {
         value: f.links.map(l => l.value),
         customdata: f.links.map(l => l.fee),
         color: withAlpha(C.muted, 0.2),
-        hovertemplate: "%{source.label} → %{target.label}<br>%{value} sats net · fee %{customdata}<extra></extra>",
+        hovertemplate: "%{source.label} → %{target.label}<br>%{value} sats net, fee %{customdata}<extra></extra>",
       },
       // Plain node labels: no halo/text-shadow.
       textfont: { color: C.ink, family: FONT, size: 13, shadow: "none" },
@@ -1287,7 +1287,7 @@ async function renderDonations() {
       margin: { l: 52, r: 62, t: 14, b: 38 },
       hovermode: "x unified",
     }), config);
-    meta.textContent = `${s.events} donation${s.events === 1 ? "" : "s"} · ${compact(s.total)} sats`;
+    meta.textContent = `${s.events} donation${s.events === 1 ? "" : "s"}, ${compact(s.total)} sats`;
   } catch (e) { console.error(e); emptyState(el, "Couldn't load this chart"); meta.textContent = ""; }
 }
 async function renderFees() {

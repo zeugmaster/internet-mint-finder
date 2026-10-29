@@ -1,8 +1,9 @@
 use crate::api::search_mints;
 use crate::components::badge::StateBadge;
-use crate::components::icons::{Check, Copy, Cross, Star};
+use crate::components::brand::FoilStar;
+use crate::components::icons::{Check, Copy, Cross};
 use crate::components::mint_avatar::MintAvatar;
-use crate::format::{relative_time, short_url};
+use crate::format::{relative_time, relative_time_from, short_url};
 use crate::hooks::use_poll;
 use crate::types::{MintPage, MintRead, MintSort, MintState};
 use chrono::{DateTime, Utc};
@@ -103,7 +104,7 @@ pub fn MintList() -> impl IntoView {
         match (updated_at.get(), stale) {
             (Some(at), false) => format!("Updated {}", relative_time(at)),
             (Some(at), true) => {
-                format!("Couldn't refresh. Showing results from {}, retrying.", relative_time(at))
+                format!("Couldn't refresh. Showing results from {}, retrying.", relative_time_from(at))
             }
             (None, _) => String::new(),
         }
@@ -297,7 +298,7 @@ fn MintRating(avg: Option<f64>, count: u64) -> impl IntoView {
             <span class="mint-rating">
                 <span class="sr-only">{format!("Rated {avg:.1} out of 5 from {count} {reviews}")}</span>
                 <span class="mint-rating-shown" aria-hidden="true">
-                    <Star/>
+                    <FoilStar/>
                     <span class="mint-rating-value">{format!("{avg:.1}")}</span>
                     <span class="mint-rating-count">{format!("({count})")}</span>
                 </span>

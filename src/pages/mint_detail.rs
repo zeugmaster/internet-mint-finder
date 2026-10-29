@@ -6,7 +6,9 @@ use crate::components::icons::{Check, Cross};
 use crate::components::mint_avatar::MintAvatar;
 use crate::components::mint_list::{CopyText, CopyUrl};
 use crate::components::reviews::ReviewsBlock;
-use crate::format::{absolute_time, format_sats, middle_ellipsis, relative_time, short_url};
+use crate::format::{
+    absolute_time, format_sats, middle_ellipsis, relative_time, relative_time_from, short_url,
+};
 use crate::hooks::use_poll;
 use crate::types::{MintMetrics, MintRead, MintState, MintUptime};
 use chrono::{DateTime, Utc};
@@ -101,7 +103,7 @@ pub fn MintDetailPage() -> impl IntoView {
         let failed = matches!(mint.get(), Some(Err(_)))
             || matches!(metrics.get(), Some(Err(_)))
             || matches!(uptime.get(), Some(Err(_)));
-        let when = updated_at.get().map(relative_time)?;
+        let when = updated_at.get().map(relative_time_from)?;
         failed.then(|| {
             view! {
                 <div class="callout mt-4" role="status">
@@ -243,7 +245,7 @@ fn MintHead(mint: MintRead, metrics: Option<MintMetrics>, uptime: Option<MintUpt
 }
 
 /// What the mint says about itself, for a wallet user, in reading order: its
-/// own words, then what it offers in one card, then how to reach it.
+/// own words, then one card of what it offers and how to reach it.
 #[component]
 fn About(mint: MintRead) -> impl IntoView {
     let info: Option<serde_json::Value> = mint
@@ -285,15 +287,45 @@ fn About(mint: MintRead) -> impl IntoView {
                     <p dir="auto">{m}</p>
                 </div>
             })}
+            {if features.is_some() || has_meta {
+                view! { <Offers features contacts software terms note fetched/> }.into_any()
+            } else {
+                view! {
+                    <p class="section-empty">"The mint doesn't list what it offers or how to reach it."</p>
+                }
+                .into_any()
+            }}
+        </div>
+    }
+    .into_any()
+}
+
+/// What the mint offers and how to reach it, in one card: Lightning in and
+/// out side by side with their limits, since those decide whether the mint
+/// fits; the rest as a two-column checklist, a check for offered and a cross
+/// for not; then the operator's contacts, software and terms; and at the
+/// foot, where it all comes from.
+#[component]
+fn Offers(
+    features: Option<Vec<Feature>>,
+    contacts: Vec<Contact>,
+    software: Option<String>,
+    terms: Option<String>,
+    note: String,
+    fetched: String,
+) -> impl IntoView {
+    let has_contact = !contacts.is_empty() || software.is_some() || terms.is_some();
+    view! {
+        <div class="card offers">
             {match features {
-                Some(list) => view! { <Offers list note fetched/> }.into_any(),
+                Some(list) => view! { <OfferRows list/> }.into_any(),
                 None => view! {
-                    <p class="section-empty">"The mint doesn't list what it offers."</p>
+                    <p class="offers-empty">"The mint doesn't list what it offers."</p>
                 }
                 .into_any(),
             }}
-            {has_meta.then(|| view! {
-                <dl class="about-meta">
+            {has_contact.then(|| view! {
+                <dl class="offers-contact">
                     {contacts.into_iter().map(|contact| view! {
                         <div>
                             <dt>{contact.label}</dt>
@@ -301,59 +333,60 @@ fn About(mint: MintRead) -> impl IntoView {
                         </div>
                     }).collect_view()}
                     {software.map(|s| view! { <div><dt>"Software"</dt><dd class="mono">{s}</dd></div> })}
+                    // The link says what it is, so its label is for screen
+                    // readers only.
                     {terms.map(|url| view! {
                         <div>
-                            <dt>"Terms"</dt>
-                            <dd><a class="text-link" href=url target="_blank" rel="noopener noreferrer">"Terms of service"</a></dd>
+                            <dt class="sr-only">"Terms"</dt>
+                            <dd>
+                                <a class="text-link" href=url target="_blank" rel="noopener noreferrer">
+                                    "Terms of service"
+                                    <span class="sr-only">" (opens in a new tab)"</span>
+                                </a>
+                            </dd>
                         </div>
                     })}
                 </dl>
             })}
+            <p class="offers-note" title=fetched>{note}</p>
         </div>
     }
-    .into_any()
 }
 
-/// What the mint offers, in one card: Lightning in and out side by side with
-/// their limits, since those decide whether the mint fits; the rest as a
-/// two-column checklist, a check for offered and a cross for not; and at the
-/// foot, where it all comes from.
+/// The features: Lightning cells, then the checklist.
 #[component]
-fn Offers(list: Vec<Feature>, note: String, fetched: String) -> impl IntoView {
+fn OfferRows(list: Vec<Feature>) -> impl IntoView {
     let (lightning, rest): (Vec<Feature>, Vec<Feature>) =
         list.into_iter().partition(|f| matches!(f.nut, 4 | 5));
     view! {
-        <div class="card offers">
-            <dl class="offers-lightning">
-                {lightning.into_iter().map(|feature| {
-                    let Feature { name, offered, detail, .. } = feature;
-                    view! {
-                        <div class="offers-cell" class:is-off=!offered>
-                            <dt>{name}</dt>
-                            <dd><Pieces detail/></dd>
-                        </div>
-                    }
-                }).collect_view()}
-            </dl>
-            <ul class="offers-list" aria-label="Features">
-                {rest.into_iter().map(|feature| {
-                    let Feature { name, offered, detail, .. } = feature;
-                    let unlisted = !offered && detail.is_empty();
-                    let has_detail = !detail.is_empty();
-                    view! {
-                        <li class="offers-item" class:is-off=!offered>
-                            {if offered { view! { <Check/> }.into_any() } else { view! { <Cross/> }.into_any() }}
-                            <span>
-                                {name}
-                                {unlisted.then(|| view! { <span class="sr-only">", not listed by the mint"</span> })}
-                            </span>
-                            {has_detail.then(|| view! { <span class="offers-item-detail"><Pieces detail/></span> })}
-                        </li>
-                    }
-                }).collect_view()}
-            </ul>
-            <p class="offers-note" title=fetched>{note}</p>
-        </div>
+        <dl class="offers-lightning">
+            {lightning.into_iter().map(|feature| {
+                let Feature { name, offered, detail, .. } = feature;
+                view! {
+                    <div class="offers-cell" class:is-off=!offered>
+                        <dt>{name}</dt>
+                        <dd><Pieces detail/></dd>
+                    </div>
+                }
+            }).collect_view()}
+        </dl>
+        <ul class="offers-list" aria-label="Features">
+            {rest.into_iter().map(|feature| {
+                let Feature { name, offered, detail, .. } = feature;
+                let unlisted = !offered && detail.is_empty();
+                let has_detail = !detail.is_empty();
+                view! {
+                    <li class="offers-item" class:is-off=!offered>
+                        {if offered { view! { <Check/> }.into_any() } else { view! { <Cross/> }.into_any() }}
+                        <span>
+                            {name}
+                            {unlisted.then(|| view! { <span class="sr-only">", not listed by the mint"</span> })}
+                        </span>
+                        {has_detail.then(|| view! { <span class="offers-item-detail"><Pieces detail/></span> })}
+                    </li>
+                }
+            }).collect_view()}
+        </ul>
     }
 }
 

@@ -881,7 +881,6 @@ button.text-link {
     gap: 6px 32px;
     margin: 0;
     padding: 14px 16px;
-    border-top: 0.5px solid var(--border);
     list-style: none;
 }
 
@@ -915,37 +914,57 @@ button.text-link {
 /* Where it all comes from, at the foot of the claims it covers. */
 .offers-note {
     padding: 8px 16px;
-    border-top: 0.5px solid var(--border);
     color: var(--fg-2);
     font-size: 13px;
     line-height: 20px;
 }
 
-/* Contact and software: one quiet line of label and value pairs. */
-.about-meta {
+/* No feature list: one quiet line where it would be. */
+.offers-empty {
+    padding: 14px 16px;
+    color: var(--fg-2);
+}
+
+/* Contact and software: a row of label and value pairs under the features. */
+.offers-contact {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 4px 24px;
     margin: 0;
+    padding: 12px 16px;
     font-size: 13px;
     line-height: 20px;
 }
 
-.about-meta > div {
+.offers-contact > div {
     display: flex;
     align-items: center;
     gap: 8px;
     min-width: 0;
 }
 
-.about-meta dt {
+.offers-contact dt {
     color: var(--fg-2);
 }
 
-.about-meta dd {
+.offers-contact dd {
     min-width: 0;
     margin: 0;
+}
+
+/* Ink and a darker rule, so it reads as a link beside the copy buttons. */
+.offers-contact .text-link {
+    color: var(--fg);
+    text-decoration-color: var(--fg-3);
+}
+
+.offers-contact .text-link:hover {
+    text-decoration-color: var(--fg);
+}
+
+.offers > * + * {
+    border-top: 0.5px solid var(--border);
 }
 
 @media (max-width: 640px) {
@@ -966,6 +985,8 @@ button.text-link {
 
     .offers-cell,
     .offers-list,
+    .offers-empty,
+    .offers-contact,
     .offers-note {
         padding-inline: 12px;
     }
@@ -1045,13 +1066,61 @@ button.text-link {
     left: 0;
     width: calc(var(--full) * (var(--star) + var(--star-gap)) + var(--frac) * var(--star));
     overflow: hidden;
-    color: var(--fg);
 }
 
 .stars .icon {
     flex: none;
     width: var(--star);
     height: var(--star);
+}
+
+/* A filled star cut from the tag's metal (see .brand-tag): bands of steel,
+   the rainbow laid in, and a glint, all masked to the star. Steel in light
+   mode, so it reads against the grey empty stars on a white card; bright
+   chrome on black. Sized by --star; --foil-at (0 to 1) is where along a row
+   the star sits, so a row of them reads as one strip of foil, the colour
+   running across it. */
+.foil-star {
+    --foil-at: 0.4;
+    --foil-metal: linear-gradient(160deg, #a7afbb 0%, #6b7483 28%, #b9c0ca 50%, #545c6b 72%, #8f98a6 100%);
+    flex: none;
+    display: block;
+    width: var(--star, 16px);
+    height: var(--star, 16px);
+    background-image:
+        radial-gradient(circle, #ffffffd9 0%, #ffffff40 22%, #ffffff00 46%),
+        linear-gradient(118deg,
+            #7a95ff73 0%, #b48cff73 14%, #f08ad873 28%, #ffc4a873 38%,
+            #7fd8ff73 52%, #6fe0c073 66%, #8aa6ff73 80%, #c79bff73 100%),
+        var(--foil-metal);
+    background-size: 200% 200%, 300% 300%, 220% 220%;
+    background-position:
+        25% 15%,
+        calc(var(--foil-at) * 100%) 30%,
+        calc(10% + var(--foil-at) * 80%) 30%;
+    background-blend-mode: screen, color, normal;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 1.25l2.06 4.18 4.61.67-3.34 3.25.79 4.59L8 11.77l-4.12 2.17.79-4.59L1.33 6.1l4.61-.67z'/%3E%3C/svg%3E") center / contain no-repeat;
+            mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 1.25l2.06 4.18 4.61.67-3.34 3.25.79 4.59L8 11.77l-4.12 2.17.79-4.59L1.33 6.1l4.61-.67z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+:root[data-theme='dark'] .foil-star {
+    --foil-metal: linear-gradient(160deg, #e6e9ed 0%, #9aa3af 28%, #ffffff 50%, #8d96a3 72%, #d3d8df 100%);
+}
+
+.stars-fill .foil-star:nth-child(1),
+.star-input label:nth-of-type(1) .foil-star { --foil-at: 0; }
+.stars-fill .foil-star:nth-child(2),
+.star-input label:nth-of-type(2) .foil-star { --foil-at: 0.25; }
+.stars-fill .foil-star:nth-child(3),
+.star-input label:nth-of-type(3) .foil-star { --foil-at: 0.5; }
+.stars-fill .foil-star:nth-child(4),
+.star-input label:nth-of-type(4) .foil-star { --foil-at: 0.75; }
+.stars-fill .foil-star:nth-child(5),
+.star-input label:nth-of-type(5) .foil-star { --foil-at: 1; }
+
+/* The light runs across a star as it fills, then settles. */
+@keyframes foil-star-sweep {
+    from { background-position: 95% 75%, 0% 60%, 90% 60%; }
 }
 
 .reviews-main {
@@ -1140,8 +1209,9 @@ button.text-link {
 }
 
 /* Star picker: radios 1 to 5 in order, each followed by its star. Filled
-   (ink) up to the checked one; while hovering, filled up to the pointer
-   instead. No gaps between stars, so the preview never flickers off. */
+   in metal up to the checked one; while hovering, up to the pointer
+   instead, the light sweeping across each star as it fills. No gaps
+   between stars, so the preview never flickers off. */
 .star-field {
     min-width: 0;
     margin: 0;
@@ -1179,18 +1249,36 @@ button.text-link {
     height: 24px;
 }
 
-.star-input input:checked + label,
-.star-input label:has(~ input:checked) {
-    color: var(--fg);
+/* The grey star with the metal one stacked over it, hidden until filled. */
+.star-pick {
+    --star: 24px;
+    display: grid;
 }
 
-.star-input:not(:has(:disabled)):hover label:not(:hover):not(:has(~ label:hover)) {
-    color: var(--border-strong);
+.star-pick > * {
+    grid-area: 1 / 1;
 }
 
-.star-input:not(:has(:disabled)):hover label:hover,
-.star-input:not(:has(:disabled)):hover label:has(~ label:hover) {
-    color: var(--fg);
+.star-input .foil-star {
+    opacity: 0;
+    transition: opacity 120ms var(--ease);
+}
+
+.star-input input:checked + label .foil-star,
+.star-input label:has(~ input:checked) .foil-star {
+    opacity: 1;
+    animation: foil-star-sweep 900ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.star-input:not(:has(:disabled)):hover label:not(:hover):not(:has(~ label:hover)) .foil-star {
+    opacity: 0;
+    animation: none;
+}
+
+.star-input:not(:has(:disabled)):hover label:hover .foil-star,
+.star-input:not(:has(:disabled)):hover label:has(~ label:hover) .foil-star {
+    opacity: 1;
+    animation: foil-star-sweep 900ms cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
 .star-input input:focus-visible + label {
@@ -1204,6 +1292,40 @@ button.text-link {
 
 .review-compose-body .field + .btn {
     margin-top: 16px;
+}
+
+/* Who is signed in, then the way out, set apart by space alone. */
+.signer-in {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 12px;
+}
+
+/* Sign-in: the extension first when there is one, then the key to paste. */
+.signer-extension {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+}
+
+.signer-or {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    align-self: stretch;
+    margin: 10px 0 12px;
+    color: var(--fg-3);
+    font-size: 12px;
+    line-height: 16px;
+}
+
+.signer-or::before,
+.signer-or::after {
+    content: '';
+    flex: 1;
+    border-top: 0.5px solid var(--border);
 }
 
 .review-list {
@@ -1866,10 +1988,8 @@ button.hallmark {
     line-height: 20px;
 }
 
-.mint-rating .icon {
-    width: 13px;
-    height: 13px;
-    color: var(--fg);
+.mint-rating .foil-star {
+    --star: 13px;
 }
 
 .mint-rating-value {
@@ -2154,6 +2274,11 @@ a.mint-name:hover {
     color: var(--fg-2);
     font-size: 13px;
     line-height: 20px;
+}
+
+/* Read as a phrase: "Succeeded, 4m ago, 1.4 s". */
+.feed-meta > *:not(:last-child)::after {
+    content: ',';
 }
 
 .feed-meta > * {
@@ -2864,9 +2989,11 @@ a.mint-name:hover {
         flex: 1 1 100%;
     }
 
+    /* 8px sides, so all five tabs fit a 360px phone without scrolling. */
     .status-tabs a {
         flex: 1 0 auto;
         justify-content: center;
+        padding-inline: 8px;
     }
 
     .card-pad,
@@ -2930,6 +3057,15 @@ a.mint-name:hover {
     .hallmark[data-tip]:hover::after,
     .hallmark[data-tip]:focus::after {
         transform: none;
+    }
+}
+
+/* The smallest phones (320px): the tabs drop to label size so they still
+   fit. */
+@media (max-width: 359px) {
+    .status-tabs a {
+        padding-inline: 6px;
+        font-size: 12px;
     }
 }
 

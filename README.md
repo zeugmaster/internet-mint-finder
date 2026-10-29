@@ -79,7 +79,7 @@ All configuration is via environment variables (a `.env` file is loaded):
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `CDK_MNEMONIC` | required | Private BIP-39 seed for the CDK wallet. Startup fails if it is missing or invalid. |
-| `APP_NAME` | `Cashu Mint Auditor` | Display name; also derives the data directory `~/.<name>`. |
+| `APP_NAME` | `Internet Mint Finder` | Display name in the header; also derives the data directory (`~/.internet-mint-finder` by default). |
 | `SITE_ADDR` | `127.0.0.1:3000` | Listen address. |
 | `BASE_URL` | unset | Public base URL; enables the NUT-18 HTTP-POST transport (`/api/donate`). |
 | `AUDITOR_PAID_SWAPS` | off | Turns on the real-money side: the swap and snapshot loops, donations (`/api/pr`, `/api/donate`, `/receive-token`) and `/dashboard`. Off, the instance is a directory: NIP-87 mints and reviews plus the free hourly checks, holding no ecash. |

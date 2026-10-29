@@ -1,5 +1,5 @@
 // Signs a NIP-87 mint review (kind 38000) in the browser, with the nsec the
-// user signed in with or a NIP-07 extension, and sends it straight to the
+// user signed in with or their NIP-07 extension, and sends it straight to the
 // relays this instance reads. The server never sees the review on the write
 // path; it ingests it from the relays like any client.
 // nostr-tools.js is lib/nostr.bundle.js from nostr-tools@2.25.2 on npm,
@@ -7,6 +7,11 @@
 // shortcut: the nsec sits in localStorage, readable by any script on this
 // origin; move to NIP-46 if the site ever loads third-party scripts.
 const NSEC_KEY = 'imf.nsec';
+// Signing in with an extension keeps only its public key, to show who is
+// signed in; the extension signs each review itself.
+const EXTENSION_KEY = 'imf.extension';
+let extensionPubkey = null;
+try { extensionPubkey = localStorage.getItem(EXTENSION_KEY); } catch (_) { /* not kept */ }
 
 function say(msg, ok) {
   const status = document.getElementById('review-status');
@@ -20,23 +25,64 @@ function storedKey() {
   } catch (_) { return null; }
 }
 
-// Shows either the sign-in box or the signed-in line. Re-runs on DOM changes
-// because pages are swapped client-side after the first load.
+function setHidden(el, hidden) {
+  if (el.hidden !== hidden) el.hidden = hidden;
+}
+
+function setText(el, text) {
+  if (el && el.textContent !== text) el.textContent = text;
+}
+
+// Shows either the sign-in box or the signed-in line, and the extension
+// button once an extension is found. Re-runs on DOM changes because pages are
+// swapped client-side after the first load.
 function render() {
   const sk = storedKey();
+  const pubkey = sk ? NostrTools.getPublicKey(sk) : extensionPubkey;
   for (const el of document.querySelectorAll('[data-signer]')) {
-    const show = (el.dataset.signer === 'in') === !!sk;
-    if (el.hidden === show) el.hidden = !show;
+    setHidden(el, (el.dataset.signer === 'in') !== !!pubkey);
+  }
+  for (const el of document.querySelectorAll('[data-extension]')) {
+    setHidden(el, (el.dataset.extension === 'on') !== !!window.nostr);
   }
   const label = document.getElementById('review-npub');
-  if (label && sk) {
-    const npub = NostrTools.nip19.npubEncode(NostrTools.getPublicKey(sk));
+  if (label && pubkey) {
+    const npub = NostrTools.nip19.npubEncode(pubkey);
     const short = `${npub.slice(0, 12)}…${npub.slice(-6)}`;
     if (label.textContent !== short) { label.textContent = short; label.title = npub; }
   }
+  setText(document.getElementById('review-via'), sk || !pubkey ? '' : ' with your extension');
 }
+
+function signInWith(pubkey) {
+  extensionPubkey = pubkey;
+  try {
+    if (pubkey) localStorage.setItem(EXTENSION_KEY, pubkey);
+    else localStorage.removeItem(EXTENSION_KEY);
+  } catch (_) { /* kept for this page only */ }
+}
+
 render();
 new MutationObserver(render).observe(document.documentElement, { childList: true, subtree: true });
+// Extensions can add window.nostr after this script runs.
+window.addEventListener('load', render);
+setTimeout(render, 1500);
+
+async function signInWithExtension(button) {
+  if (!window.nostr) { say('No Nostr extension found in this browser.', false); return; }
+  button.disabled = true;
+  try {
+    const pubkey = await window.nostr.getPublicKey();
+    if (!/^[0-9a-f]{64}$/.test(pubkey)) throw new Error('not a public key');
+    signInWith(pubkey);
+    render();
+    say('Signed in with your extension.', true);
+  } catch (_) {
+    say('Your extension didn’t sign you in. Try again, or paste your nsec.', false);
+  } finally {
+    button.disabled = false;
+  }
+}
 
 document.addEventListener('click', (ev) => {
   const id = ev.target instanceof Element ? ev.target.id : '';
@@ -48,10 +94,14 @@ document.addEventListener('click', (ev) => {
     if (!decoded || decoded.type !== 'nsec') { say('That isn’t an nsec key. It starts with nsec1.', false); return; }
     try { localStorage.setItem(NSEC_KEY, nsec); } catch (_) { say('This browser won’t keep your key. Use a Nostr extension instead.', false); return; }
     input.value = '';
+    signInWith(null);
     render();
     say('Signed in.', true);
+  } else if (id === 'review-extension') {
+    signInWithExtension(ev.target);
   } else if (id === 'review-signout') {
     try { localStorage.removeItem(NSEC_KEY); } catch (_) { /* nothing stored */ }
+    signInWith(null);
     render();
   }
 });
@@ -85,18 +135,29 @@ document.addEventListener('submit', async (ev) => {
     tags,
     content: `[${rating}/5] ${text}`,
   };
-  let event;
-  try { event = sk ? NostrTools.finalizeEvent(unsigned, sk) : await window.nostr.signEvent(unsigned); }
-  catch (_) { say('Couldn’t sign the review. Try again.', false); return; }
-  const relays = (data.relays || '').split(',').filter(Boolean);
-  say('Posting…', true);
-  const results = await Promise.all(relays.map((url) => publish(url, event)));
-  const ok = results.filter(Boolean).length;
-  if (ok) {
-    say('Posted. It shows up here once this site picks it up from Nostr.', true);
-    form.reset();
-  } else {
-    say('Couldn’t post: no Nostr relay accepted it. Try again later.', false);
+  // One review at a time: the button stays off from signing (an extension
+  // may ask first) until the relays answer, however that ends.
+  const button = form.querySelector('button[type="submit"]');
+  if (button.disabled) return;
+  button.disabled = true;
+  try {
+    let event;
+    try { event = sk ? NostrTools.finalizeEvent(unsigned, sk) : await window.nostr.signEvent(unsigned); }
+    catch (_) { say('Couldn’t sign the review. Try again.', false); return; }
+    // The extension may have switched accounts since sign-in.
+    if (!sk && event.pubkey !== extensionPubkey) { signInWith(event.pubkey); render(); }
+    const relays = (data.relays || '').split(',').filter(Boolean);
+    say('Posting…', true);
+    const results = await Promise.all(relays.map((url) => publish(url, event)));
+    const ok = results.filter(Boolean).length;
+    if (ok) {
+      say('Posted. It shows up here once this site picks it up from Nostr.', true);
+      form.reset();
+    } else {
+      say('Couldn’t post: no Nostr relay accepted it. Try again later.', false);
+    }
+  } finally {
+    button.disabled = false;
   }
 });
 

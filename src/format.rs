@@ -55,6 +55,15 @@ pub fn absolute_time(dt: DateTime<Utc>) -> String {
     dt.format("%Y-%m-%d %H:%M:%S UTC").to_string()
 }
 
+/// `relative_time` for after "from": "showing data from a moment ago"
+/// rather than "from just now".
+pub fn relative_time_from(dt: DateTime<Utc>) -> String {
+    match relative_time(dt).as_str() {
+        "just now" => "a moment ago".to_string(),
+        other => other.to_string(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -71,6 +80,13 @@ mod tests {
     fn urls_are_shortened() {
         assert_eq!(short_url("https://mint.example.com/"), "mint.example.com");
         assert_eq!(short_url("http://x.y"), "x.y");
+    }
+
+    #[test]
+    fn times_after_from_read_naturally() {
+        assert_eq!(relative_time_from(Utc::now()), "a moment ago");
+        let earlier = Utc::now() - chrono::Duration::minutes(3);
+        assert_eq!(relative_time_from(earlier), "3m ago");
     }
 
     #[test]
