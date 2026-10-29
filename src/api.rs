@@ -31,16 +31,7 @@ pub async fn search_mints(
         .await?;
     let mut reads = Vec::with_capacity(mints.len());
     for mint in mints {
-        let mut read = crate::server::service::with_balance(&state, mint).await;
-        // Each row's strip comes from the same query as the mint page's chart.
-        match state.auditor_db.get_mint_uptime(read.id).await {
-            Ok(uptime) => {
-                read.uptime_bars = uptime.bars.iter().map(|bar| bar.state).collect();
-                read.uptime_percent = uptime.uptime_percent;
-            }
-            Err(error) => tracing::warn!(mint = %read.url, %error, "uptime unavailable"),
-        }
-        reads.push(read);
+        reads.push(crate::server::service::with_balance(&state, mint).await);
     }
     Ok(crate::types::MintPage {
         mints: reads,

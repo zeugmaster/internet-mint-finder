@@ -93,13 +93,6 @@ pub struct MintRead {
     /// Every auditor's own 24 h verdict, this instance first.
     #[serde(default)]
     pub auditor_marks: Vec<AuditorMark>,
-    /// The directory's 24 h uptime strip: one state per bar, oldest first.
-    /// Empty when it wasn't loaded (only directory pages fill it).
-    #[serde(default)]
-    pub uptime_bars: Vec<MintState>,
-    /// The share of checks in that window that passed, in percent.
-    #[serde(default)]
-    pub uptime_percent: Option<f64>,
 }
 
 /// A NIP-87 announcement as shown on the mint page.
