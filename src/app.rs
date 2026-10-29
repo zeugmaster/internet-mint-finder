@@ -50,10 +50,12 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
                 <meta name="description" content=DESCRIPTION/>
                 // The favicon is drawn on the 16px pixel grid; the PNGs are for
                 // browsers without SVG icons. All of them come from scripts/brand.
-                <link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
-                <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png"/>
-                <link rel="icon" href="/favicon-16.png" sizes="16x16" type="image/png"/>
-                <link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
+                // The ?v= is the brand version: browsers keep favicons for a
+                // long time, so bump it whenever the icons change.
+                <link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml"/>
+                <link rel="icon" href="/favicon-32.png?v=2" sizes="32x32" type="image/png"/>
+                <link rel="icon" href="/favicon-16.png?v=2" sizes="16x16" type="image/png"/>
+                <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2"/>
                 {og("og:site_name", "Internet Mint Finder")}
                 {og("og:title", "Internet Mint Finder")}
                 {og("og:description", DESCRIPTION)}
