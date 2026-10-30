@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Internet Mint Finder: directory hero, bold or subtle</title>
+<!-- The template for the hero comparison. build.py fills in the app's
+     stylesheet (with Inter and the seal masks inlined, TX-02 left out) and
+     the rendered directory, and writes one self-contained page: served
+     locally from target/site and published as a Claude artifact. Each pane
+     is the same directory in its own frame, with the hero made into the
+     chosen version. -->
+<style id="app-css">/*APP_CSS*/</style>
+<style id="variants-css">
+/* The head from before the seal (style/main.css at eb2688f): the oval tag,
+   IMF struck in steel, the name pressed along the bottom, and the head laid
+   out beside it; the round seal in the same place; and the oval heading
+   today's masthead. */
+@property --tag-px { syntax: "<percentage>"; inherits: true; initial-value: 28%; }
+@property --tag-py { syntax: "<percentage>"; inherits: true; initial-value: 18%; }
+@property --tag-bx { syntax: "<percentage>"; inherits: true; initial-value: 22%; }
+@property --tag-by { syntax: "<percentage>"; inherits: true; initial-value: 30%; }
+@property --tag-lx { syntax: "<number>"; inherits: true; initial-value: -0.57; }
+@property --tag-ly { syntax: "<number>"; inherits: true; initial-value: -0.82; }
+@property --tag-rx { syntax: "<angle>"; inherits: true; initial-value: 0deg; }
+@property --tag-ry { syntax: "<angle>"; inherits: true; initial-value: 0deg; }
+
+.brand-tag {
+    --tag-w: 44px;
+    --tag-edge: #3a425252;
+    position: relative;
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: var(--tag-w);
+    height: calc(var(--tag-w) * 0.72);
+    border-radius: 50%;
+    isolation: isolate;
+}
+.brand-tag > * { pointer-events: none; }
+.brand-tag-layer { position: absolute; inset: 0; border-radius: inherit; }
+.brand-tag .metal {
+    background: linear-gradient(158deg,
+        #fbfcfd 0%, #d3d8df 8%, #98a1ad 16%, #e6e9ed 24%, #ffffff 31%, #bcc3cc 40%,
+        #7f8896 49%, #cfd4db 57%, #f7f8fa 65%, #a6aeb9 74%, #eef0f3 82%, #8d96a3 91%, #e4e7eb 100%);
+    background-size: 200% 200%;
+    background-position: var(--tag-bx) var(--tag-by);
+}
+.brand-tag .holo {
+    background: linear-gradient(118deg,
+        #7a95ff 0%, #b48cff 12%, #f08ad8 23%, #ffc4a8 31%, #7fd8ff 42%, #6fe0c0 52%,
+        #8aa6ff 63%, #c79bff 74%, #ff9fcf 84%, #8fe6d4 93%, #7a95ff 100%);
+    background-size: 300% 300%;
+    background-position: calc(100% - var(--tag-bx)) var(--tag-by);
+    mix-blend-mode: color;
+    opacity: 0.38;
+}
+.brand-tag .glint {
+    background:
+        radial-gradient(circle at var(--tag-px) var(--tag-py), #ffffffe6 0%, #ffffff59 14%, #ffffff00 38%),
+        linear-gradient(112deg, #ffffff00 38%, #ffffffb3 47%, #ffffff00 56%);
+    background-size: 100% 100%, 260% 100%;
+    background-position: center, calc(100% - var(--tag-px)) center;
+    background-repeat: no-repeat;
+    mix-blend-mode: screen;
+}
+.brand-tag .grain {
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+    background-size: 180px;
+    mix-blend-mode: overlay;
+    opacity: 0.38;
+}
+.brand-tag .bevel {
+    box-shadow:
+        inset 0 max(1px, calc(var(--tag-w) * 0.008)) 0 #ffffffe6,
+        inset 0 min(-0.5px, calc(var(--tag-w) * -0.008)) 0 #3a425240,
+        inset 0 0 0 max(1px, calc(var(--tag-w) * 0.006)) #ffffff73,
+        inset 0 calc(var(--tag-w) * -0.04) calc(var(--tag-w) * 0.08) #2a324314,
+        0 0 0 1px var(--tag-edge);
+}
+.brand-tag-imf {
+    position: relative;
+    margin-right: -0.035em;
+    color: #3a4352eb;
+    font-size: calc(var(--tag-w) * 0.27);
+    line-height: 1;
+    font-weight: 820;
+    letter-spacing: -0.035em;
+}
+:root[data-theme='dark'] .brand-tag { --tag-edge: #ffffff2e; }
+:root[data-theme='dark'] .brand-tag .metal { filter: brightness(0.88); }
+.brand:hover .brand-tag,
+.brand:focus-visible .brand-tag { animation: brand-tag-sweep 1.3s cubic-bezier(0.2, 0.7, 0.2, 1); }
+@keyframes brand-tag-sweep {
+    from { --tag-bx: 8%; --tag-px: 10%; }
+    to { --tag-bx: 92%; --tag-px: 90%; }
+}
+
+.brand-tag.is-hero {
+    --tag-w: 184px;
+    --e: calc(var(--tag-w) * 0.006);
+    grid-area: tag;
+    justify-self: end;
+    transform: rotate(-6deg) perspective(700px) rotateX(var(--tag-rx)) rotateY(var(--tag-ry));
+    transition: --tag-rx 600ms cubic-bezier(0.2, 0.8, 0.2, 1), --tag-ry 600ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    animation: brand-tag-arrive 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) 0.3s backwards;
+}
+.brand-tag.is-hero.is-live {
+    animation: none;
+    transition: --tag-rx 120ms linear, --tag-ry 120ms linear;
+}
+@keyframes brand-tag-arrive {
+    from { --tag-bx: 90%; --tag-by: 46%; --tag-px: 92%; --tag-py: 40%; --tag-lx: 0.8; --tag-ly: -0.6; }
+}
+.brand-tag-face {
+    position: relative;
+    display: grid;
+    place-items: center;
+    transform: translateY(calc(var(--tag-w) * -0.045));
+}
+.brand-tag-struck {
+    display: inline-grid;
+    margin-right: -0.035em;
+    transform: translateX(calc(var(--tag-w) * 0.004));
+    font-size: calc(var(--tag-w) * 0.25);
+    line-height: 1;
+    font-weight: 820;
+    letter-spacing: -0.035em;
+    white-space: nowrap;
+}
+.brand-tag-struck > span { position: relative; grid-area: 1 / 1; }
+.brand-tag-struck .lo {
+    color: #1c222f8c;
+    transform: translate(calc(var(--e) * -1.4 * var(--tag-lx)), calc(var(--e) * -1.4 * var(--tag-ly)));
+    filter: blur(calc(var(--e) * 0.8));
+}
+.brand-tag-struck .hi {
+    color: #fffffff0;
+    transform: translate(calc(var(--e) * 1.1 * var(--tag-lx)), calc(var(--e) * 1.1 * var(--tag-ly)));
+}
+.brand-tag-struck .steel,
+.brand-tag-struck .tint {
+    color: transparent;
+    -webkit-background-clip: text;
+    background-clip: text;
+}
+.brand-tag-struck .steel {
+    background-image: linear-gradient(172deg, #a7afbb 0%, #6b7483 28%, #b9c0ca 50%, #545c6b 72%, #8f98a6 100%);
+    background-size: 100% 220%;
+    background-position: 0 var(--tag-by);
+}
+.brand-tag-struck .tint {
+    background-image: linear-gradient(118deg,
+        #6f8fff 0%, #a685ff 18%, #52b0ff 36%, #5fdca6 52%, #ef6fd0 70%, #6f8fff 86%, #52b0ff 100%);
+    background-size: calc(var(--tag-w) * 2.6) 100%;
+    background-position: var(--tag-bx) 0;
+    mix-blend-mode: color;
+    opacity: 0.285;
+}
+.brand-tag-arc { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.brand-tag-arc text {
+    font-family: var(--font-mono);
+    font-feature-settings: 'ss02';
+    font-size: 5px;
+    letter-spacing: 0.6px;
+}
+.brand-tag-arc .lo { fill: #1c222fb8; }
+.brand-tag-arc .hi {
+    fill: #fffffff2;
+    transform: translate(calc(var(--tag-lx) * -0.35px), calc(var(--tag-ly) * -0.35px));
+}
+
+/* Today's round seal in the tag's place in the subtle head, pressed on at
+   the same angle. Its art comes from .is-hero. */
+.brand-sticker.is-hero.is-corner {
+    --sticker-d: 148px;
+    grid-area: tag;
+    justify-self: end;
+    transform: rotate(-6deg) perspective(700px) rotateX(var(--metal-rx)) rotateY(var(--metal-ry));
+    transition-property: --metal-px, --metal-py, --metal-bx, --metal-by, --metal-lx, --metal-ly, --metal-rx, --metal-ry;
+    transition-duration: 700ms;
+    transition-timing-function: var(--ease-arrive);
+    animation: masthead-arrive 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) 0.3s backwards;
+}
+.brand-sticker.is-hero.is-corner.is-live {
+    animation: none;
+    transition-duration: 260ms;
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.page-head.has-tag {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "title tag" "subtitle tag";
+    align-items: center;
+    gap: 0 48px;
+}
+.page-head.has-tag .page-title { grid-area: title; align-self: end; }
+.page-head.has-tag .page-subtitle { grid-area: subtitle; align-self: start; }
+
+/* The oval tag heading today's masthead: upright and centred like the seal,
+   about as heavy (288 by 207 against the seal's 240), under the masthead's
+   one light, which now moves the tag's metal as well as the name. */
+.masthead.has-oval {
+    transition-property: --metal-px, --metal-py, --metal-bx, --metal-by, --metal-lx, --metal-ly, --metal-rx, --metal-ry, --name-x,
+        --tag-px, --tag-py, --tag-bx, --tag-by, --tag-lx, --tag-ly, --tag-rx, --tag-ry;
+    animation:
+        masthead-arrive 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) 0.3s backwards,
+        oval-arrive 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) 0.3s backwards;
+}
+.masthead.has-oval.is-live { animation: none; }
+@keyframes oval-arrive {
+    from { --tag-bx: 90%; --tag-by: 46%; --tag-px: 92%; --tag-py: 40%; --tag-lx: 0.8; --tag-ly: -0.6; }
+}
+.brand-tag.is-masthead {
+    --tag-w: 288px;
+    --e: calc(var(--tag-w) * 0.006);
+    transform: perspective(900px) rotateX(var(--tag-rx)) rotateY(var(--tag-ry));
+}
+
+@media (max-width: 760px) {
+    .page-head.has-tag {
+        grid-template-areas: "title tag" "subtitle subtitle";
+        gap: 12px 16px;
+    }
+    .page-head.has-tag .page-title { align-self: center; }
+    .brand-tag.is-hero { --tag-w: 104px; }
+    .brand-sticker.is-hero.is-corner { --sticker-d: 88px; }
+    .brand-tag.is-masthead { --tag-w: 224px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .masthead.has-oval { animation: none; }
+    .brand-tag.is-masthead { transform: none; }
+    .brand-tag.is-hero,
+    .brand-sticker.is-hero.is-corner { transform: rotate(-6deg); }
+}
+</style>
+<style>
+    body {
+        min-height: 100vh;
+        background: var(--shell);
+    }
+
+    .cmp {
+        display: grid;
+        gap: 16px;
+        padding: 20px 24px 32px;
+    }
+
+    .cmp-head {
+        display: grid;
+        gap: 2px;
+    }
+
+    .cmp-title {
+        font-size: 15px;
+        line-height: 24px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+    }
+
+    .cmp-note {
+        max-width: 75ch;
+        color: var(--fg-2);
+        font-size: 13px;
+        line-height: 20px;
+    }
+
+    /* The controls in one bar under the title, in ink at full button size,
+       held at the top while the versions scroll under it. */
+    .cmp-toolbar {
+        position: sticky;
+        top: 8px;
+        z-index: 2;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px 28px;
+        padding: 10px 12px 10px 16px;
+        border-radius: 12px;
+        background: var(--container);
+        box-shadow: var(--s-large);
+    }
+
+    .cmp-control {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 13px;
+        line-height: 20px;
+        font-weight: 500;
+    }
+
+    .cmp-toolbar .segmented button {
+        height: 32px;
+        padding: 0 12px;
+    }
+
+    .cmp-toolbar #replay {
+        margin-left: auto;
+    }
+
+    .cmp-panes {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 20px;
+        align-items: start;
+    }
+
+    /* At phone width the three run side by side at their real size and
+       wrap when the window is narrower than all three. */
+    .is-phone .cmp-panes {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .is-phone .cmp-panes > section {
+        width: 390px;
+        max-width: 100%;
+    }
+
+    .cmp-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+
+    .cmp-letter {
+        display: inline-grid;
+        place-items: center;
+        min-width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        background: var(--inverted);
+        color: var(--on-inverted);
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .cmp-label .filter-select {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    /* Desktop: the page 1280 wide, scaled to the pane and as tall as the
+       window allows. Phone: 390 by 844 at its real size. */
+    .cmp-frame {
+        --s: 0.5;
+        --h: 900px;
+        position: relative;
+        height: calc(var(--h) * var(--s));
+        overflow: hidden;
+        border-radius: 12px;
+        background: var(--container);
+        box-shadow: 0 0 0 0.5px var(--border-strong);
+    }
+
+    .cmp-frame iframe {
+        display: block;
+        width: 1280px;
+        height: var(--h);
+        border: 0;
+        transform: scale(var(--s));
+        transform-origin: 0 0;
+    }
+
+    .is-phone .cmp-frame {
+        width: 390px;
+        max-width: 100%;
+        height: 844px;
+        margin-inline: auto;
+    }
+
+    .is-phone .cmp-frame iframe {
+        width: 390px;
+        height: 844px;
+        transform: none;
+    }
+
+    /* Stacked: one version under another at actual size, each as wide as
+       the window allows up to 1280, tall enough to show the hero and the
+       top of the list; the page inside scrolls. Phones stack the same way. */
+    .is-stacked .cmp-panes {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 32px;
+    }
+
+    .is-stacked.is-phone .cmp-panes {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .is-stacked:not(.is-phone) .cmp-panes > section {
+        width: 100%;
+        max-width: 1280px;
+        margin-inline: auto;
+    }
+
+    .is-stacked:not(.is-phone) .cmp-frame {
+        height: var(--h);
+    }
+
+    .is-stacked:not(.is-phone) .cmp-frame iframe {
+        width: 100%;
+        transform: none;
+    }
+
+    @media (max-width: 1000px) {
+        .cmp {
+            padding-inline: 16px;
+        }
+
+        .cmp-panes {
+            grid-template-columns: minmax(0, 1fr);
+        }
+    }
+</style>
+</head>
+<body>
+<div class="cmp">
+    <header class="cmp-head">
+        <h1 class="cmp-title">Directory hero: bold or subtle</h1>
+        <p class="cmp-note">The Internet Mint Finder directory three times, with the same page under the hero. Pick a version for each. Move the pointer over a mark. Figures here use a system monospace in place of TX-02.</p>
+    </header>
+
+    <div class="cmp-toolbar">
+        <div class="cmp-control">
+            <span>Layout</span>
+            <div class="segmented" role="group" aria-label="Layout" data-set="layout">
+                <button type="button" data-value="side" aria-pressed="true">Side by side</button>
+                <button type="button" data-value="stacked" aria-pressed="false">Stacked, actual size</button>
+            </div>
+        </div>
+        <div class="cmp-control">
+            <span>Width</span>
+            <div class="segmented" role="group" aria-label="Width" data-set="width">
+                <button type="button" data-value="desktop" aria-pressed="true">Desktop</button>
+                <button type="button" data-value="phone" aria-pressed="false">Phone</button>
+            </div>
+        </div>
+        <div class="cmp-control">
+            <span>Theme</span>
+            <div class="segmented" role="group" aria-label="Theme" data-set="theme">
+                <button type="button" data-value="light" aria-pressed="true">Light</button>
+                <button type="button" data-value="dark" aria-pressed="false">Dark</button>
+            </div>
+        </div>
+        <button type="button" class="btn" id="replay">Replay arrival</button>
+    </div>
+
+    <main class="cmp-panes">
+        <section>
+            <div class="cmp-label">
+                <span class="cmp-letter" aria-hidden="true">A</span>
+                <select class="filter-select" data-pane="a" aria-label="Version A"></select>
+            </div>
+            <div class="cmp-frame"><iframe id="frame-a" title="Version A"></iframe></div>
+        </section>
+        <section>
+            <div class="cmp-label">
+                <span class="cmp-letter" aria-hidden="true">B</span>
+                <select class="filter-select" data-pane="b" aria-label="Version B"></select>
+            </div>
+            <div class="cmp-frame"><iframe id="frame-b" title="Version B"></iframe></div>
+        </section>
+        <section>
+            <div class="cmp-label">
+                <span class="cmp-letter" aria-hidden="true">C</span>
+                <select class="filter-select" data-pane="c" aria-label="Version C"></select>
+            </div>
+            <div class="cmp-frame"><iframe id="frame-c" title="Version C"></iframe></div>
+        </section>
+    </main>
+</div>
+
+<template id="page"><!--PAGE--></template>
+
+<!-- Runs inside each pane: makes the hero into the chosen version, version
+     being layout-mark ("bold-seal", "subtle-oval"), and lights its mark. -->
+<script type="text/plain" id="frame-js">
+(() => {
+    const root = document.documentElement;
+    const [layout, kind] = (root.dataset.version || 'bold-seal').split('-');
+
+    function light(x, y, prefix) {
+        const dx = x - 0.5, dy = y - 0.5, n = Math.hypot(dx, dy);
+        const [lx, ly] = n < 0.08 ? [0, -1] : [dx / n, dy / n];
+        return {
+            [prefix + '-px']: (x * 100).toFixed(1) + '%',
+            [prefix + '-py']: (y * 100).toFixed(1) + '%',
+            [prefix + '-bx']: (8 + x * 84).toFixed(1) + '%',
+            [prefix + '-by']: (8 + y * 84).toFixed(1) + '%',
+            [prefix + '-lx']: lx.toFixed(3),
+            [prefix + '-ly']: ly.toFixed(3),
+            [prefix + '-rx']: ((0.5 - y) * 16).toFixed(2) + 'deg',
+            [prefix + '-ry']: ((x - 0.5) * 20).toFixed(2) + 'deg',
+        };
+    }
+
+    const set = (el, vars) => { for (const [k, v] of Object.entries(vars)) el.style.setProperty(k, v); };
+    const frac = (at, start, size) => Math.min(1, Math.max(0, (at - start) / Math.max(1, size)));
+
+    // The page is a picture of the app: links and buttons go nowhere, and
+    // the theme switch flips both panes.
+    document.addEventListener('click', (ev) => {
+        const el = ev.target.closest('a, button');
+        if (!el) return;
+        ev.preventDefault();
+        if (el.matches('[data-theme-toggle]')) parent.postMessage({ cmp: 'toggle-theme' }, '*');
+    });
+    document.addEventListener('submit', (ev) => ev.preventDefault());
+
+    const layers = (names, cls) => names.map((l) => '<span class="' + cls + l + '"></span>').join('');
+    const TAG_LAYERS = layers(['metal', 'holo', 'glint', 'grain', 'bevel'], 'brand-tag-layer ');
+    const SEAL_LAYERS = layers(['metal', 'holo', 'glint', 'grain', 'art shade', 'art lip', 'art steel', 'art tint', 'bevel'], '');
+    const struck = ['lo', 'hi', 'steel', 'tint'].map((l) => '<span class="' + l + '">IMF</span>').join('');
+    const arc = ['hi', 'lo'].map((l) => '<text class="' + l + '"><textPath href="#cmp-tag-arc" startOffset="50%" text-anchor="middle">INTERNET MINT FINDER</textPath></text>').join('');
+    const ovalTag = (cls) => '<span class="brand-tag ' + cls + '" aria-hidden="true">' + TAG_LAYERS
+        + '<svg class="brand-tag-arc" viewBox="0 0 100 72"><path id="cmp-tag-arc" d="M 10 37 A 40 28 0 0 0 90 37" fill="none"></path>' + arc + '</svg>'
+        + '<span class="brand-tag-face"><span class="brand-tag-struck">' + struck + '</span></span></span>';
+
+    if (layout === 'bold') {
+        // Today's masthead: one light for the mark and the name. The mark
+        // tilts toward the pointer and the streak runs along the name.
+        const m = document.querySelector('.masthead');
+        let mark = m.querySelector('.brand-sticker');
+        const prefixes = ['--metal'];
+        if (kind === 'oval') {
+            mark.insertAdjacentHTML('beforebegin', ovalTag('is-masthead'));
+            mark.remove();
+            mark = m.querySelector('.brand-tag');
+            m.classList.add('has-oval');
+            prefixes.push('--tag');
+        }
+        const name = m.querySelector('.masthead-title');
+        m.addEventListener('pointermove', (ev) => {
+            const x = frac(ev.pageX, mark.offsetLeft, mark.offsetWidth);
+            const y = frac(ev.pageY, mark.offsetTop, mark.offsetHeight);
+            const along = frac(ev.pageX, name.offsetLeft, name.offsetWidth);
+            m.classList.add('is-live');
+            for (const p of prefixes) set(m, light(x, y, p));
+            m.style.setProperty('--name-x', (8 + along * 84).toFixed(1) + '%');
+        });
+        m.addEventListener('pointerleave', () => {
+            m.classList.remove('is-live');
+            m.removeAttribute('style');
+        });
+    } else {
+        // The head from before the seal: the title and its intro with the
+        // mark at the right, and the brand back in the header.
+        const oval = kind === 'oval';
+        const header = document.querySelector('.site-header');
+        header.classList.remove('is-bare');
+        const brand = document.createElement('a');
+        brand.href = '/';
+        brand.className = 'brand';
+        brand.innerHTML = (oval
+            ? '<span class="brand-tag" aria-hidden="true">' + TAG_LAYERS + '<span class="brand-tag-imf">IMF</span></span>'
+            : '<span class="brand-sticker" aria-hidden="true">' + SEAL_LAYERS + '</span>')
+            + '<span>Internet Mint Finder</span>';
+        header.querySelector('.site-header-inner').prepend(brand);
+
+        const head = document.createElement('div');
+        head.className = 'page-head has-tag';
+        head.innerHTML = '<h1 class="page-title">Find a Cashu mint.</h1>'
+            + '<p class="page-subtitle">Cashu mints found on Nostr, rated by the people who use them. '
+            + 'Each one is checked every hour to see if it\'s online.</p>'
+            + (oval ? ovalTag('is-hero') : '<span class="brand-sticker is-hero is-corner" aria-hidden="true">' + SEAL_LAYERS + '</span>');
+        document.querySelector('.masthead').replaceWith(head);
+
+        const mark = head.lastElementChild, prefix = oval ? '--tag' : '--metal';
+        mark.addEventListener('pointermove', (ev) => {
+            const w = mark.clientWidth, h = mark.clientHeight;
+            if (!w || !h) return;
+            mark.classList.add('is-live');
+            set(mark, light(frac(ev.offsetX, 0, w), frac(ev.offsetY, 0, h), prefix));
+        });
+        mark.addEventListener('pointerleave', () => {
+            mark.classList.remove('is-live');
+            mark.removeAttribute('style');
+        });
+    }
+
+    window.addEventListener('message', (ev) => {
+        const d = ev.data || {};
+        if (d.cmp === 'state') root.dataset.theme = d.theme;
+    });
+})();
+</script>
+
+<script>
+(() => {
+    const VERSIONS = [
+        ['bold-seal', 'Bold masthead, round seal (as shipped)'],
+        ['bold-oval', 'Bold masthead, oval tag'],
+        ['subtle-oval', 'Subtle head, oval tag (as before the seal)'],
+        ['subtle-seal', 'Subtle head, round seal'],
+    ];
+    const state = { theme: 'light', width: 'desktop', layout: 'side', a: 'bold-seal', b: 'bold-oval', c: 'subtle-oval' };
+    const frames = Object.fromEntries(['a', 'b', 'c'].map((pane) => [pane, document.getElementById('frame-' + pane)]));
+    const css = document.getElementById('app-css').textContent + document.getElementById('variants-css').textContent;
+    const page = document.getElementById('page').innerHTML;
+    const frameJS = document.getElementById('frame-js').textContent;
+
+    function srcdoc(pane) {
+        return '<!DOCTYPE html><html lang="en" data-theme="' + state.theme + '" data-version="' + state[pane]
+            + '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
+            + '<style>' + css + '</style></head><body>' + page + '<script>' + frameJS + '<\/script></body></html>';
+    }
+
+    function load(pane) {
+        frames[pane].srcdoc = srcdoc(pane);
+    }
+
+    function send() {
+        for (const frame of Object.values(frames)) {
+            if (frame.contentWindow) frame.contentWindow.postMessage({ cmp: 'state', theme: state.theme }, '*');
+        }
+    }
+
+    function choose(set, value) {
+        state[set] = value;
+        for (const b of document.querySelectorAll('[data-set="' + set + '"] button')) {
+            b.setAttribute('aria-pressed', String(b.dataset.value === value));
+        }
+        if (set === 'theme') document.documentElement.dataset.theme = value;
+        if (set === 'width' || set === 'layout') {
+            document.body.classList.toggle('is-phone', state.width === 'phone');
+            document.body.classList.toggle('is-stacked', state.layout === 'stacked');
+            fit();
+        }
+        send();
+    }
+
+    // Side by side, the desktop page is scaled to its pane and runs to the
+    // bottom of the window; stacked, it is actual size and about a window
+    // tall, under the toolbar.
+    function fit() {
+        const toolbar = document.querySelector('.cmp-toolbar').offsetHeight;
+        for (const box of document.querySelectorAll('.cmp-frame')) {
+            if (state.layout === 'stacked') {
+                box.style.setProperty('--s', '1');
+                box.style.setProperty('--h', Math.min(900, Math.max(600, window.innerHeight - toolbar - 72)) + 'px');
+            } else {
+                const s = box.clientWidth / 1280;
+                const room = window.innerHeight - (box.getBoundingClientRect().top + window.scrollY) - 24;
+                box.style.setProperty('--s', s.toFixed(4));
+                box.style.setProperty('--h', Math.max(720, Math.round(room / s)) + 'px');
+            }
+        }
+    }
+
+    for (const select of document.querySelectorAll('[data-pane]')) {
+        const pane = select.dataset.pane;
+        for (const [value, label] of VERSIONS) select.add(new Option(label, value, false, value === state[pane]));
+        select.addEventListener('change', () => {
+            state[pane] = select.value;
+            load(pane);
+        });
+    }
+
+    for (const group of document.querySelectorAll('[data-set]')) {
+        group.addEventListener('click', (ev) => {
+            const button = ev.target.closest('button');
+            if (button) choose(group.dataset.set, button.dataset.value);
+        });
+    }
+
+    window.addEventListener('message', (ev) => {
+        if ((ev.data || {}).cmp === 'toggle-theme') choose('theme', state.theme === 'dark' ? 'light' : 'dark');
+    });
+
+    document.getElementById('replay').addEventListener('click', () => Object.keys(frames).forEach(load));
+    window.addEventListener('resize', fit);
+
+    try {
+        if (matchMedia('(prefers-color-scheme: dark)').matches) choose('theme', 'dark');
+    } catch (_) { /* light it is */ }
+    fit();
+    Object.keys(frames).forEach(load);
+})();
+</script>
+</body>
+</html>

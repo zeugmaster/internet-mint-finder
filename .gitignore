@@ -22,3 +22,9 @@ result/
 # open source (OFL) and is committed.
 public/fonts/tx-02-*
 .impeccable/mocks/decision/fonts/
+
+# Blender teaser (scripts/brand/teaser): the exported outlines, maps, .blend,
+# frames and videos are all rebuilt by the scripts.
+/renders/
+*.blend
+*.blend1
