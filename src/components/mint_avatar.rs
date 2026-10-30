@@ -1,7 +1,7 @@
 use leptos::prelude::*;
 
 /// A mint's face: the icon from its NUT-06 info when it publishes one over
-/// https, otherwise its initial on a grey disc. The initial is always drawn
+/// https, otherwise its initial on the brand's metal. The initial is always drawn
 /// under the image, so a slow or broken icon shows the letter, not a gap.
 #[component]
 pub fn MintAvatar(#[prop(into)] name: String, info: Option<String>) -> impl IntoView {

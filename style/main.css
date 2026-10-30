@@ -204,8 +204,17 @@
    Base
 --------------------------------------------------------------------------- */
 
+/* The page's ground is painted on body, so the html background shows only
+   where the window rubber-bands past the page. At the top that is the
+   ground; at the bottom, in light, it is the reeding's steel, so the milled
+   edge carries on instead of ending on a pale strip. The scroll swaps them
+   halfway down. On black the ground serves both ends. */
 html {
-    background: var(--container);
+    --ground: var(--container);
+    --ground-below: #4f5766;
+    background: var(--ground);
+    animation: ground-below linear both;
+    animation-timeline: scroll(root);
     color: var(--fg);
     font-family: var(--font-sans);
     font-size: 15px;
@@ -219,12 +228,22 @@ html {
 
 @media (min-width: 48rem) {
     html {
-        background: var(--shell);
+        --ground: var(--shell);
     }
+}
+
+:root[data-theme='dark'] {
+    --ground-below: var(--ground);
+}
+
+@keyframes ground-below {
+    from, 50% { background-color: var(--ground); }
+    50.01%, to { background-color: var(--ground-below); }
 }
 
 body {
     margin: 0;
+    background: var(--ground);
 }
 
 a {
@@ -2407,9 +2426,15 @@ button.hallmark {
     from { opacity: 0; transform: scale(0.5); }
 }
 
-/* Mint avatar: the mint's own icon over its initial on a grey disc. The
-   image gets an opaque ground so a transparent logo hides the letter. */
+/* Mint avatar: the mint's own icon over its initial. With no icon the
+   initial sits on the IMF tag's metal at the tag's resting light, in the
+   tag's engraved steel: from the top, the glint, the colour laid in at 20%,
+   a shade for dark mode, then the chrome, all in one element's backgrounds
+   so a long list stays light, and the bevel's lips inset. The image covers
+   all of it, and gets an opaque ground so a transparent logo hides the
+   letter. */
 .mint-avatar {
+    --avatar-shade: #0000;
     position: relative;
     flex: none;
     display: inline-flex;
@@ -2419,8 +2444,25 @@ button.hallmark {
     height: 36px;
     border-radius: 50%;
     overflow: hidden;
-    background: var(--component);
-    color: var(--fg-2);
+    background:
+        radial-gradient(circle at var(--tag-px) var(--tag-py), #ffffffe6 0%, #ffffff59 14%, #ffffff00 38%),
+        linear-gradient(112deg, #ffffff00 38%, #ffffffb3 47%, #ffffff00 56%)
+            calc(100% - var(--tag-px)) 50% / 260% 100% no-repeat,
+        linear-gradient(118deg,
+            #7a95ff33 0%, #b48cff33 12%, #f08ad833 23%, #ffc4a833 31%, #7fd8ff33 42%, #6fe0c033 52%,
+            #8aa6ff33 63%, #c79bff33 74%, #ff9fcf33 84%, #8fe6d433 93%, #7a95ff33 100%)
+            calc(100% - var(--tag-bx)) var(--tag-by) / 300% 300%,
+        linear-gradient(var(--avatar-shade) 0 0),
+        linear-gradient(158deg,
+            #fbfcfd 0%, #d3d8df 8%, #98a1ad 16%, #e6e9ed 24%, #ffffff 31%, #bcc3cc 40%,
+            #7f8896 49%, #cfd4db 57%, #f7f8fa 65%, #a6aeb9 74%, #eef0f3 82%, #8d96a3 91%, #e4e7eb 100%)
+            var(--tag-bx) var(--tag-by) / 200% 200%;
+    background-blend-mode: screen, screen, color, normal, normal;
+    box-shadow:
+        inset 0 1px 0 #ffffffe6,
+        inset 0 -0.5px 0 #3a425240,
+        inset 0 -1.5px 3px #2a324314;
+    color: #3a4352eb;
     font-size: 13px;
     line-height: 1;
     font-weight: 600;
@@ -2443,6 +2485,15 @@ button.hallmark {
     border-radius: inherit;
     box-shadow: inset 0 0 0 0.5px var(--border-strong);
     pointer-events: none;
+}
+
+/* On black the chrome a step down, as on the tag. */
+:root[data-theme='dark'] .mint-avatar {
+    --avatar-shade: #0000001f;
+}
+
+.mint-avatar.skeleton {
+    box-shadow: none;
 }
 
 .mint-avatar.skeleton::after {
@@ -3530,8 +3581,10 @@ a.mint-name:hover {
     }
 }
 
+/* Not html: its scroll-linked ground (see Base) changes colour, it doesn't
+   move. */
 @media (prefers-reduced-motion: reduce) {
-    *,
+    :not(html),
     ::before,
     ::after {
         animation: none !important;
