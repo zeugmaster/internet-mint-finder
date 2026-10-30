@@ -1564,8 +1564,16 @@ button.text-link {
     list-style: none;
 }
 
+/* Each review is a line, like a row of a ledger: its stars, the author's
+   key, and the date at the right; the words, when there are any, under the
+   key. The stars' column is the width of five 14px stars, so the keys line
+   up even under a review with no rating. */
 .review {
-    padding: 20px 0;
+    display: grid;
+    grid-template-columns: calc(5 * 14px + 4 * 2px) minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 4px 16px;
+    padding: 12px 0;
 }
 
 /* The first review lines up with the average across the gutter, and the
@@ -1585,29 +1593,15 @@ button.text-link {
 }
 
 .review-rating {
+    grid-column: 1;
     display: flex;
-    align-items: center;
-    gap: 6px;
-    font-family: var(--font-mono);
-    font-feature-settings: 'ss02';
-    font-size: 13px;
-    line-height: 20px;
-}
-
-.review-author {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-top: 12px;
-}
-
-.review-avatar {
-    width: 32px;
-    height: 32px;
 }
 
 .review-who {
-    display: block;
+    grid-column: 2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     font-family: var(--font-mono);
     font-feature-settings: 'ss02';
     font-size: 13px;
@@ -1615,15 +1609,16 @@ button.text-link {
 }
 
 .review-date {
-    display: block;
+    grid-column: 3;
     color: var(--fg-2);
     font-size: 13px;
     line-height: 20px;
+    white-space: nowrap;
 }
 
 .review-text {
+    grid-column: 2 / -1;
     max-width: 75ch;
-    margin-top: 12px;
     overflow-wrap: anywhere;
 }
 
@@ -1691,6 +1686,11 @@ button.text-link {
 
     .review-compose > summary .btn {
         align-self: flex-end;
+    }
+
+    /* The words take the card's width under the line. */
+    .review-text {
+        grid-column: 1 / -1;
     }
 }
 

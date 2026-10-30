@@ -77,6 +77,14 @@ mod tests {
     }
 
     #[test]
+    fn keys_are_cut_in_the_middle() {
+        let npub = "npub1vhjteu3hq8x7wq3l0vdq8m5xa2c9e6ttl2dkqj253vsm2fj8a0xqeu3h";
+        assert_eq!(short_npub(npub), "npub1vhjt…eu3h");
+        assert_eq!(middle_ellipsis(npub), "npub1vhjteu…qeu3h");
+        assert_eq!(short_npub("npub1short"), "npub1short");
+    }
+
+    #[test]
     fn urls_are_shortened() {
         assert_eq!(short_url("https://mint.example.com/"), "mint.example.com");
         assert_eq!(short_url("http://x.y"), "x.y");
@@ -110,14 +118,23 @@ pub fn short_pubkey(id: &str) -> String {
 /// A long key cut in the middle, so both ends stay checkable:
 /// "npub1qe3e5w…ezefe".
 pub fn middle_ellipsis(id: &str) -> String {
-    const HEAD: usize = 11;
-    const TAIL: usize = 5;
+    cut_middle(id, 11, 5)
+}
+
+/// A reviewer's npub, shorter than `middle_ellipsis` for a line of a list:
+/// the "npub1" that says what it is and four characters either side of the
+/// cut, "npub1vhjt…eu3h".
+pub fn short_npub(npub: &str) -> String {
+    cut_middle(npub, 9, 4)
+}
+
+fn cut_middle(id: &str, head: usize, tail: usize) -> String {
     let chars: Vec<char> = id.chars().collect();
-    if chars.len() <= HEAD + TAIL + 1 {
+    if chars.len() <= head + tail + 1 {
         id.to_string()
     } else {
-        let head: String = chars[..HEAD].iter().collect();
-        let tail: String = chars[chars.len() - TAIL..].iter().collect();
-        format!("{head}…{tail}")
+        let start: String = chars[..head].iter().collect();
+        let end: String = chars[chars.len() - tail..].iter().collect();
+        format!("{start}…{end}")
     }
 }

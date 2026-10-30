@@ -1,6 +1,6 @@
 use crate::components::brand::FoilStar;
-use crate::components::icons::{Star, User};
-use crate::format::{absolute_time, short_pubkey};
+use crate::components::icons::Star;
+use crate::format::{absolute_time, short_npub};
 use crate::types::{MintReviews, ReviewContext, ReviewRead};
 use leptos::prelude::*;
 
@@ -88,33 +88,29 @@ fn ReviewList(reviews: Vec<ReviewRead>) -> impl IntoView {
     }
 }
 
-/// One review: its stars, the author's key and date, and the text.
+/// One review as a line: its stars, the author's npub cut in the middle (the
+/// whole key on hover), and the date at the right, with the text under it
+/// when there is any. A rating without words is that line alone.
 #[component]
 fn ReviewItem(review: ReviewRead) -> impl IntoView {
-    let who = if review.npub.is_empty() {
-        short_pubkey(&review.pubkey)
+    let full = if review.npub.is_empty() {
+        review.pubkey.clone()
     } else {
-        short_pubkey(&review.npub)
+        review.npub.clone()
     };
-    let full = if review.npub.is_empty() { review.pubkey.clone() } else { review.npub.clone() };
+    let who = short_npub(&full);
     view! {
         <li class="review">
             {review.rating.map(|n| view! {
-                <div class="review-rating">
+                <span class="review-rating">
                     <Stars value=f64::from(n)/>
-                    <span>{n}</span>
-                    <span class="sr-only">" out of 5"</span>
-                </div>
-            })}
-            <div class="review-author">
-                <span class="mint-avatar review-avatar" aria-hidden="true"><User/></span>
-                <span>
-                    <span class="review-who" title=full>{who}</span>
-                    <span class="review-date" title=absolute_time(review.created_at)>
-                        {review.created_at.format("%b %-d, %Y").to_string()}
-                    </span>
+                    <span class="sr-only">{format!("{n} out of 5, ")}</span>
                 </span>
-            </div>
+            })}
+            <span class="review-who" title=full>{who}</span>
+            <span class="review-date" title=absolute_time(review.created_at)>
+                {review.created_at.format("%b %-d, %Y").to_string()}
+            </span>
             {(!review.content.trim().is_empty()).then(|| view! { <p class="review-text" dir="auto">{review.content}</p> })}
         </li>
     }

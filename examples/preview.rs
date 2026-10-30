@@ -195,7 +195,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     // Star ratings across the range, from one review to a dozen per mint, so
     // the directory's stars show every fill and sorting by rating has
-    // something to sort. Text is picked by rating from a small pool.
+    // something to sort. Text is picked by rating from a small pool; a third
+    // come without words, and mint 15's all do, as Nostr ratings often do.
     let ratings: [(usize, &[u8]); 15] = [
         (2, &[2, 3, 2, 1, 3]),
         (3, &[5, 5, 4, 5, 5, 5, 4, 5, 5]),
@@ -244,13 +245,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for (mint, stars) in ratings {
         for (j, &rating) in stars.iter().enumerate() {
             let pool = says[rating as usize - 1];
+            let wordless = mint == 15 || (mint + j) % 3 == 0;
             db.upsert_review(&Review {
                 pubkey: nostr_sdk::prelude::Keys::generate().public_key().to_hex(),
                 d: format!("preview-{mint}"),
                 event_id: format!("{k:064x}"),
                 mint_url: Some(mints[mint].url.clone()),
                 rating: Some(rating),
-                content: pool[(mint + j) % pool.len()].into(),
+                content: if wordless {
+                    String::new()
+                } else {
+                    pool[(mint + j) % pool.len()].into()
+                },
                 created_at: Utc::now() - Duration::days(3 + ((mint * 5 + j * 9) % 60) as i64),
             })
             .await?;
