@@ -122,6 +122,9 @@ pub fn MintDetailPage() -> impl IntoView {
                     <div class="skeleton mt-4" style="height: 14px; width: min(480px, 100%);"></div>
                 }
             }>
+                // Built once, so it fades in where the skeleton was (`.arrives`)
+                // and the refresh redraws only what's inside.
+                <div class="arrives">
                 {move || {
                     let metrics_data = metrics.get().and_then(|r| r.ok()).or_else(|| last_metrics.get());
                     let uptime_data = current_uptime();
@@ -154,6 +157,7 @@ pub fn MintDetailPage() -> impl IntoView {
                         .into_any(),
                     })
                 }}
+                </div>
             </Transition>
 
             <Transition fallback=|| ()>
@@ -162,24 +166,30 @@ pub fn MintDetailPage() -> impl IntoView {
                     <section aria-labelledby="uptime-title">
                         <h2 class="section-title" id="uptime-title">"Observed uptime"</h2>
                         <Transition fallback=|| view! { <div class="skeleton" style="height: 136px;"></div> }>
-                            {move || uptime.get().map(|_| view! { <UptimePanel uptime=current_uptime()/> })}
+                            <div class="arrives">
+                                {move || uptime.get().map(|_| view! { <UptimePanel uptime=current_uptime()/> })}
+                            </div>
                         </Transition>
                     </section>
 
                     <section aria-labelledby="reviews-title">
                         <h2 class="section-title" id="reviews-title">"Reviews"</h2>
                         <Transition fallback=|| view! { <div class="skeleton" style="height: 120px;"></div> }>
-                            {move || reviews.get().map(|res| match res {
-                                Ok(data) => view! { <ReviewsBlock data/> }.into_any(),
-                                Err(e) => view! { <p class="section-empty" title=e.to_string()>"Couldn't load reviews. Refresh the page to try again."</p> }.into_any(),
-                            })}
+                            <div class="arrives">
+                                {move || reviews.get().map(|res| match res {
+                                    Ok(data) => view! { <ReviewsBlock data/> }.into_any(),
+                                    Err(e) => view! { <p class="section-empty" title=e.to_string()>"Couldn't load reviews. Refresh the page to try again."</p> }.into_any(),
+                                })}
+                            </div>
                         </Transition>
                     </section>
 
                     <section aria-labelledby="about-title">
                         <h2 class="section-title" id="about-title">"About this mint"</h2>
                         <Transition fallback=|| ()>
-                            {move || current_mint().and_then(|r| r.ok()).flatten().map(|mint| view! { <About mint/> })}
+                            <div class="arrives">
+                                {move || current_mint().and_then(|r| r.ok()).flatten().map(|mint| view! { <About mint/> })}
+                            </div>
                         </Transition>
                     </section>
                 </div>

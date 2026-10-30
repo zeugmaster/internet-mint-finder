@@ -819,6 +819,16 @@ button.text-link {
     from { opacity: 0; }
 }
 
+/* What a page loads after it arrives (the directory's list, a mint's head
+   and sections) fades in where its skeleton was instead of snapping in.
+   Opacity only, like the page. Each wrapper is built once, so the 15s
+   refresh doesn't replay it; not on the first load, which comes with its
+   data. It lets go of opacity once done, so the directory's dim
+   (`.directory-results`) can still ease. */
+.is-navigated .arrives {
+    animation: page-in 260ms var(--ease-out) backwards;
+}
+
 /* Reduced motion: no spreading circle or turning icon, a short crossfade. */
 @media (prefers-reduced-motion: reduce) {
     .theme-swap::view-transition-new(root) {
@@ -1695,11 +1705,16 @@ button.text-link {
     font-weight: 500;
     white-space: nowrap;
     user-select: none;
-    transition: color 150ms var(--ease-out), background-color 150ms var(--ease-out), transform 200ms var(--ease-out);
+    transition: color 150ms var(--ease-out), background-color 150ms var(--ease-out), transform 150ms var(--ease-out);
 }
 
 .btn:hover {
     background-color: var(--surface-strong-hover);
+}
+
+/* A press gives a little, like a key going down, and springs back. */
+.btn:active:not(:disabled, [aria-disabled='true']) {
+    transform: scale(0.98);
 }
 
 .btn-primary {
@@ -2120,6 +2135,47 @@ button.hallmark {
     scrollbar-width: none;
 }
 
+/* The status pill slides to the chosen tab, so a new filter reads as one
+   choice moving along the track rather than two tabs swapping. It is drawn
+   once on the track and anchored to the current tab (after the tabs, so the
+   anchor comes first); without anchor positioning the current tab keeps its
+   own pill. The transparent outline shows in forced colours, where fills and
+   shadows drop out. */
+@supports (anchor-name: --a) {
+    .status-tabs {
+        position: relative;
+    }
+
+    .status-tabs a {
+        position: relative;
+        z-index: 1;
+    }
+
+    .status-tabs a[aria-current='true'] {
+        anchor-name: --status-current;
+        background: none;
+        box-shadow: none;
+    }
+
+    .status-tabs::after {
+        content: '';
+        position: absolute;
+        position-anchor: --status-current;
+        top: anchor(top);
+        left: anchor(left);
+        width: anchor-size(width);
+        height: anchor-size(height);
+        border-radius: 6px;
+        outline: 1px solid transparent;
+        outline-offset: -1px;
+        background-color: var(--surface-strong);
+        background-image: var(--sheen-raised);
+        box-shadow: var(--s-tab);
+        pointer-events: none;
+        transition: left 280ms var(--ease-arrive), width 280ms var(--ease-arrive);
+    }
+}
+
 .sort-field {
     display: flex;
     align-items: center;
@@ -2145,6 +2201,18 @@ button.hallmark {
     padding-left: 36px;
 }
 
+
+/* While a new search, filter, sort or page loads, the list on screen dims,
+   then the new one comes up to full strength in its place. Dimming is quick;
+   the answer settles more slowly. The 15s refresh doesn't dim it. */
+.directory-results {
+    transition: opacity 260ms var(--ease-out);
+}
+
+.directory-results.is-updating {
+    opacity: 0.6;
+    transition-duration: 160ms;
+}
 
 .directory-meta {
     display: flex;
@@ -2295,6 +2363,7 @@ button.hallmark {
     width: 14px;
     height: 14px;
     color: var(--fg-3);
+    transition: color 150ms var(--ease);
 }
 
 .copy-url:hover .icon {
@@ -2309,6 +2378,22 @@ button.hallmark {
 
 .copy-url.is-copied .icon {
     color: var(--success-fg);
+}
+
+/* Once used, the icon changes with a little motion: the check (or cross)
+   grows in on the arrival curve, as the theme switch's icon does, and the
+   copy icon fades back after it. */
+.copy-url.is-used .icon {
+    animation: page-in 200ms var(--ease-out) both;
+}
+
+.copy-url.is-copied .icon,
+.copy-url.is-failed .icon {
+    animation: copy-mark-in 360ms var(--ease-arrive) both;
+}
+
+@keyframes copy-mark-in {
+    from { opacity: 0; transform: scale(0.5); }
 }
 
 /* Mint avatar: the mint's own icon over its initial on a grey disc. The
@@ -2373,8 +2458,8 @@ button.hallmark {
     padding-inline: 0;
 }
 
-/* The directory's own states fill its card, centred: a raised tile with
-   the icon, the title, one line, and the action. */
+/* The directory's own states fill its card, centred: the title, one line,
+   and the action. No icon. */
 .directory .empty-state {
     display: flex;
     flex-direction: column;
@@ -2385,25 +2470,6 @@ button.hallmark {
 
 .directory .empty-state p {
     max-width: 40ch;
-}
-
-.empty-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    margin-bottom: 16px;
-    border-radius: 8px;
-    background-color: var(--surface-strong);
-    background-image: var(--sheen-raised);
-    box-shadow: var(--s-raised);
-    color: var(--fg-2);
-}
-
-.empty-icon .icon {
-    width: 20px;
-    height: 20px;
 }
 
 /* ---------------------------------------------------------------------------

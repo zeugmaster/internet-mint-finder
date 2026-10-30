@@ -1,6 +1,6 @@
 use crate::api::search_mints;
 use crate::components::badge::StateBadge;
-use crate::components::icons::{Alert, Check, Coin, Copy, Cross, Search};
+use crate::components::icons::{Check, Copy, Cross};
 use crate::components::mint_avatar::MintAvatar;
 use crate::components::reviews::Stars;
 use crate::format::{relative_time, relative_time_from, short_url};
@@ -92,10 +92,17 @@ pub fn MintList() -> impl IntoView {
     // A failed background refresh keeps the last good list on screen.
     let last_good = RwSignal::new(None::<MintPage>);
     let updated_at = RwSignal::new(None::<DateTime<Utc>>);
+    // The view the list on screen answers. Until the list for a new search,
+    // filter, sort or page arrives, the old one dims (`.is-updating`); the
+    // refresh keeps the view, so it never dims.
+    let view = Memo::new(move |_| (applied_search.get(), state_filter.get(), sort.get(), page.get()));
+    let shown_view = RwSignal::new(None::<(String, Option<MintState>, MintSort, u64)>);
+    let updating = move || shown_view.get().is_some_and(|shown| shown != view.get());
     Effect::new(move |_| {
         if let Some(Ok(data)) = mints.get() {
             last_good.set(Some(data));
             updated_at.set(Some(Utc::now()));
+            shown_view.set(Some(view.get_untracked()));
         }
     });
     let freshness = move || {
@@ -192,6 +199,7 @@ pub fn MintList() -> impl IntoView {
                 </div>
             </div>
             <Transition fallback=|| view! { <DirectorySkeleton/> }>
+                <div class="directory-results arrives" class:is-updating=updating>
                 {move || mints.get().map(|result| {
                     let data = match result {
                         Ok(data) => Some(data),
@@ -200,7 +208,6 @@ pub fn MintList() -> impl IntoView {
                     let Some(data) = data else {
                         return view! {
                             <div class="card card-pad empty-state" role="alert">
-                                <span class="empty-icon"><Alert/></span>
                                 <h3>"Couldn't load mints"</h3>
                                 <p>"Check your connection. This retries every 15 seconds."</p>
                                 <button type="button" class="btn btn-secondary mt-4" on:click=move |_| mints.refetch()>"Try again"</button>
@@ -223,7 +230,6 @@ pub fn MintList() -> impl IntoView {
                             if filtered {
                                 view! {
                                     <div class="card card-pad empty-state">
-                                        <span class="empty-icon"><Search/></span>
                                         <h3>"No mints match"</h3>
                                         <p>"Try another name, or clear the filters."</p>
                                         <button type="button" class="btn btn-secondary mt-4" on:click=clear.clone()>"Clear filters"</button>
@@ -232,7 +238,6 @@ pub fn MintList() -> impl IntoView {
                             } else {
                                 view! {
                                     <div class="card card-pad empty-state">
-                                        <span class="empty-icon"><Coin/></span>
                                         <h3>"No mints yet"</h3>
                                         <p>"Mints show up here once they're listed on Nostr."</p>
                                     </div>
@@ -262,6 +267,7 @@ pub fn MintList() -> impl IntoView {
                         </Show>
                     }.into_any()
                 })}
+                </div>
             </Transition>
         </div>
     }
@@ -326,6 +332,9 @@ pub fn CopyUrl(url: String) -> impl IntoView {
 pub fn CopyText(text: String, shown: String) -> impl IntoView {
     // None: idle. Some(true): copied. Some(false): the browser refused.
     let copied = RwSignal::new(None::<bool>);
+    // Set with the first answer, so the icon animates only when it changes,
+    // not when the row is drawn.
+    let used = RwSignal::new(false);
     let title = format!("Copy {text}");
     let on_click = move |_| {
         #[cfg(feature = "hydrate")]
@@ -336,6 +345,7 @@ pub fn CopyText(text: String, shown: String) -> impl IntoView {
                     window().navigator().clipboard().write_text(&text),
                 )
                 .await;
+                used.try_set(true);
                 copied.try_set(Some(result.is_ok()));
                 set_timeout(
                     move || {
@@ -354,6 +364,7 @@ pub fn CopyText(text: String, shown: String) -> impl IntoView {
             class="copy-url"
             class:is-copied=move || copied.get() == Some(true)
             class:is-failed=move || copied.get() == Some(false)
+            class:is-used=move || used.get()
             title=title
             on:click=on_click
         >
