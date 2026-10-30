@@ -98,3 +98,36 @@ pub fn User() -> impl IntoView {
         </svg>
     }
 }
+
+/// A magnifier, for search with no results.
+#[component]
+pub fn Search() -> impl IntoView {
+    view! {
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="7" cy="7" r="4.5"/>
+            <path d="M10.5 10.5l3 3"/>
+        </svg>
+    }
+}
+
+/// A coin with a milled rim, for an empty directory.
+#[component]
+pub fn Coin() -> impl IntoView {
+    view! {
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="8" cy="8" r="6"/>
+            <circle cx="8" cy="8" r="3.25"/>
+        </svg>
+    }
+}
+
+/// An exclamation in a ring, for something that failed to load.
+#[component]
+pub fn Alert() -> impl IntoView {
+    view! {
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="8" cy="8" r="6"/>
+            <path d="M8 5v3.25M8 10.75v.01"/>
+        </svg>
+    }
+}

@@ -91,6 +91,18 @@ document.startViewTransition(swap).finished.finally(end);
     --danger-fg: #cd2200ea;
     --s-default: 0 0 0 0.5px #0000 inset, 0 0 0 0.5px #0000000f, 0 1px 1px -1px #0000, 0 1px 2px 0 #0000;
     --s-large: 0 0 0 0.5px #0000000f, 0 2px 3px -2px #0000000f, 0 3px 12px -4px #0000001a, 0 4px 16px -8px #0000000d;
+    /* Top-lit sheen and its edges, as in style/main.css. */
+    --sheen-panel: linear-gradient(#0000 0, #00000006 160px);
+    --sheen-raised: linear-gradient(#0000, #00000010);
+    --sheen-well: linear-gradient(#00000010, #0000 14px);
+    --sheen-inverted: linear-gradient(#ffffff24, #fff0);
+    --s-panel: inset 0 -1px 0 #00000008, 0 0 0 0.5px #00000014;
+    --s-lip: inset 0 1px 0 #ffffffcc, inset 0 -1px 0 #00000014;
+    --s-raised: var(--s-lip), 0 0 0 0.5px #00000017;
+    --s-well: inset 0 1px 2px #00000014, 0 0 0 0.5px #00000017;
+    --s-track: inset 0 1px 2px #00000017;
+    --s-tab: inset 0 -1px 0 #00000014, inset 0 0 0 1px var(--tab-border);
+    --s-inverted: inset 0 1px 0 #ffffff29;
   }
   :root[data-theme='dark'] {
     color-scheme: dark;
@@ -124,6 +136,20 @@ document.startViewTransition(swap).finished.finally(end);
     --danger-fg: #ff977d;
     --s-default: 0 0 0 1px #ffffff1a inset, 0 0 0 0.5px #0000, 0 1px 1px -1px #0000, 0 1px 2px 0 #0000;
     --s-large: 0 0 0 1px #ffffff2c, 0 2px 3px -2px #00000026, 0 3px 8px -2px #00000066, 0 4px 12px -4px #00000080;
+    --sheen-panel: linear-gradient(#ffffff0d 0, #fff0 160px);
+    --sheen-raised: linear-gradient(#ffffff0d, #0000000d);
+    --sheen-well: linear-gradient(#00000040, #ffffff08);
+    --sheen-inverted: linear-gradient(#0000, #00000024);
+    --s-panel: inset 0 1px 0 #ffffff0f, inset 0 0 0 1px #ffffff1a;
+    --s-lip: inset 0 1px 0 #ffffff14;
+    --s-raised: var(--s-lip), inset 0 0 0 1px #ffffff1a;
+    --s-well: inset 0 1px 1.5px #00000059, inset 0 -1px 0 #ffffff0a, inset 0 0 0 1px #ffffff1a;
+    --s-track: inset 0 1px 1.5px #00000066, inset 0 -1px 0 #ffffff0a;
+    --s-tab: inset 0 1px 0 #ffffff14, inset 0 0 0 1px var(--tab-border);
+    --s-inverted: inset 0 -1px 0 #00000033;
+  }
+  @media (forced-colors: active), (prefers-contrast: more) {
+    :root, :root[data-theme='dark'] { --sheen-panel: none; --sheen-raised: none; --sheen-well: none; --sheen-inverted: none; }
   }
   :root {
     --font: 'InterVariable', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -217,7 +243,8 @@ document.startViewTransition(swap).finished.finally(end);
   }
   .site-nav {
     grid-area: nav; justify-self: start; display: inline-flex;
-    border-radius: 6px; background: var(--component); white-space: nowrap;
+    border-radius: 6px; background-color: var(--component); background-image: var(--sheen-well);
+    box-shadow: var(--s-track); white-space: nowrap;
   }
   .nav-link {
     display: inline-flex; align-items: center; height: 28px; padding: 0 10px;
@@ -227,8 +254,8 @@ document.startViewTransition(swap).finished.finally(end);
   }
   .nav-link:hover { color: var(--ink); }
   .nav-link[aria-current='page'] {
-    color: var(--ink); background: var(--surface-strong);
-    box-shadow: inset 0 0 0 1px var(--tab-border);
+    color: var(--ink); background-color: var(--surface-strong); background-image: var(--sheen-raised);
+    box-shadow: var(--s-tab);
   }
   /* Interfere icon button: a transparent 32px square. */
   .theme-toggle {
@@ -289,11 +316,11 @@ document.startViewTransition(swap).finished.finally(end);
   .tool-btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
     height: 32px; padding: 0 12px; border: 0; border-radius: 8px;
-    background: var(--surface-strong); box-shadow: var(--s-default); color: var(--ink);
+    background-color: var(--surface-strong); background-image: var(--sheen-raised); box-shadow: var(--s-raised); color: var(--ink);
     font-size: 13px; line-height: 20px; font-weight: 500; white-space: nowrap; cursor: pointer;
     transition: background-color 150ms var(--ease-out);
   }
-  .tool-btn:hover { background: var(--surface-strong-hover); }
+  .tool-btn:hover { background-color: var(--surface-strong-hover); }
 
   /* One sentence. */
   .site-footer-inner {
@@ -325,9 +352,10 @@ document.startViewTransition(swap).finished.finally(end);
      Cards — Interfere card: 12px radius, hairline default shadow
      =================================================================== */
   .card {
-    background: var(--surface);
+    background-color: var(--surface);
+    background-image: var(--sheen-panel);
     border-radius: 12px;
-    box-shadow: var(--s-default);
+    box-shadow: var(--s-panel);
     overflow: hidden;
   }
   .panel { padding: 0; }
@@ -355,7 +383,7 @@ document.startViewTransition(swap).finished.finally(end);
   .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
   .kpi {
     position: relative; padding: 16px;
-    background: var(--surface); border-radius: 12px; box-shadow: var(--s-default);
+    background-color: var(--surface); background-image: var(--sheen-panel); border-radius: 12px; box-shadow: var(--s-panel);
     overflow: hidden; min-width: 0;
   }
   .kpi .lbl { font-size: 13px; line-height: 20px; color: var(--muted); }
@@ -414,11 +442,11 @@ document.startViewTransition(swap).finished.finally(end);
   .filters legend { margin-top: 0; }
   .filters input[type="date"] {
     width: 100%; min-width: 0; height: 32px; padding: 0 8px;
-    background: var(--surface-strong); box-shadow: var(--s-default);
+    background-color: var(--surface-strong); background-image: var(--sheen-well); box-shadow: var(--s-well);
     border: 0; border-radius: 8px;
     color: var(--ink); font-size: 13px;
   }
-  .filters input[type="date"]:focus-visible { outline: 0; box-shadow: var(--focus-ring); }
+  .filters input[type="date"]:focus-visible { outline: 0; box-shadow: var(--focus-ring), var(--s-well); }
   .filters .row { display: flex; gap: 16px; }
   .filters .row > * { flex: 1; }
 
@@ -427,16 +455,18 @@ document.startViewTransition(swap).finished.finally(end);
     width: 100%; height: 32px; margin-top: 20px; padding: 0 12px;
     border: 0; border-radius: 8px;
     cursor: pointer; font: inherit; font-weight: 500; font-size: 13px; line-height: 20px;
-    background: var(--inverted); color: var(--on-inverted);
+    background-color: var(--inverted); background-image: var(--sheen-inverted);
+    box-shadow: var(--s-inverted); color: var(--on-inverted);
     transition: background-color 150ms var(--ease-out);
   }
-  .btn:hover { background: var(--inverted-hover); }
-  .btn:active { background: var(--inverted-active); }
-  .btn:disabled { cursor: wait; background: var(--disabled); color: var(--fg-disabled); }
+  .btn:hover { background-color: var(--inverted-hover); }
+  .btn:active { background-color: var(--inverted-active); }
+  .btn:disabled { cursor: wait; background: var(--disabled); box-shadow: none; color: var(--fg-disabled); }
   .btn.secondary {
-    margin-top: 8px; background: var(--surface-strong); box-shadow: var(--s-default); color: var(--ink);
+    margin-top: 8px; background-color: var(--surface-strong); background-image: var(--sheen-raised);
+    box-shadow: var(--s-raised); color: var(--ink);
   }
-  .btn.secondary:hover { background: var(--surface-strong-hover); }
+  .btn.secondary:hover { background-color: var(--surface-strong-hover); }
   .btn.secondary:disabled { background: var(--disabled); box-shadow: none; color: var(--fg-disabled); }
 
   /* ===================================================================
@@ -444,7 +474,8 @@ document.startViewTransition(swap).finished.finally(end);
      =================================================================== */
   .seg {
     display: inline-flex; gap: 0;
-    background: var(--component); border-radius: 6px;
+    background-color: var(--component); background-image: var(--sheen-well);
+    box-shadow: var(--s-track); border-radius: 6px;
   }
   .seg button {
     display: inline-flex; align-items: center; justify-content: center;
@@ -456,8 +487,8 @@ document.startViewTransition(swap).finished.finally(end);
   }
   .seg button:hover { color: var(--ink); }
   .seg button.active {
-    color: var(--ink); background: var(--surface-strong);
-    box-shadow: inset 0 0 0 1px var(--tab-border);
+    color: var(--ink); background-color: var(--surface-strong); background-image: var(--sheen-raised);
+    box-shadow: var(--s-tab);
   }
   .seg button:disabled { cursor: wait; }
   .seg.sm button { height: 24px; padding: 0 8px; font-size: 12px; line-height: 16px; }
@@ -541,21 +572,21 @@ document.startViewTransition(swap).finished.finally(end);
   /* Choices.js clips the closed box, which would hide the field's ring. */
   .choices { margin-bottom: 0; font-size: 13px; overflow: visible; }
   .choices__inner {
-    background: var(--surface-strong) !important; border: 0 !important;
-    box-shadow: var(--s-default);
+    background-color: var(--surface-strong) !important; background-image: var(--sheen-raised); border: 0 !important;
+    box-shadow: var(--s-raised);
     border-radius: 8px !important; min-height: 32px; padding: 3px 6px 0 !important;
     color: var(--ink); font-size: 13px;
   }
   .choices.is-focused .choices__inner,
-  .choices.is-open .choices__inner { box-shadow: var(--focus-ring); }
+  .choices.is-open .choices__inner { box-shadow: var(--focus-ring), var(--s-raised); }
   .choices__list--dropdown, .choices__list[aria-expanded] {
-    background: var(--surface) !important;
+    background-color: var(--surface) !important; background-image: var(--sheen-panel);
     border: 0 !important; box-shadow: var(--s-large);
     border-radius: 12px !important; padding: 4px;
     margin-top: 4px !important; overflow: hidden; z-index: 20;
   }
   :root[data-theme='dark'] .choices__list--dropdown,
-  :root[data-theme='dark'] .choices__list[aria-expanded] { background: #191919 !important; }
+  :root[data-theme='dark'] .choices__list[aria-expanded] { background-color: #191919 !important; }
   .choices__list--dropdown .choices__item, .choices__list[aria-expanded] .choices__item {
     color: var(--ink); font-size: 13px; line-height: 20px; border-radius: 8px;
   }

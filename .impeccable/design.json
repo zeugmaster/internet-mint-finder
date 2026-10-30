@@ -1056,7 +1056,31 @@
         "name": "shadow-default",
         "value": "0 0 0 0.5px #0000 inset, 0 0 0 0.5px #0000000f, 0 1px 1px -1px #0000001a, 0 1px 2px 0 #0000000d",
         "dark": "0 0 0 0.5px #ffffff12 inset",
-        "purpose": "Hairline ring for cards, secondary buttons, fields, divided stat card, QR frame. Replaces borders."
+        "purpose": "The plain hairline ring; the QR frame. Panels, controls and fields use the s-* edges below, which carry the same ring."
+      },
+      {
+        "name": "s-panel",
+        "value": "inset 0 -1px 0 #00000008, 0 0 0 0.5px #00000014",
+        "dark": "inset 0 1px 0 #ffffff0f, inset 0 0 0 1px #ffffff1a",
+        "purpose": "Raised panels (cards, step cards): a firmer ring and a faint shaded bottom edge in light, a lit top edge in dark."
+      },
+      {
+        "name": "s-raised",
+        "value": "inset 0 1px 0 #ffffffcc, inset 0 -1px 0 #00000014, 0 0 0 0.5px #00000017",
+        "dark": "inset 0 1px 0 #ffffff14, inset 0 0 0 1px #ffffff1a",
+        "purpose": "Raised controls (secondary buttons, selects): a white top lip and shaded bottom lip in light, a lit top edge in dark. s-lip is the same without the ring (buttons in the reviews card)."
+      },
+      {
+        "name": "s-well",
+        "value": "inset 0 1px 2px #00000014, 0 0 0 0.5px #00000017",
+        "dark": "inset 0 1px 1.5px #00000059, inset 0 -1px 0 #ffffff0a, inset 0 0 0 1px #ffffff1a",
+        "purpose": "Pressed-in fields: a soft shade under the top edge. s-track is the same without the ring, for tab tracks."
+      },
+      {
+        "name": "s-inverted",
+        "value": "inset 0 1px 0 #ffffff29",
+        "dark": "inset 0 -1px 0 #00000033",
+        "purpose": "Primary button: a lit top edge on black, a shaded foot on white."
       },
       {
         "name": "shadow-large",
@@ -1067,12 +1091,12 @@
       {
         "name": "focus-ring",
         "value": "inset 0 0 0 0.5px var(--focus), 0 0 0 1px var(--focus)",
-        "purpose": "Field focus, stacked on shadow-default. Elsewhere a 1px outline at -1px offset."
+        "purpose": "Field focus, stacked on the field's own edges. Elsewhere a 1px outline at -1px offset."
       },
       {
         "name": "tab-edge",
         "value": "inset 0 0 0 1px var(--tab-border)",
-        "purpose": "Active segmented tab."
+        "purpose": "Active segmented tab; in dark a lit 1px top edge is stacked on it."
       },
       {
         "name": "stamp-edge",
@@ -1147,7 +1171,7 @@
       "sectionGap": "32px, single column (donate splits at 900px)",
       "cardPadding": "16px (12px on phone)"
     },
-    "rootCss": ":host{--shell:#f6f6f6;--container:#ffffff;--surface:#ffffff;--surface-strong:#ffffff;--surface-strong-hover:#f9f9f9;--component:#0000000f;--component-hover:#00000017;--component-active:#0000001f;--fg:#000000df;--fg-2:#0000009b;--fg-3:#00000072;--fg-disabled:#00000044;--border:#0000000f;--border-strong:#00000026;--tab-border:#d9d9d9;--focus:#0084e6a1;--brand:#0090ff;--brand-subtle:#008ff519;--on-brand-subtle:#0090ff;--inverted:#000000f2;--inverted-hover:#000000cc;--inverted-active:#000000b3;--on-inverted:#ffffff;--success-bg:#00a43319;--success-fg:#00713fde;--warning-bg:#ff9c0029;--warning-fg:#cc4e00;--danger-bg:#f52b0018;--danger-fg:#cd2200ea;--danger-subtle:#ff200008;--danger-border:#ff35002c;--ok-solid:#30a46c;--warn-solid:#f76b15;--err-solid:#e54d2e;--s-default:0 0 0 0.5px #0000 inset,0 0 0 0.5px #0000000f,0 1px 1px -1px #0000001a,0 1px 2px 0 #0000000d;--focus-ring:inset 0 0 0 0.5px var(--focus),0 0 0 1px var(--focus);--font-sans:'InterVariable',system-ui,-apple-system,'Segoe UI',sans-serif;--font-mono:'TX-02',ui-monospace,'SF Mono',Menlo,monospace;--ease:cubic-bezier(0.4,0,0.2,1);--ease-out:cubic-bezier(0,0,0.2,1);font-family:var(--font-sans);font-feature-settings:'ss03';font-size:15px;line-height:24px;color:var(--fg);background:var(--container)}",
+    "rootCss": ":host{--shell:#f6f6f6;--container:#ffffff;--surface:#ffffff;--surface-strong:#ffffff;--surface-strong-hover:#f9f9f9;--component:#0000000f;--component-hover:#00000017;--component-active:#0000001f;--fg:#000000df;--fg-2:#0000009b;--fg-3:#00000072;--fg-disabled:#00000044;--border:#0000000f;--border-strong:#00000026;--tab-border:#d9d9d9;--focus:#0084e6a1;--brand:#0090ff;--brand-subtle:#008ff519;--on-brand-subtle:#0090ff;--inverted:#000000f2;--inverted-hover:#000000cc;--inverted-active:#000000b3;--on-inverted:#ffffff;--success-bg:#00a43319;--success-fg:#00713fde;--warning-bg:#ff9c0029;--warning-fg:#cc4e00;--danger-bg:#f52b0018;--danger-fg:#cd2200ea;--danger-subtle:#ff200008;--danger-border:#ff35002c;--ok-solid:#30a46c;--warn-solid:#f76b15;--err-solid:#e54d2e;--s-default:0 0 0 0.5px #0000 inset,0 0 0 0.5px #0000000f,0 1px 1px -1px #0000001a,0 1px 2px 0 #0000000d;--focus-ring:inset 0 0 0 0.5px var(--focus),0 0 0 1px var(--focus);--font-sans:'InterVariable',system-ui,-apple-system,'Segoe UI',sans-serif;--font-mono:'TX-02',ui-monospace,'SF Mono',Menlo,monospace;--ease:cubic-bezier(0.4,0,0.2,1);--ease-out:cubic-bezier(0,0,0.2,1);font-family:var(--font-sans);font-feature-settings:'ss03';font-size:15px;line-height:24px;color:var(--fg);background:var(--container);--sheen-panel:linear-gradient(#0000 0,#00000006 160px);--sheen-raised:linear-gradient(#0000,#00000010);--sheen-well:linear-gradient(#00000010,#0000 14px);--sheen-inverted:linear-gradient(#ffffff24,#fff0);--s-panel:inset 0 -1px 0 #00000008,0 0 0 0.5px #00000014;--s-lip:inset 0 1px 0 #ffffffcc,inset 0 -1px 0 #00000014;--s-raised:inset 0 1px 0 #ffffffcc,inset 0 -1px 0 #00000014,0 0 0 0.5px #00000017;--s-well:inset 0 1px 2px #00000014,0 0 0 0.5px #00000017;--s-track:inset 0 1px 2px #00000017;--s-inverted:inset 0 1px 0 #ffffff29;}",
     "derivedTokens": [
       {
         "name": "--inverted / --on-inverted",
@@ -1163,15 +1187,21 @@
       },
       {
         "name": "--s-default",
-        "light": "ring + 1-2px drop",
-        "dark": "inner 0.5px hairline only",
-        "purpose": "Containers and controls."
+        "light": "hairline ring",
+        "dark": "inner 1px ring",
+        "purpose": "The plain ring (QR frame); the s-* edges carry it for panels, controls and fields."
       },
       {
         "name": "tooltip",
         "light": "#222222 / #ffffffed",
         "dark": "#222222 / #ffffffed",
         "purpose": "Always dark."
+      },
+      {
+        "name": "--sheen-panel / -raised / -well / -inverted",
+        "light": "white settling 2.5% darker over 160px / white to 6% darker / 6% shade fading over 14px / 14% white top on the black button",
+        "dark": "5% brighter top fading over 160px / 5% lighter to 5% darker / 25% shade lifting 3% to the bottom / 14% shade at the foot of the white button",
+        "purpose": "The top-lit sheen: a grey background-image over each fill, so hover and press still fade the colour. None with forced colours or increased contrast."
       }
     ]
   },
@@ -1182,7 +1212,7 @@
       "refersTo": "button-primary",
       "description": "Inverted fill: near-black in light, near-white in dark. The one main action per view.",
       "html": "<button class=\"ds-btn ds-btn-primary\">Donate ecash</button>",
-      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 12px;border:0;border-radius:8px;background:var(--surface-strong);box-shadow:var(--s-default);color:var(--fg);font-family:var(--font-sans);font-feature-settings:'ss03';font-size:13px;line-height:20px;font-weight:500;cursor:pointer;transition:color 150ms var(--ease-out),background-color 150ms var(--ease-out)}.ds-btn:hover{background:var(--surface-strong-hover)}.ds-btn:focus-visible{outline:1px solid var(--focus);outline-offset:-1px}.ds-btn-primary{background:var(--inverted);box-shadow:none;color:var(--on-inverted)}.ds-btn-primary:hover{background:var(--inverted-hover)}.ds-btn-primary:active{background:var(--inverted-active)}"
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 12px;border:0;border-radius:8px;background-color:var(--surface-strong);background-image:var(--sheen-raised);box-shadow:var(--s-raised);color:var(--fg);font-family:var(--font-sans);font-feature-settings:'ss03';font-size:13px;line-height:20px;font-weight:500;cursor:pointer;transition:color 150ms var(--ease-out),background-color 150ms var(--ease-out)}.ds-btn:hover{background-color:var(--surface-strong-hover)}.ds-btn:focus-visible{outline:1px solid var(--focus);outline-offset:-1px}.ds-btn-primary{background-color:var(--inverted);background-image:var(--sheen-inverted);box-shadow:var(--s-inverted);color:var(--on-inverted)}.ds-btn-primary:hover{background-color:var(--inverted-hover)}.ds-btn-primary:active{background-color:var(--inverted-active)}"
     },
     {
       "name": "Secondary Button",
@@ -1190,7 +1220,7 @@
       "refersTo": "button-secondary",
       "description": "Default .btn: strong surface with the hairline shadow. Retry, clear, sign in.",
       "html": "<button class=\"ds-btn\">Try again</button>",
-      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 12px;border:0;border-radius:8px;background:var(--surface-strong);box-shadow:var(--s-default);color:var(--fg);font-family:var(--font-sans);font-feature-settings:'ss03';font-size:13px;line-height:20px;font-weight:500;cursor:pointer;transition:color 150ms var(--ease-out),background-color 150ms var(--ease-out)}.ds-btn:hover{background:var(--surface-strong-hover)}.ds-btn:focus-visible{outline:1px solid var(--focus);outline-offset:-1px}"
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 12px;border:0;border-radius:8px;background-color:var(--surface-strong);background-image:var(--sheen-raised);box-shadow:var(--s-raised);color:var(--fg);font-family:var(--font-sans);font-feature-settings:'ss03';font-size:13px;line-height:20px;font-weight:500;cursor:pointer;transition:color 150ms var(--ease-out),background-color 150ms var(--ease-out)}.ds-btn:hover{background-color:var(--surface-strong-hover)}.ds-btn:focus-visible{outline:1px solid var(--focus);outline-offset:-1px}"
     },
     {
       "name": "Ghost Button",
@@ -1198,7 +1228,7 @@
       "refersTo": "button-ghost",
       "description": "Transparent; fills grey on hover. Pagination and quiet actions.",
       "html": "<button class=\"ds-btn ds-btn-ghost\">Next</button>",
-      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 12px;border:0;border-radius:8px;background:var(--surface-strong);box-shadow:var(--s-default);color:var(--fg);font-family:var(--font-sans);font-feature-settings:'ss03';font-size:13px;line-height:20px;font-weight:500;cursor:pointer;transition:color 150ms var(--ease-out),background-color 150ms var(--ease-out)}.ds-btn:hover{background:var(--surface-strong-hover)}.ds-btn:focus-visible{outline:1px solid var(--focus);outline-offset:-1px}.ds-btn-ghost{background:transparent;box-shadow:none;color:var(--fg-2)}.ds-btn-ghost:hover{background:var(--component);color:var(--fg)}"
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 12px;border:0;border-radius:8px;background-color:var(--surface-strong);background-image:var(--sheen-raised);box-shadow:var(--s-raised);color:var(--fg);font-family:var(--font-sans);font-feature-settings:'ss03';font-size:13px;line-height:20px;font-weight:500;cursor:pointer;transition:color 150ms var(--ease-out),background-color 150ms var(--ease-out)}.ds-btn:hover{background-color:var(--surface-strong-hover)}.ds-btn:focus-visible{outline:1px solid var(--focus);outline-offset:-1px}.ds-btn-ghost{background:transparent;box-shadow:none;color:var(--fg-2)}.ds-btn-ghost:hover{background:var(--component);color:var(--fg)}"
     },
     {
       "name": "Search Field",
@@ -1206,7 +1236,7 @@
       "refersTo": "input",
       "description": "Borderless field on the hairline shadow; focus ring stacks on it.",
       "html": "<label class=\"ds-search\"><svg viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><circle cx=\"7\" cy=\"7\" r=\"4.5\"/><path d=\"M10.5 10.5L14 14\"/></svg><input placeholder=\"Search mints\"></label>",
-      "css": ".ds-search{position:relative;display:flex;align-items:center;height:40px;width:280px;border-radius:8px;background:var(--surface-strong);box-shadow:var(--s-default);transition:background-color 150ms var(--ease),box-shadow 150ms var(--ease)}.ds-search:hover{background:var(--surface-strong-hover)}.ds-search:focus-within{box-shadow:var(--focus-ring),var(--s-default)}.ds-search svg{position:absolute;left:12px;width:16px;height:16px;color:var(--fg-3)}.ds-search input{width:100%;height:100%;padding:0 8px 0 36px;border:0;background:transparent;color:var(--fg);font:inherit;font-size:13px;line-height:20px;outline:none}"
+      "css": ".ds-search{position:relative;display:flex;align-items:center;height:40px;width:280px;border-radius:8px;background-color:var(--surface-strong);background-image:var(--sheen-well);box-shadow:var(--s-well);transition:background-color 150ms var(--ease),box-shadow 150ms var(--ease)}.ds-search:hover{background-color:var(--surface-strong-hover)}.ds-search:focus-within{box-shadow:var(--focus-ring),var(--s-well)}.ds-search svg{position:absolute;left:12px;width:16px;height:16px;color:var(--fg-3)}.ds-search input{width:100%;height:100%;padding:0 8px 0 36px;border:0;background:transparent;color:var(--fg);font:inherit;font-size:13px;line-height:20px;outline:none}"
     },
     {
       "name": "Segmented Nav",
@@ -1246,7 +1276,7 @@
       "refersTo": "card",
       "description": "Interfere card: 12px radius on the hairline shadow, no border.",
       "html": "<div class=\"ds-card\"><h3>Uptime</h3><div class=\"ds-fig\">99.8%</div><p>Last 30 days</p></div>",
-      "css": ".ds-card{width:280px;padding:16px;border-radius:12px;background:var(--surface);box-shadow:var(--s-default)}.ds-card h3{margin:0;font-size:15px;line-height:24px;font-weight:600;letter-spacing:-0.01em}.ds-fig{font-family:var(--font-mono);font-feature-settings:'ss02';font-size:24px;line-height:32px;font-weight:700}.ds-card p{margin:0;color:var(--fg-2);font-size:13px;line-height:20px}"
+      "css": ".ds-card{width:280px;padding:16px;border-radius:12px;background-color:var(--surface);background-image:var(--sheen-panel);box-shadow:var(--s-panel)}.ds-card h3{margin:0;font-size:15px;line-height:24px;font-weight:600;letter-spacing:-0.01em}.ds-fig{font-family:var(--font-mono);font-feature-settings:'ss02';font-size:24px;line-height:32px;font-weight:700}.ds-card p{margin:0;color:var(--fg-2);font-size:13px;line-height:20px}"
     },
     {
       "name": "Tooltip",
@@ -1259,12 +1289,13 @@
   ],
   "narrative": {
     "northStar": "The Assay Register",
-    "overview": "A flat, quiet register built on the Interfere design system (design.interfere.com). Interfere supplies the material: Radix colour scales with hue-free neutrals, Inter for the interface, a mono for figures, and hairline shadow rings in place of borders. The product supplies the one thing that is its own: the hallmark, one small stamp per independent auditor on every mint, read left to right like marks on a bar of metal.\n\nSurfaces are a light grey shell with white containers in light mode, and black with a near-black container in dark mode. Depth comes from 0.5px rings and grey alpha fills, never from colour or blur. Hue is spent on state: green, orange and tomato for health, and Interfere blue (#0090ff) only for focus, info badges and one chart series. Everything else is grey and ink. The UI is deliberately restrained; gradient and glass styling is rejected outright.\n\nThe visual system is adapted from Interfere. Earlier layout inspiration came from Umbrel; no Umbrel code is used (Umbrel is PolyForm Noncommercial).",
+    "overview": "A flat, quiet register built on the Interfere design system (design.interfere.com). Interfere supplies the material: Radix colour scales with hue-free neutrals, Inter for the interface, a mono for figures, and hairline shadow rings in place of borders. The product supplies the one thing that is its own: the hallmark, one small stamp per independent auditor on every mint, read left to right like marks on a bar of metal.\n\nSurfaces are a light grey shell with white containers in light mode, and black with a near-black container in dark mode. Depth comes from 0.5px rings, grey alpha fills and one quiet light from above (the top-lit sheen), never from colour or blur. Hue is spent on state: green, orange and tomato for health, and Interfere blue (#0090ff) only for focus, info badges and one chart series. Everything else is grey and ink. The UI is deliberately restrained; glass styling is rejected outright, and the only gradients outside the brand are the sheen's grey ones.\n\nThe visual system is adapted from Interfere. Earlier layout inspiration came from Umbrel; no Umbrel code is used (Umbrel is PolyForm Noncommercial).",
     "keyCharacteristics": [
       "Inter Variable with 'ss03' for all interface text; TX-02 with 'ss02' only for figures, URLs, codes and stamps.",
       "Hue-free grey neutrals expressed as alpha steps (gray-a3 to gray-a12), so they sit on any surface.",
       "One brand hue (#0090ff), used sparingly.",
       "Hairline \"shadow-default\" rings instead of borders; 0.5px rules between rows.",
+      "One quiet light from above: panels and controls lightest at the top, fields pressed in.",
       "Primary actions are inverted: near-black in light, near-white in dark.",
       "The hallmark row is the signature: Interfere md badges in four verdict states.",
       "Light and dark themes are first-class, switched from a sun/moon icon at the top right and set before first paint."
@@ -1302,26 +1333,32 @@
       },
       {
         "name": "The Hairline Not Border Rule",
-        "body": "Containers get a 0.5px ring from shadow-default, not a CSS border. Real borders exist only as 0.5px row rules.",
+        "body": "Containers get a 0.5px ring, not a CSS border. Real borders exist only as 0.5px row rules.",
         "section": "elevation"
       },
       {
+        "name": "The Top-Lit Rule",
+        "section": "elevation",
+        "body": "One light, from above, the same everywhere: raised things are lightest at the top, wells are shaded under their top edge. The sheen is grey and quiet (a few percent, never a visible band of colour), never on state colour, and nothing glows. Added 2026-10-30 at the owner's request, after Umbrel's dark UI (the idea only; no Umbrel code)."
+      },
+      {
         "name": "The No Glass Rule",
-        "body": "No gradients, no backdrop blur, no translucent glass panels, no glow.",
+        "body": "No backdrop blur, no translucent glass panels, no glow, and no gradients but the sheen's and the brand's.",
         "section": "elevation"
       }
     ],
     "dos": [
       "Do set interface text in InterVariable with 'ss03', and figures, URLs, codes and stamps in TX-02 with 'ss02' and tabular numerals.",
       "Do use the alpha grey tokens (`--fg`, `--fg-2`, `--fg-3`, `--component`, `--border`) so surfaces work in both themes.",
-      "Do separate containers with shadow-default and rows with 0.5px `--border` rules.",
+      "Do separate containers with the hairline ring and rows with 0.5px `--border` rules.",
+      "Do light raised panels and controls from above and press fields in, with the `--sheen-*` and `--s-*` tokens, in both themes.",
       "Do make the primary action inverted (`--inverted` / `--on-inverted`).",
       "Do keep status colour tied to a real state: success, warning (Radix orange), danger (tomato).",
       "Do draw every auditor verdict as a hallmark in one of its four states.",
       "Do keep the header, pages and footer on the shared 960px column."
     ],
     "donts": [
-      "Don't use gradients, glass, backdrop blur or glow; the user regards them as AI slop.",
+      "Don't use glass, backdrop blur, glow or coloured gradients; the owner regards them as AI slop. The grey top-lit sheen and the brand's metal are the only gradients.",
       "Don't tint the neutrals warm or cool, or reintroduce cream fills or amber status.",
       "Don't use #0090ff as a button fill, heading colour or decoration.",
       "Don't add CSS borders to cards or fields; use the hairline shadow.",

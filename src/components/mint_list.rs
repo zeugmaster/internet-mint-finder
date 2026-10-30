@@ -1,6 +1,6 @@
 use crate::api::search_mints;
 use crate::components::badge::StateBadge;
-use crate::components::icons::{Check, Copy, Cross};
+use crate::components::icons::{Alert, Check, Coin, Copy, Cross, Search};
 use crate::components::mint_avatar::MintAvatar;
 use crate::components::reviews::Stars;
 use crate::format::{relative_time, relative_time_from, short_url};
@@ -200,6 +200,7 @@ pub fn MintList() -> impl IntoView {
                     let Some(data) = data else {
                         return view! {
                             <div class="card card-pad empty-state" role="alert">
+                                <span class="empty-icon"><Alert/></span>
                                 <h3>"Couldn't load mints"</h3>
                                 <p>"Check your connection. This retries every 15 seconds."</p>
                                 <button type="button" class="btn btn-secondary mt-4" on:click=move |_| mints.refetch()>"Try again"</button>
@@ -222,6 +223,7 @@ pub fn MintList() -> impl IntoView {
                             if filtered {
                                 view! {
                                     <div class="card card-pad empty-state">
+                                        <span class="empty-icon"><Search/></span>
                                         <h3>"No mints match"</h3>
                                         <p>"Try another name, or clear the filters."</p>
                                         <button type="button" class="btn btn-secondary mt-4" on:click=clear.clone()>"Clear filters"</button>
@@ -230,6 +232,7 @@ pub fn MintList() -> impl IntoView {
                             } else {
                                 view! {
                                     <div class="card card-pad empty-state">
+                                        <span class="empty-icon"><Coin/></span>
                                         <h3>"No mints yet"</h3>
                                         <p>"Mints show up here once they're listed on Nostr."</p>
                                     </div>
