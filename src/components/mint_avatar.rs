@@ -1,13 +1,18 @@
 use leptos::prelude::*;
 
 /// A mint's face: the icon from its NUT-06 info when it publishes one over
-/// https, otherwise its initial on the brand's metal. The initial is always drawn
-/// under the image, so a slow or broken icon shows the letter, not a gap.
+/// https, otherwise its initial on the brand's metal, brushed at the name's own
+/// angle. The initial is always drawn under the image, so a slow or broken
+/// icon shows the letter, not a gap.
 #[component]
 pub fn MintAvatar(#[prop(into)] name: String, info: Option<String>) -> impl IntoView {
     let icon = icon_url(info.as_deref());
     view! {
-        <span class="mint-avatar" aria-hidden="true">
+        <span
+            class="mint-avatar"
+            style=format!("--sheen: {}deg", sheen_angle(&name))
+            aria-hidden="true"
+        >
             <span>{initial(&name)}</span>
             // A plain onerror attribute, not on:error: an icon can fail before
             // hydration, and hiding (not removing) keeps the DOM hydratable.
@@ -32,6 +37,15 @@ pub fn icon_url(info: Option<&str>) -> Option<String> {
     url.starts_with("https://").then(|| url.to_string())
 }
 
+/// The angle a name's metal is brushed at, 0-359 degrees: FNV-1a over its
+/// bytes, so the server and the browser agree and a mint keeps its angle.
+pub fn sheen_angle(name: &str) -> u32 {
+    let hash = name.bytes().fold(0x811c_9dc5_u32, |hash, byte| {
+        (hash ^ u32::from(byte)).wrapping_mul(0x0100_0193)
+    });
+    hash % 360
+}
+
 /// The first letter or digit of a name, upper-cased; "?" when there is none.
 pub fn initial(name: &str) -> String {
     name.chars()
@@ -42,7 +56,7 @@ pub fn initial(name: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{icon_url, initial};
+    use super::{icon_url, initial, sheen_angle};
 
     #[test]
     fn icon_url_is_https_only() {
@@ -56,6 +70,14 @@ mod tests {
         assert_eq!(icon_url(Some(r#"{"name":"x"}"#)), None);
         assert_eq!(icon_url(Some("not json")), None);
         assert_eq!(icon_url(None), None);
+    }
+
+    #[test]
+    fn sheen_angle_is_fixed_per_name() {
+        assert_eq!(sheen_angle("Atlas"), 260);
+        assert_eq!(sheen_angle("Birch"), 97);
+        assert_eq!(sheen_angle("Bramble"), 128);
+        assert_eq!(sheen_angle(""), 0x811c_9dc5 % 360);
     }
 
     #[test]
