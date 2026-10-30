@@ -17,6 +17,9 @@ use leptos::web_sys::HtmlElement;
 use leptos_meta::Title;
 use leptos_router::hooks::use_params_map;
 
+/// How much of a failure message the mint page shows.
+const INCIDENT_CHARS: usize = 300;
+
 /// One mint for a wallet user: is it up, what people say, and what the mint
 /// says about itself. Audit detail (per-auditor results, swaps, funding) is
 /// left off. Each section is a card with its heading outside, on the page.
@@ -220,6 +223,21 @@ fn MintHead(mint: MintRead, metrics: Option<MintMetrics>, uptime: Option<MintUpt
         (true, Some((message, category, at))) => {
             let when = at.map(relative_time).unwrap_or_else(|| "recently".to_string());
             let pill = category.map(|c| view! { <CategoryPill category=c/> });
+            // A mint's raw error can be a whole HTML error page: the first
+            // 300 characters, and all of it on hover.
+            let full = (message.chars().count() > INCIDENT_CHARS).then(|| message.clone());
+            let message = if full.is_some() {
+                format!(
+                    "{}…",
+                    message
+                        .chars()
+                        .take(INCIDENT_CHARS)
+                        .collect::<String>()
+                        .trim_end()
+                )
+            } else {
+                message
+            };
             Some(view! {
                 <div class="incident">
                     <div class="incident-head">
@@ -227,7 +245,7 @@ fn MintHead(mint: MintRead, metrics: Option<MintMetrics>, uptime: Option<MintUpt
                         {pill}
                         <span class="incident-when mono">{when}</span>
                     </div>
-                    <div class="incident-msg mono">{message}</div>
+                    <div class="incident-msg mono" title=full>{message}</div>
                 </div>
             })
         }
@@ -589,19 +607,21 @@ fn lightning(
         })
         .unwrap_or_default();
     if units != ["sat"] {
+        // Bitcoin's own units as written ("sat", "msat"); currencies in
+        // capitals ("USD").
         let named = |unit: &&str| {
-            if *unit == "sat" {
-                "sat".to_string()
+            if matches!(unit.to_lowercase().as_str(), "sat" | "msat") {
+                unit.to_lowercase()
             } else {
                 unit.to_uppercase()
             }
         };
         if detail.is_empty() {
             let all: Vec<String> = units.iter().map(named).collect();
-            detail.push(Piece::Text(format!("In {}", all.join(" and "))));
+            detail.push(Piece::Text(format!("In {}", and_list(&all))));
         } else {
             let others: Vec<String> = units.iter().filter(|u| **u != "sat").map(named).collect();
-            detail.push(Piece::Text(format!(", also {}", others.join(" and "))));
+            detail.push(Piece::Text(format!(", also {}", and_list(&others))));
         }
     }
     // An offered cell is never blank.
@@ -631,6 +651,15 @@ fn sat_range(min: Option<u64>, max: Option<u64>) -> Vec<Piece> {
     }
 }
 
+/// "USD", "USD and EUR", "msat, USD and EUR".
+fn and_list(items: &[String]) -> String {
+    match items {
+        [] => String::new(),
+        [one] => one.clone(),
+        [rest @ .., last] => format!("{} and {last}", rest.join(", ")),
+    }
+}
+
 fn text(words: &str) -> Vec<Piece> {
     vec![Piece::Text(words.to_string())]
 }
@@ -652,7 +681,9 @@ fn contacts(info: &serde_json::Value) -> Vec<Contact> {
         .flatten()
         .filter_map(|c| {
             let method = c.get("method")?.as_str()?.trim().to_lowercase();
-            let value = c.get("info")?.as_str()?.trim().to_string();
+            // A key written as a nostr: URI is still the key.
+            let value = c.get("info")?.as_str()?.trim();
+            let value = value.strip_prefix("nostr:").unwrap_or(value).to_string();
             if method.is_empty() || value.is_empty() {
                 return None;
             }
@@ -712,7 +743,11 @@ fn UptimePanel(uptime: Option<MintUptime>) -> impl IntoView {
     let checks = if uptime.checks == 0 {
         format!("No checks in the last {window}")
     } else {
-        format!("{} of {} checks passed", uptime.successes, uptime.checks)
+        format!(
+            "{} of {} passed",
+            uptime.successes,
+            plural(uptime.checks, "check", "checks")
+        )
     };
     let last = match (uptime.checks, uptime.last_checked_at) {
         (0, _) | (_, None) => String::new(),
@@ -726,20 +761,41 @@ fn UptimePanel(uptime: Option<MintUptime>) -> impl IntoView {
     let style = uptime_grid_style(uptime.bars.len());
     let bars = uptime.bars;
 
+    let tip_open = RwSignal::new(false);
+    let tip = NodeRef::<leptos::html::Span>::new();
+    #[cfg(feature = "hydrate")]
+    {
+        use leptos::wasm_bindgen::JsCast;
+        let outside = window_event_listener(leptos::ev::pointerdown, move |ev| {
+            let target = ev.target();
+            let node = target
+                .as_ref()
+                .and_then(|t| t.dyn_ref::<leptos::web_sys::Node>());
+            if !tip.get_untracked().is_some_and(|tip| tip.contains(node)) {
+                tip_open.set(false);
+            }
+        });
+        on_cleanup(move || outside.remove());
+    }
+
     view! {
         <div class="card card-pad uptime-card">
             <div class="uptime-head">
                 <span class="uptime-figure">
                     <span class="uptime-value">{value}</span>
-                    // Shown on hover or focus (a tap focuses it on touch);
-                    // Escape hides it again.
-                    <span class="help-tip">
+                    // Shown on hover (a mouse) or focus (the keyboard), and
+                    // toggled by a tap, since iOS doesn't focus a tapped
+                    // button; a press elsewhere or Escape hides it again.
+                    <span class="help-tip" class:is-open=move || tip_open.get() node_ref=tip>
                         <button
                             type="button"
                             class="help-tip-button"
                             aria-describedby="uptime-note"
-                            on:keydown=|ev: leptos::ev::KeyboardEvent| {
+                            aria-expanded=move || if tip_open.get() { "true" } else { "false" }
+                            on:click=move |_| tip_open.update(|open| *open = !*open)
+                            on:keydown=move |ev: leptos::ev::KeyboardEvent| {
                                 if ev.key() == "Escape" {
+                                    tip_open.set(false);
                                     let _ = event_target::<HtmlElement>(&ev).blur();
                                 }
                             }
@@ -848,7 +904,7 @@ fn uptime_grid_style(bar_count: usize) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{bar_span, contacts, features, nut_title, uptime_grid_style, Nut, Piece};
+    use super::{and_list, bar_span, contacts, features, nut_title, uptime_grid_style, Nut, Piece};
     use serde_json::json;
 
     fn nuts(value: serde_json::Value) -> serde_json::Map<String, serde_json::Value> {
@@ -925,7 +981,10 @@ mod tests {
                 Piece::Text(", also USD".into()),
             ]
         );
-        assert_eq!(list.lightning[1].detail, [Piece::Text("In sat and EUR".into())]);
+        assert_eq!(
+            list.lightning[1].detail,
+            [Piece::Text("In sat and EUR".into())]
+        );
         assert!(list.lightning[1].offered);
     }
 
@@ -935,13 +994,36 @@ mod tests {
             {"method": "email", "info": "ops@mint.example"},
             {"method": "nostr", "info": "npub1qe3e5wrvnsgpggtkytxteaqfprz0rgxr8c3l34kk3a9t7e2l3acslezefe"},
             {"method": "twitter", "info": "@mint"},
-            {"method": "matrix", "info": " "}
+            {"method": "matrix", "info": " "},
+            {"method": "nostr", "info": "nostr:npub1qe3e5wrvnsgpggtkytxteaqfprz0rgxr8c3l34kk3a9t7e2l3acslezefe"}
         ]}));
         let labels: Vec<&str> = list.iter().map(|c| c.label.as_str()).collect();
-        assert_eq!(labels, ["Email", "Nostr", "X"]);
+        assert_eq!(labels, ["Email", "Nostr", "X", "Nostr"]);
+        assert_eq!(list[3].shown, "npub1qe3e5w…ezefe");
+        assert!(list[3].value.starts_with("npub1"));
         assert_eq!(list[0].shown, "ops@mint.example");
         assert_eq!(list[1].shown, "npub1qe3e5w…ezefe");
         assert!(list[1].value.ends_with("ezefe") && list[1].value.len() == 63);
+    }
+
+    #[test]
+    fn units_are_listed_in_plain_english() {
+        let list =
+            |items: &[&str]| and_list(&items.iter().map(|s| s.to_string()).collect::<Vec<_>>());
+        assert_eq!(list(&["USD"]), "USD");
+        assert_eq!(list(&["sat", "EUR"]), "sat and EUR");
+        assert_eq!(list(&["msat", "USD", "EUR"]), "msat, USD and EUR");
+        let three = features(&nuts(json!({
+            "4": {"methods": [
+                {"method": "bolt11", "unit": "msat"},
+                {"method": "bolt11", "unit": "usd"},
+                {"method": "bolt11", "unit": "eur"}
+            ]}
+        })));
+        assert_eq!(
+            three.lightning[0].detail,
+            [Piece::Text("In msat, USD and EUR".into())]
+        );
     }
 
     #[test]

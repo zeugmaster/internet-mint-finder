@@ -14,13 +14,23 @@ let extensionPubkey = null;
 try { extensionPubkey = localStorage.getItem(EXTENSION_KEY); } catch (_) { /* not kept */ }
 
 // The line beside Post review starts as a hint; a message replaces it and
-// quiet() puts the hint back.
+// quiet() puts the hint back. Each message rises in a little, so saying the
+// same thing twice still answers the click; with reduced motion it only
+// fades (the stylesheet's motion rule doesn't reach a script's animation).
 function say(msg, ok) {
   const status = document.getElementById('review-status');
   if (!status) return;
   if (status.dataset.hint === undefined) status.dataset.hint = status.textContent.trim();
   status.textContent = msg;
   status.dataset.ok = ok ? '1' : '0';
+  if (!status.animate) return;
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  status.animate(
+    still
+      ? [{ opacity: 0 }, { opacity: 1 }]
+      : [{ opacity: 0, transform: 'translateY(4px)' }, { opacity: 1, transform: 'none' }],
+    { duration: still ? 150 : 200, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' },
+  );
 }
 
 function quiet() {

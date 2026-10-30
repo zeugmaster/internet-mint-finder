@@ -131,6 +131,12 @@
     /* Arrivals (reveals, tips, the light settling): fast, then a long, soft
        deceleration. */
     --ease-arrive: cubic-bezier(0.16, 1, 0.3, 1);
+    /* The light sweeping across metal (the tag, the footer's steel): quick
+       to start, easing long into place. */
+    --ease-sweep: cubic-bezier(0.2, 0.7, 0.2, 1);
+    /* Movement from one place on screen to another (the status pill):
+       accelerate, then decelerate. */
+    --ease-move: cubic-bezier(0.77, 0, 0.175, 1);
     /* One column for header, pages and footer, so every edge lines up. */
     --column: 960px;
     --gutter: 24px;
@@ -224,12 +230,33 @@ html {
     text-rendering: optimizeLegibility;
     -webkit-text-size-adjust: 100%;
     -webkit-font-smoothing: antialiased;
+    /* Presses show as the controls' own :active states, not the browser's
+       grey flash. */
+    -webkit-tap-highlight-color: transparent;
 }
 
 @media (min-width: 48rem) {
     html {
         --ground: var(--shell);
     }
+}
+
+/* Hover styles are for a mouse: each sits in
+   `@media (hover: hover) and (pointer: fine)`, so a tap on a phone doesn't
+   leave a control tinted. Controls take a tap at once, with no wait for a
+   double-tap zoom. */
+a, button, summary, label, select {
+    touch-action: manipulation;
+}
+
+/* Holding a control doesn't select its label or open the link menu. */
+.segmented a,
+.copy-url,
+.help-tip-button,
+.star-input label {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
 }
 
 :root[data-theme='dark'] {
@@ -331,10 +358,12 @@ kbd,
     transition: text-decoration-color 150ms var(--ease), color 150ms var(--ease);
 }
 
-.text-link:hover,
-.stack-table td a:not(.btn):hover {
-    color: var(--fg);
-    text-decoration-color: var(--fg-2);
+@media (hover: hover) and (pointer: fine) {
+    .text-link:hover,
+    .stack-table td a:not(.btn):hover {
+        color: var(--fg);
+        text-decoration-color: var(--fg-2);
+    }
 }
 
 button.text-link {
@@ -348,8 +377,11 @@ button.text-link {
    Page chrome
 --------------------------------------------------------------------------- */
 
+/* Full height of the small viewport (the phone's toolbars showing), so on a
+   short page the milled edge sits on the bottom of what's visible. */
 .page-wrapper {
     min-height: 100vh;
+    min-height: 100svh;
     display: flex;
     flex-direction: column;
 }
@@ -368,7 +400,10 @@ button.text-link {
     width: 100%;
     max-width: calc(var(--column) + 2 * var(--gutter));
     margin: 0 auto;
-    padding-inline: var(--gutter);
+    /* Clear of the notch when a phone lies on its side (the page runs edge
+       to edge: viewport-fit=cover). */
+    padding-left: max(var(--gutter), env(safe-area-inset-left, 0px));
+    padding-right: max(var(--gutter), env(safe-area-inset-right, 0px));
 }
 
 .shell {
@@ -554,20 +589,37 @@ button.text-link {
 }
 
 /* The header mark: still at rest; the light sweeps across it once on hover
-   or focus of the link. */
-.brand:hover .brand-tag,
-.brand:focus-visible .brand-tag {
-    animation: brand-tag-sweep 1.3s cubic-bezier(0.2, 0.7, 0.2, 1);
+   of the link (a mouse only; not on keyboard focus, which shouldn't set
+   things moving), from the far side back to where it rests, so it ends
+   where it started rather than snapping home. */
+@media (hover: hover) and (pointer: fine) {
+    .brand:hover .brand-tag {
+        animation: brand-tag-sweep 1.3s var(--ease-sweep);
+    }
 }
 
 @keyframes brand-tag-sweep {
-    from { --tag-bx: 8%; --tag-px: 10%; }
-    to { --tag-bx: 92%; --tag-px: 90%; }
+    from { --tag-bx: 92%; --tag-px: 90%; }
+}
+
+/* Changing page, the header's mark fades in with the page rather than
+   popping in at full strength (one tag per page: the directory has the
+   hero instead). Not on the first load. */
+.brand .brand-tag {
+    transition: opacity 180ms var(--ease-out);
+}
+
+@starting-style {
+    :root:has(main.is-navigated) .brand .brand-tag {
+        opacity: 0;
+    }
 }
 
 /* The hero: the tag at full size in the directory's head, set at a slight
    angle like a sticker pressed onto the page. The light sweeps in once as
-   the page arrives and settles at the hero light; then it follows the
+   the site first loads and settles at the hero light (not again on coming
+   back to the directory, and held until the page has hydrated, so its
+   frames don't compete with the page coming alive); then it follows the
    pointer over the tag, the sticker tilting toward it. The light and the
    tilt move together on one soft curve, a beat behind the pointer, and
    glide home together on leave. */
@@ -580,14 +632,22 @@ button.text-link {
     transition-property: --tag-px, --tag-py, --tag-bx, --tag-by, --tag-lx, --tag-ly, --tag-rx, --tag-ry;
     transition-duration: 700ms;
     transition-timing-function: var(--ease-arrive);
-    animation: brand-tag-arrive 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) 0.3s backwards;
+    animation: brand-tag-arrive 1.6s var(--ease-sweep) 0.1s backwards;
+}
+
+.js .brand-tag.is-hero:not(.is-hydrated) {
+    animation-play-state: paused;
+}
+
+.is-navigated .brand-tag.is-hero {
+    animation: none;
 }
 
 /* The arrival is left alone when the pointer comes: switching it off and
    back on would replay it, from the right, on every leave. */
 .brand-tag.is-hero.is-live {
     transition-duration: 260ms;
-    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+    transition-timing-function: var(--ease-arrive);
 }
 
 /* From the right to the hero light, and the struck edges turn with it. */
@@ -753,10 +813,29 @@ button.text-link {
     transition: color 150ms var(--ease-out), background-color 150ms var(--ease-out), box-shadow 150ms var(--ease-out);
 }
 
-.nav-link:hover,
-.segmented button:hover,
-.segmented a:hover {
+@media (hover: hover) and (pointer: fine) {
+    .nav-link:hover,
+    .segmented button:hover,
+    .segmented a:hover {
+        color: var(--fg);
+    }
+}
+
+/* A press darkens the tab under the finger or pointer. */
+.nav-link:active:not([aria-current='page']),
+.segmented button:active:not([aria-pressed='true']),
+.segmented a:active:not([aria-current='true']) {
     color: var(--fg);
+    background-color: var(--component);
+}
+
+/* Tabs a finger can hit: 36px tall on touch screens, 28px for a mouse. */
+@media (pointer: coarse) {
+    .nav-link,
+    .segmented button,
+    .segmented a {
+        height: 36px;
+    }
 }
 
 .nav-link[aria-current='page'],
@@ -813,7 +892,7 @@ button.text-link {
 }
 
 .theme-swap::view-transition-old(theme-icon) {
-    animation: theme-icon-out 160ms cubic-bezier(0.4, 0, 1, 1) both;
+    animation: theme-icon-out 160ms var(--ease-out) both;
 }
 
 .theme-swap::view-transition-new(theme-icon) {
@@ -825,11 +904,11 @@ button.text-link {
 }
 
 @keyframes theme-icon-out {
-    to { opacity: 0; transform: rotate(90deg) scale(0.6); }
+    to { opacity: 0; transform: rotate(90deg) scale(0.9); }
 }
 
 @keyframes theme-icon-in {
-    from { opacity: 0; transform: rotate(-90deg) scale(0.6); }
+    from { opacity: 0; transform: rotate(-90deg) scale(0.9); }
 }
 
 @keyframes theme-fade {
@@ -837,8 +916,9 @@ button.text-link {
 }
 
 /* Changing page: the new page fades in as it arrives, opacity only, so the
-   header, the scroll position and late data all change inside the fade
-   rather than around it. Not on the first load. (A view transition was
+   scroll position and late data change inside the fade rather than around
+   it, and the header's mark fades in with it (`.brand .brand-tag`). Not on
+   the first load. (A view transition was
    tried and dropped as jumpy: the router changes the header before the old
    page is captured, and the scroll and data land after the new one is.) */
 .is-navigated > * {
@@ -854,9 +934,10 @@ button.text-link {
    Opacity only, like the page. Each wrapper is built once, so the 15s
    refresh doesn't replay it; not on the first load, which comes with its
    data. It lets go of opacity once done, so the directory's dim
-   (`.directory-results`) can still ease. */
+   (`.directory-results`) can still ease. Short: it follows the page's own
+   fade, up to four times on a mint page. */
 .is-navigated .arrives {
-    animation: page-in 260ms var(--ease-out) backwards;
+    animation: page-in 150ms var(--ease-out) backwards;
 }
 
 /* Reduced motion: no spreading circle or turning icon, a short crossfade. */
@@ -891,11 +972,13 @@ button.text-link {
 }
 
 /* heading-4 */
+/* Tracked in tighter than body headings: Inter wants about -0.02em at 24
+   and 28px. */
 .page-title {
     font-size: 28px;
     line-height: 36px;
     font-weight: 600;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
 }
 
 /* The intro runs the full column, at the owner's request. */
@@ -1027,8 +1110,17 @@ button.text-link {
     gap: 16px;
 }
 
+/* The mint's own words, kept to a readable 65 characters a line, with its
+   line breaks kept; an address or key with no spaces breaks anywhere
+   rather than pushing the page wider than a phone. */
+.about-text,
+.about-notice p {
+    overflow-wrap: anywhere;
+    white-space: pre-line;
+}
+
 .about-text {
-    max-width: 75ch;
+    max-width: 65ch;
 }
 
 .about-notice-label {
@@ -1158,9 +1250,12 @@ button.text-link {
     color: var(--fg-2);
 }
 
+/* A long version string ("Nutshell 0.16.5.dev3+g1a2b3c4d…") wraps rather
+   than being clipped by the card. */
 .offers-ledger dd {
     min-width: 0;
     margin: 0;
+    overflow-wrap: anywhere;
 }
 
 /* Values in ink, like Software beside them; the copy icon stays quiet. */
@@ -1181,8 +1276,10 @@ button.text-link {
     vertical-align: bottom;
 }
 
-.offers-ledger .text-link:hover {
-    text-decoration-color: var(--fg);
+@media (hover: hover) and (pointer: fine) {
+    .offers-ledger .text-link:hover {
+        text-decoration-color: var(--fg);
+    }
 }
 
 .offers > * + * {
@@ -1345,11 +1442,6 @@ button.text-link {
 .stars-fill .foil-star:nth-child(5),
 .star-input label:nth-of-type(5) .foil-star { --foil-at: 1; }
 
-/* The light runs across a star as it fills, then settles. */
-@keyframes foil-star-sweep {
-    from { background-position: 95% 75%, 0% 60%, 90% 60%; }
-}
-
 .reviews-main {
     min-width: 0;
 }
@@ -1415,8 +1507,10 @@ button.text-link {
     background-color: var(--component);
 }
 
-.reviews-card .btn:not(.btn-primary):not(.btn-ghost):hover {
-    background-color: var(--component-hover);
+@media (hover: hover) and (pointer: fine) {
+    .reviews-card .btn:not(.btn-primary):not(.btn-ghost):hover {
+        background-color: var(--component-hover);
+    }
 }
 
 /* With no reviews the row is the whole card: no rule above it. */
@@ -1437,9 +1531,8 @@ button.text-link {
 }
 
 /* Star picker: radios 1 to 5 in order, each followed by its star. Filled
-   in metal up to the checked one; while hovering, up to the pointer
-   instead, the light sweeping across each star as it fills. No gaps
-   between stars, so the preview never flickers off. */
+   in metal up to the checked one; while a mouse hovers, up to the pointer
+   instead. No gaps between stars, so the preview never flickers off. */
 .star-field {
     min-width: 0;
     margin: 0;
@@ -1469,7 +1562,12 @@ button.text-link {
     border-radius: 6px;
     color: var(--border-strong);
     cursor: pointer;
-    transition: color 120ms var(--ease);
+    transition: color 120ms var(--ease), transform 120ms var(--ease-out);
+}
+
+/* A press gives a little, like a button's. */
+.star-input input:not(:disabled) + label:active {
+    transform: scale(0.94);
 }
 
 .star-input .icon {
@@ -1492,21 +1590,22 @@ button.text-link {
     transition: opacity 120ms var(--ease);
 }
 
+/* Filling is a quick fade, no sweep: arrow keys move the choice, and
+   motion on every key press is noise. */
 .star-input input:checked + label .foil-star,
 .star-input label:has(~ input:checked) .foil-star {
     opacity: 1;
-    animation: foil-star-sweep 900ms cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
-.star-input:not(:has(:disabled)):hover label:not(:hover):not(:has(~ label:hover)) .foil-star {
-    opacity: 0;
-    animation: none;
-}
+@media (hover: hover) and (pointer: fine) {
+    .star-input:not(:has(:disabled)):hover label:not(:hover):not(:has(~ label:hover)) .foil-star {
+        opacity: 0;
+    }
 
-.star-input:not(:has(:disabled)):hover label:hover .foil-star,
-.star-input:not(:has(:disabled)):hover label:has(~ label:hover) .foil-star {
-    opacity: 1;
-    animation: foil-star-sweep 900ms cubic-bezier(0.2, 0.7, 0.2, 1);
+    .star-input:not(:has(:disabled)):hover label:hover .foil-star,
+    .star-input:not(:has(:disabled)):hover label:has(~ label:hover) .foil-star {
+        opacity: 1;
+    }
 }
 
 .star-input input:focus-visible + label {
@@ -1533,8 +1632,27 @@ button.text-link {
     flex: 1 1 16rem;
 }
 
+/* What went wrong reads as an error (review.js marks it). */
+.review-submit .field-hint[data-ok='0'] {
+    color: var(--danger-fg);
+}
+
 .review-submit .btn {
     margin-left: auto;
+}
+
+/* Signing in or out swaps the key field for the "Signed in as" line (and
+   back); the one that arrives fades in, so the change is seen. */
+.signer,
+.signer-in {
+    transition: opacity 200ms var(--ease-arrive);
+}
+
+@starting-style {
+    .signer,
+    .signer-in {
+        opacity: 0;
+    }
 }
 
 /* Who is signed in on the left, the way out at the right, in line with
@@ -1639,10 +1757,57 @@ button.text-link {
     white-space: nowrap;
 }
 
+/* The words, 65 characters a line at most, with the writer's line breaks
+   kept. */
 .review-text {
     grid-column: 2 / -1;
-    max-width: 75ch;
+    max-width: 65ch;
     overflow-wrap: anywhere;
+    white-space: pre-line;
+}
+
+/* A long review shows its first eight lines and a "Read more" under them;
+   opened, the whole text, and the link goes. */
+.review-text.is-long {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 8;
+    line-clamp: 8;
+    overflow: hidden;
+}
+
+.review:has(> .review-read-more[open]) .review-text {
+    display: block;
+    -webkit-line-clamp: none;
+    line-clamp: none;
+}
+
+.review-read-more {
+    grid-column: 2 / -1;
+    font-size: 13px;
+    line-height: 20px;
+}
+
+.review-read-more > summary {
+    display: inline;
+    list-style: none;
+    cursor: pointer;
+}
+
+.review-read-more > summary::-webkit-details-marker {
+    display: none;
+}
+
+.review-read-more[open] {
+    display: none;
+}
+
+/* Past the loaded reviews: how many there are in all. */
+.reviews-capped {
+    margin-top: 12px;
+    color: var(--fg-2);
+    font-size: 13px;
+    line-height: 20px;
 }
 
 
@@ -1666,14 +1831,14 @@ button.text-link {
     block-size: 0;
     overflow: clip;
     overflow-clip-margin: 4px;
-    transition: block-size 200ms var(--ease), content-visibility 200ms var(--ease) allow-discrete;
+    transition: block-size 200ms var(--ease-out), content-visibility 200ms var(--ease-out) allow-discrete;
 }
 
 .review-compose[open]::details-content,
 .reviews-more[open]::details-content,
 .feed-error[open]::details-content {
     block-size: auto;
-    transition-duration: 340ms;
+    transition-duration: 240ms;
     transition-timing-function: var(--ease-arrive);
 }
 
@@ -1712,8 +1877,17 @@ button.text-link {
     }
 
     /* The words take the card's width under the line. */
-    .review-text {
+    .review-text,
+    .review-read-more {
         grid-column: 1 / -1;
+    }
+}
+
+/* The smallest phones: the date drops under the key, so the key keeps the
+   ends it was cut to show. */
+@media (max-width: 359px) {
+    .review-date {
+        grid-column: 2;
     }
 }
 
@@ -1742,8 +1916,10 @@ button.text-link {
     transition: color 150ms var(--ease-out), background-color 150ms var(--ease-out), transform 150ms var(--ease-out);
 }
 
-.btn:hover {
-    background-color: var(--surface-strong-hover);
+@media (hover: hover) and (pointer: fine) {
+    .btn:hover {
+        background-color: var(--surface-strong-hover);
+    }
 }
 
 /* A press gives a little, like a key going down, and springs back. */
@@ -1758,8 +1934,10 @@ button.text-link {
     color: var(--on-inverted);
 }
 
-.btn-primary:hover {
-    background-color: var(--inverted-hover);
+@media (hover: hover) and (pointer: fine) {
+    .btn-primary:hover {
+        background-color: var(--inverted-hover);
+    }
 }
 
 .btn-primary:active {
@@ -1772,7 +1950,15 @@ button.text-link {
     color: var(--fg-2);
 }
 
-.btn-ghost:hover {
+@media (hover: hover) and (pointer: fine) {
+    .btn-ghost:hover {
+        background: var(--component);
+        color: var(--fg);
+    }
+}
+
+/* A press shows on a ghost button too, where a tap leaves no hover. */
+.btn-ghost:active:not([aria-disabled='true']) {
     background: var(--component);
     color: var(--fg);
 }
@@ -1786,6 +1972,22 @@ button.text-link {
 .btn-icon {
     width: 32px;
     padding: 0;
+}
+
+/* For a finger the small and icon buttons take a wider ring around them
+   (the button itself looks the same): 36px and 44px to aim at. */
+@media (pointer: coarse) {
+    .btn-small,
+    .btn-icon {
+        position: relative;
+    }
+
+    .btn-small::before,
+    .btn-icon::before {
+        content: '';
+        position: absolute;
+        inset: -6px;
+    }
 }
 
 .btn-block {
@@ -1865,14 +2067,28 @@ h4.field-label {
     font-size: 13px;
     line-height: 20px;
     outline: none;
-    transition: background-color 150ms var(--ease), box-shadow 150ms var(--ease);
+    /* The fill eases; the focus ring is there at once, as tabbing expects. */
+    transition: background-color 150ms var(--ease);
 }
 
-.field-input:hover,
-.field-textarea:hover,
-.filter-select:hover,
-.search-field:hover {
-    background-color: var(--surface-strong-hover);
+/* iOS zooms the page into any field set under 16px, and doesn't zoom back:
+   on touch screens fields take 16px, on the same 20px line. */
+@media (pointer: coarse) {
+    .field-input,
+    .field-textarea,
+    .filter-select,
+    .search-field {
+        font-size: 16px;
+    }
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .field-input:hover,
+    .field-textarea:hover,
+    .filter-select:hover,
+    .search-field:hover {
+        background-color: var(--surface-strong-hover);
+    }
 }
 
 .field-input:focus-visible,
@@ -1924,6 +2140,15 @@ h4.field-label {
 
 .filter-select:focus-visible {
     box-shadow: var(--focus-ring), var(--s-raised);
+}
+
+/* Pressed like a button: it gives a little. */
+.filter-select {
+    transition: background-color 150ms var(--ease), transform 150ms var(--ease-out);
+}
+
+.filter-select:active:not(:disabled) {
+    transform: scale(0.98);
 }
 
 .filter-select:disabled,
@@ -2120,15 +2345,25 @@ button.hallmark {
     pointer-events: none;
     opacity: 0;
     transform: translate(-50%, 4px) scale(0.95);
-    transition: opacity 120ms var(--ease), transform 120ms var(--ease);
+    transform-origin: 50% 100%;
+    transition: opacity 120ms var(--ease-out), transform 120ms var(--ease-out);
 }
 
-/* In on a soft deceleration, out faster. */
-.hallmark[data-tip]:hover::after,
+/* In on a soft deceleration from the stamp it points at, out faster. A
+   mouse waits a moment first, so passing over doesn't open it; focus is
+   at once. */
 .hallmark[data-tip]:focus::after {
     opacity: 1;
     transform: translate(-50%, 0) scale(1);
-    transition: opacity 180ms var(--ease-arrive), transform 260ms var(--ease-arrive);
+    transition: opacity 150ms var(--ease-arrive), transform 180ms var(--ease-arrive);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .hallmark[data-tip]:hover::after {
+        opacity: 1;
+        transform: translate(-50%, 0) scale(1);
+        transition: opacity 150ms var(--ease-arrive) 300ms, transform 180ms var(--ease-arrive) 300ms;
+    }
 }
 
 .auditor-cell {
@@ -2206,7 +2441,7 @@ button.hallmark {
         background-image: var(--sheen-raised);
         box-shadow: var(--s-tab);
         pointer-events: none;
-        transition: left 280ms var(--ease-arrive), width 280ms var(--ease-arrive);
+        transition: left 240ms var(--ease-move), width 240ms var(--ease-move);
     }
 }
 
@@ -2238,14 +2473,19 @@ button.hallmark {
 
 /* While a new search, filter, sort or page loads, the list on screen dims,
    then the new one comes up to full strength in its place. Dimming is quick;
-   the answer settles more slowly. The 15s refresh doesn't dim it. */
+   the answer settles more slowly. The 15s refresh doesn't dim it. The dim
+   waits 150ms, so an answer that comes at once (most, while typing) never
+   flickers the list. Previous and Next land here (#mints), a little below
+   the window's top. */
 .directory-results {
+    scroll-margin-top: 16px;
     transition: opacity 260ms var(--ease-out);
 }
 
 .directory-results.is-updating {
     opacity: 0.6;
     transition-duration: 160ms;
+    transition-delay: 150ms;
 }
 
 .directory-meta {
@@ -2284,7 +2524,15 @@ button.hallmark {
     transition: background-color 150ms var(--ease);
 }
 
-.mint-row:not(.is-skeleton):hover {
+@media (hover: hover) and (pointer: fine) {
+    .mint-row:not(.is-skeleton):hover {
+        background: var(--component);
+    }
+}
+
+/* A press on the row (not on its copy button) tints it, the tap's answer on
+   a phone, where there's no hover. */
+.mint-row:has(.mint-link:active) {
     background: var(--component);
 }
 
@@ -2295,8 +2543,10 @@ button.hallmark {
 }
 
 /* The row tint is the hover cue; no underline on the name. */
-.mint-row a.mint-link:hover {
-    text-decoration: none;
+@media (hover: hover) and (pointer: fine) {
+    .mint-row a.mint-link:hover {
+        text-decoration: none;
+    }
 }
 
 .mint-link:focus-visible {
@@ -2354,6 +2604,7 @@ button.hallmark {
 
 .mint-rating-count {
     color: var(--fg-2);
+    white-space: nowrap;
 }
 
 /* The URL as a quiet button: mono text and a copy icon, raised above the
@@ -2377,7 +2628,23 @@ button.hallmark {
     font-size: 13px;
     line-height: 20px;
     cursor: pointer;
-    transition: color 150ms var(--ease), background-color 150ms var(--ease);
+    transform-origin: left center;
+    transition: color 150ms var(--ease), transform 150ms var(--ease-out);
+}
+
+/* A press gives a little, like a button's, from the text's edge. */
+.copy-url:active {
+    transform: scale(0.98);
+}
+
+/* For a finger, a taller ring to aim at (40px), so a near miss copies
+   rather than opening the mint through the row's link. */
+@media (pointer: coarse) {
+    .copy-url::before {
+        content: '';
+        position: absolute;
+        inset: -8px -6px;
+    }
 }
 
 /* No fill or colour on hover (the owner's call): the copy icon already says
@@ -2387,10 +2654,22 @@ button.hallmark {
     box-shadow: var(--focus-ring);
 }
 
+/* Cut in the middle when it doesn't fit, keeping the last six characters
+   ("legend.lnbits.c…BiQGoC"): two mints on one host differ at the end. */
 .copy-url-text {
+    display: flex;
+    min-width: 0;
+    white-space: nowrap;
+}
+
+.copy-url-head {
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
+}
+
+.copy-url-tail {
+    flex: none;
 }
 
 .copy-url .icon {
@@ -2400,8 +2679,10 @@ button.hallmark {
     transition: color 150ms var(--ease);
 }
 
-.copy-url:hover .icon {
-    color: var(--fg-2);
+@media (hover: hover) and (pointer: fine) {
+    .copy-url:hover .icon {
+        color: var(--fg-2);
+    }
 }
 
 /* The browser refused the clipboard: say so on the button itself. */
@@ -2415,19 +2696,19 @@ button.hallmark {
 }
 
 /* Once used, the icon changes with a little motion: the check (or cross)
-   grows in on the arrival curve, as the theme switch's icon does, and the
-   copy icon fades back after it. */
+   grows in from 0.9 on the arrival curve, as the theme switch's icon does,
+   and the copy icon fades back after it. */
 .copy-url.is-used .icon {
     animation: page-in 200ms var(--ease-out) both;
 }
 
 .copy-url.is-copied .icon,
 .copy-url.is-failed .icon {
-    animation: copy-mark-in 360ms var(--ease-arrive) both;
+    animation: copy-mark-in 200ms var(--ease-arrive) both;
 }
 
 @keyframes copy-mark-in {
-    from { opacity: 0; transform: scale(0.5); }
+    from { opacity: 0; transform: scale(0.9); }
 }
 
 /* Mint avatar: the mint's own icon over its initial. With no icon the
@@ -2484,6 +2765,14 @@ button.hallmark {
     height: 100%;
     object-fit: cover;
     background: var(--container);
+    transition: opacity 200ms var(--ease-out);
+}
+
+/* Until the icon has arrived the letter shows, not a blank disc, and then
+   the icon fades in over it. Only where scripts run (`.js`), since the
+   attribute that marks it loaded is a script. */
+.js .mint-avatar img:not([data-loaded]) {
+    opacity: 0;
 }
 
 .mint-avatar::after {
@@ -2632,9 +2921,11 @@ button.hallmark {
     overflow-wrap: anywhere;
 }
 
-a.mint-name:hover {
-    text-decoration: underline;
-    text-underline-offset: 20%;
+@media (hover: hover) and (pointer: fine) {
+    a.mint-name:hover {
+        text-decoration: underline;
+        text-underline-offset: 20%;
+    }
 }
 
 .mint-url {
@@ -2754,9 +3045,11 @@ a.mint-name:hover {
     text-overflow: ellipsis;
 }
 
-.hop:hover {
-    text-decoration: underline;
-    text-underline-offset: 20%;
+@media (hover: hover) and (pointer: fine) {
+    .hop:hover {
+        text-decoration: underline;
+        text-underline-offset: 20%;
+    }
 }
 
 .arrow {
@@ -2788,8 +3081,10 @@ a.mint-name:hover {
     display: none;
 }
 
-.feed-error summary:hover {
-    color: var(--fg);
+@media (hover: hover) and (pointer: fine) {
+    .feed-error summary:hover {
+        color: var(--fg);
+    }
 }
 
 .feed-error .chevron {
@@ -2903,9 +3198,11 @@ a.mint-name:hover {
 --------------------------------------------------------------------------- */
 
 /* Breadcrumb: words and a slash; navigation never gets a back arrow. */
+/* One line: a long mint name is cut short (its own rule below) rather than
+   wrapping and leaving "Directory /" hanging. */
 .breadcrumb {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: baseline;
     gap: 8px;
     margin: 16px 0 4px;
@@ -2919,8 +3216,10 @@ a.mint-name:hover {
     transition: color 150ms var(--ease);
 }
 
-.breadcrumb a:hover {
-    color: var(--fg);
+@media (hover: hover) and (pointer: fine) {
+    .breadcrumb a:hover {
+        color: var(--fg);
+    }
 }
 
 .breadcrumb-sep {
@@ -2936,9 +3235,11 @@ a.mint-name:hover {
 }
 
 /* Mint head: the avatar beside the name and state over the copyable URL. */
+/* The avatar sits at the top of the name, so a name that wraps to three
+   lines on a phone doesn't leave it floating midway. */
 .detail-head {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 16px;
     margin-top: 16px;
 }
@@ -3034,7 +3335,9 @@ a.mint-name:hover {
 }
 
 /* A question mark beside a figure, and what the figure rests on in a
-   tooltip on hover or focus (a tap focuses it on touch). The tip opens
+   tooltip: on hover after a moment (a mouse), at once on focus (the
+   keyboard) or a tap (`.is-open`, since iOS doesn't focus a tapped
+   button). The tip opens
    downward over the bars, since the card clips anything above its edge,
    and is placed against the start of the row, not the mark, so it stays on
    screen on a phone. Interfere tooltip: always dark, 12/16 medium, 8px
@@ -3053,10 +3356,31 @@ a.mint-name:hover {
     transition: color 150ms var(--ease), background-color 150ms var(--ease);
 }
 
-.help-tip-button:hover,
-.help-tip-button:focus-visible {
+.help-tip-button:focus-visible,
+.help-tip-button:active,
+.help-tip.is-open .help-tip-button {
     background: var(--component);
     color: var(--fg);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .help-tip-button:hover {
+        background: var(--component);
+        color: var(--fg);
+    }
+}
+
+/* For a finger, a 36px ring to aim at; the mark looks the same. */
+@media (pointer: coarse) {
+    .help-tip-button {
+        position: relative;
+    }
+
+    .help-tip-button::before {
+        content: '';
+        position: absolute;
+        inset: -6px;
+    }
 }
 
 .help-tip-button .icon {
@@ -3084,14 +3408,28 @@ a.mint-name:hover {
     opacity: 0;
     transform: translateY(-4px) scale(0.95);
     transform-origin: top left;
-    transition: opacity 120ms var(--ease), transform 120ms var(--ease);
+    transition: opacity 120ms var(--ease-out), transform 120ms var(--ease-out);
 }
 
-.help-tip:hover .help-tip-text,
-.help-tip:focus-within .help-tip-text {
+.help-tip:focus-within .help-tip-text,
+.help-tip.is-open .help-tip-text {
     opacity: 1;
     transform: none;
-    transition: opacity 180ms var(--ease-arrive), transform 260ms var(--ease-arrive);
+    transition: opacity 150ms var(--ease-arrive), transform 180ms var(--ease-arrive);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .help-tip:hover .help-tip-text {
+        opacity: 1;
+        transform: none;
+        transition: opacity 150ms var(--ease-arrive) 300ms, transform 180ms var(--ease-arrive) 300ms;
+    }
+
+    /* Focused or tapped open is at once, even with the pointer over it. */
+    .help-tip:focus-within .help-tip-text,
+    .help-tip.is-open .help-tip-text {
+        transition-delay: 0ms;
+    }
 }
 
 
@@ -3276,8 +3614,11 @@ a.mint-name:hover {
     --reed-glint: #ffffff99;
     --reed-steel: linear-gradient(100deg,
         #4f5766 0%, #6b7483 14%, #3f4756 30%, #687180 46%, #4f5766 62%, #6b7483 80%, #4f5766 100%);
-    --reed-fade: linear-gradient(180deg, transparent, #000000a6);
-    transition: --foil-x 500ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    /* Eased in, so the fade has no visible edge: the dark curve below,
+       scaled to 65%. */
+    --reed-fade: linear-gradient(180deg,
+        transparent 0%, #0000000d 30%, #0000002e 55%, #00000064 80%, #000000a6 100%);
+    transition: --foil-x 500ms var(--ease-sweep);
 }
 
 /* On black the reeding is chrome kept low, eased in, with wide bands of
@@ -3377,9 +3718,11 @@ a.mint-name:hover {
     transition: color 150ms var(--ease), text-decoration-color 150ms var(--ease);
 }
 
-.foil-links a:hover {
-    color: var(--fg);
-    text-decoration-color: var(--border-strong);
+@media (hover: hover) and (pointer: fine) {
+    .foil-links a:hover {
+        color: var(--fg);
+        text-decoration-color: var(--border-strong);
+    }
 }
 
 /* On black the steel turns bright chrome and needs no lip. */
@@ -3590,13 +3933,80 @@ a.mint-name:hover {
     }
 }
 
-/* Not html: its scroll-linked ground (see Base) changes colour, it doesn't
-   move. */
+/* Reduced motion: nothing moves, slides, scales or sweeps, but fades and
+   colour changes stay, as gentler cues that something changed: the page and
+   section fades, the list's dim, the tooltips, the copy check. Not html:
+   its scroll-linked ground (see Base) changes colour, it doesn't move. */
 @media (prefers-reduced-motion: reduce) {
     :not(html),
     ::before,
     ::after {
         animation: none !important;
+        transition-property: opacity, color, background-color, border-color, text-decoration-color !important;
+    }
+
+    .is-navigated > * {
+        animation: page-in 180ms var(--ease-out) both !important;
+    }
+
+    .is-navigated .arrives {
+        animation: page-in 150ms var(--ease-out) backwards !important;
+    }
+
+    .copy-url.is-used .icon,
+    .copy-url.is-copied .icon,
+    .copy-url.is-failed .icon {
+        animation: page-in 150ms var(--ease-out) both !important;
+    }
+
+    /* Tooltips fade in where they stand; presses don't give. */
+    .help-tip-text {
+        transform: none !important;
+    }
+
+    .btn:active,
+    .copy-url:active,
+    .filter-select:active,
+    .star-input label:active {
+        transform: none !important;
+    }
+
+    /* The light on the steel stays at rest: the pointer no longer moves it. */
+    .site-footer {
+        --foil-x: 30% !important;
+    }
+
+    .brand-tag.is-hero {
+        --tag-px: 28% !important;
+        --tag-py: 18% !important;
+        --tag-bx: 22% !important;
+        --tag-by: 30% !important;
+        --tag-lx: -0.57 !important;
+        --tag-ly: -0.82 !important;
+    }
+}
+
+/* A stamp's tip stays centred over it (on phones it is a bar along the
+   bottom, with no transform to keep). */
+@media (prefers-reduced-motion: reduce) and (min-width: 761px) {
+    .hallmark[data-tip]::after {
+        transform: translate(-50%, 0) !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) and (max-width: 760px) {
+    .hallmark[data-tip]::after {
+        transform: none !important;
+    }
+}
+
+/* Disclosures open at once. A rule of its own: the one above can't reach
+   ::details-content, and a browser that doesn't know it would drop the
+   whole rule if it were listed there. */
+@media (prefers-reduced-motion: reduce) {
+    .review-compose::details-content,
+    .reviews-more::details-content,
+    .feed-error::details-content {
         transition: none !important;
     }
 }

@@ -16,14 +16,22 @@ use leptos_router::{
 /// theme from the switch (see `.theme-swap` in main.css). Transitions are off
 /// for the swap, so every colour changes at once instead of some fading and
 /// some snapping; without view transitions the swap is just that, instant.
+/// The browser's bar takes the page's own ground for the chosen theme (the
+/// theme-color tags above it split by width; the script only picks the
+/// theme). `js` on the root marks that scripts run, and an empty touchstart
+/// listener lets iOS show `:active` presses before hydration.
 /// `public/dashboard.html` carries the same script.
 const THEME_SCRIPT: &str = r#"(function(){
 var d=document.documentElement,swaps=0;
 d.dataset.theme=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+d.classList.add('js');
+var tint=function(){var dark=d.dataset.theme==='dark';document.querySelectorAll('meta[name=theme-color]').forEach(function(m){var wide=m.media.indexOf('>=')>0;m.content=dark?(wide?'#000000':'#111111'):(wide?'#f6f6f6':'#ffffff');});};
+tint();
+document.addEventListener('touchstart',function(){},{passive:true});
 document.addEventListener('click',function(e){
 var b=e.target.closest('[data-theme-toggle]');if(!b)return;
 var next=d.dataset.theme==='dark'?'light':'dark',k=++swaps;
-var swap=function(){d.dataset.theme=next;localStorage.setItem('theme',next);};
+var swap=function(){d.dataset.theme=next;localStorage.setItem('theme',next);tint();};
 var end=function(){if(k===swaps)d.classList.remove('theme-swap');};
 d.classList.add('theme-swap');
 if(!document.startViewTransition){swap();requestAnimationFrame(function(){requestAnimationFrame(end);});return;}
@@ -63,10 +71,16 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
         <html lang="en">
             <head>
                 <meta charset="utf-8"/>
-                <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                // Edge to edge in landscape too; the shell pads itself clear
+                // of the notch (env(safe-area-inset-*) in main.css).
+                <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
                 <meta name="color-scheme" content="light dark"/>
-                <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6f6f6"/>
-                <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000"/>
+                // The page's ground: white (#111 on black) on phones, the
+                // shell from 48rem. THEME_SCRIPT follows the theme switch.
+                <meta name="theme-color" media="(prefers-color-scheme: light) and (width < 48rem)" content="#ffffff"/>
+                <meta name="theme-color" media="(prefers-color-scheme: light) and (width >= 48rem)" content="#f6f6f6"/>
+                <meta name="theme-color" media="(prefers-color-scheme: dark) and (width < 48rem)" content="#111111"/>
+                <meta name="theme-color" media="(prefers-color-scheme: dark) and (width >= 48rem)" content="#000000"/>
                 <script inner_html=THEME_SCRIPT></script>
                 <meta name="description" content=DESCRIPTION/>
                 // The favicon is drawn on the 16px pixel grid; the PNGs are for
@@ -92,7 +106,7 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
                 <script src="/nostr-tools.js" defer></script>
                 // Versioned like the icons: browsers keep scripts too, so bump
                 // ?v= whenever review.js changes or visitors run the old one.
-                <script src="/review.js?v=3" defer></script>
+                <script src="/review.js?v=4" defer></script>
             </head>
             <body>
                 <App/>
@@ -175,6 +189,10 @@ fn Footer() -> impl IntoView {
     // How far across the footer the pointer is, in percent; None at rest.
     let light = RwSignal::new(None::<f64>);
     let on_move = move |ev: leptos::ev::PointerEvent| {
+        // A finger starting a scroll isn't pointing at the steel.
+        if ev.pointer_type() == "touch" {
+            return;
+        }
         let Some(footer) = footer.get() else {
             return;
         };

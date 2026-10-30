@@ -14,8 +14,10 @@ pub fn MintAvatar(#[prop(into)] name: String, info: Option<String>) -> impl Into
             aria-hidden="true"
         >
             <span>{initial(&name)}</span>
-            // A plain onerror attribute, not on:error: an icon can fail before
-            // hydration, and hiding (not removing) keeps the DOM hydratable.
+            // Plain onload and onerror attributes, not on:load and on:error:
+            // an icon can land or fail before hydration, and hiding (not
+            // removing) keeps the DOM hydratable. `data-loaded` fades the
+            // icon in over its letter once it has arrived.
             {icon.map(|src| view! {
                 <img
                     src=src
@@ -23,6 +25,7 @@ pub fn MintAvatar(#[prop(into)] name: String, info: Option<String>) -> impl Into
                     loading="lazy"
                     decoding="async"
                     referrerpolicy="no-referrer"
+                    onload="this.dataset.loaded=''"
                     onerror="this.hidden=true"
                 />
             })}
@@ -46,11 +49,15 @@ pub fn sheen_angle(name: &str) -> u32 {
     hash % 360
 }
 
-/// The first letter or digit of a name, upper-cased; "?" when there is none.
+/// The first letter or digit of a name, upper-cased; else its first
+/// character as written, so "🥜" keeps its peanut; "?" only for a blank
+/// name.
 pub fn initial(name: &str) -> String {
+    use unicode_segmentation::UnicodeSegmentation;
     name.chars()
         .find(|c| c.is_alphanumeric())
         .map(|c| c.to_uppercase().collect())
+        .or_else(|| name.trim().graphemes(true).next().map(String::from))
         .unwrap_or_else(|| "?".to_string())
 }
 
@@ -86,6 +93,9 @@ mod tests {
         assert_eq!(initial("  ✨minibits"), "M");
         assert_eq!(initial("8333.space"), "8");
         assert_eq!(initial("ärger"), "Ä");
-        assert_eq!(initial("---"), "?");
+        assert_eq!(initial("🥜"), "🥜");
+        assert_eq!(initial(" 🏴‍☠️ "), "🏴‍☠️");
+        assert_eq!(initial("---"), "-");
+        assert_eq!(initial("  "), "?");
     }
 }

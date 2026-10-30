@@ -22,7 +22,7 @@ fn Layers() -> impl IntoView {
 
 /// The header mark: IMF engraved solid, the size where shaded steel would
 /// melt into the silver. Decoration beside the name, so hidden from screen
-/// readers; the light sweeps across it once on hover or focus of the link.
+/// readers; the light sweeps across it once on hover of the link.
 #[component]
 pub fn BrandTag() -> impl IntoView {
     view! {
@@ -39,13 +39,20 @@ pub fn BrandTag() -> impl IntoView {
 /// in once as the page arrives and settles at the angle the files are
 /// rendered at. After that it follows the pointer over the tag: the sticker
 /// tilts, the light moves across the metal and the struck edges turn to face
-/// it, then it glides home on leave.
+/// it, then it glides home on leave. The arrival waits for hydration
+/// (`is-hydrated`), so its frames don't compete with the page coming alive.
 #[component]
 pub fn HeroTag() -> impl IntoView {
     // The pointer over the tag, as fractions of its box; None when away.
     let pointer = RwSignal::new(None::<(f64, f64)>);
+    let hydrated = RwSignal::new(false);
+    Effect::new(move |_| request_animation_frame(move || hydrated.set(true)));
 
     let on_move = move |ev: leptos::ev::PointerEvent| {
+        // A finger starting a scroll isn't pointing at the tag.
+        if ev.pointer_type() == "touch" {
+            return;
+        }
         // The layers take no pointer, so the target is the tag itself and
         // the offsets are against its own box, which the tilt doesn't move.
         let tag = event_target::<HtmlElement>(&ev);
@@ -66,6 +73,7 @@ pub fn HeroTag() -> impl IntoView {
         <span
             class="brand-tag is-hero"
             class:is-live=move || pointer.get().is_some()
+            class:is-hydrated=move || hydrated.get()
             style=style
             aria-hidden="true"
             on:pointermove=on_move

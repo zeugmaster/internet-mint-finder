@@ -2,18 +2,24 @@
 
 use chrono::{DateTime, Utc};
 
-/// Format a sat amount with thin thousands separators: 1234567 -> "1 234 567".
+/// Format a sat amount with narrow thousands separators: 1234567 ->
+/// "1 234 567". The narrow no-break space keeps a figure on one line.
 pub fn format_sats(n: u64) -> String {
     let s = n.to_string();
     let mut out = String::with_capacity(s.len() + s.len() / 3);
     let offset = s.len() % 3;
     for (i, c) in s.chars().enumerate() {
         if i != 0 && (i + 3 - offset).is_multiple_of(3) {
-            out.push('\u{2009}'); // thin space
+            out.push('\u{202F}'); // narrow no-break space
         }
         out.push(c);
     }
     out
+}
+
+/// A count with its thousands grouped like an amount: "1 284 reviews".
+pub fn format_count(n: u64) -> String {
+    format_sats(n)
 }
 
 /// Strip scheme and trailing slash from a mint URL for compact display.
@@ -35,7 +41,8 @@ pub fn format_ms(ms: f64) -> String {
     }
 }
 
-/// Human relative time: "just now", "4m ago", "2h ago", "3d ago".
+/// Human relative time: "just now", "4m ago", "2h ago", "3d ago", then
+/// after a week the date, "Sep 30, 2026", like a review's.
 pub fn relative_time(dt: DateTime<Utc>) -> String {
     let secs = (Utc::now() - dt).num_seconds();
     if secs < 0 {
@@ -46,7 +53,8 @@ pub fn relative_time(dt: DateTime<Utc>) -> String {
         45..=89 => "1m ago".to_string(),
         90..=3599 => format!("{}m ago", secs / 60),
         3600..=86_399 => format!("{}h ago", secs / 3600),
-        _ => format!("{}d ago", secs / 86_400),
+        86_400..=604_799 => format!("{}d ago", secs / 86_400),
+        _ => dt.format("%b %-d, %Y").to_string(),
     }
 }
 
@@ -72,8 +80,9 @@ mod tests {
     fn sats_are_grouped() {
         assert_eq!(format_sats(0), "0");
         assert_eq!(format_sats(999), "999");
-        assert_eq!(format_sats(1000), "1\u{2009}000");
-        assert_eq!(format_sats(1234567), "1\u{2009}234\u{2009}567");
+        assert_eq!(format_sats(1000), "1\u{202F}000");
+        assert_eq!(format_sats(1234567), "1\u{202F}234\u{202F}567");
+        assert_eq!(format_count(1284), "1\u{202F}284");
     }
 
     #[test]
@@ -95,6 +104,14 @@ mod tests {
         assert_eq!(relative_time_from(Utc::now()), "a moment ago");
         let earlier = Utc::now() - chrono::Duration::minutes(3);
         assert_eq!(relative_time_from(earlier), "3m ago");
+        let days = Utc::now() - chrono::Duration::days(6);
+        assert_eq!(relative_time(days), "6d ago");
+        let old = chrono::NaiveDate::from_ymd_opt(2026, 9, 30)
+            .unwrap()
+            .and_hms_opt(12, 0, 0)
+            .unwrap()
+            .and_utc();
+        assert_eq!(relative_time(old), "Sep 30, 2026");
     }
 
     #[test]

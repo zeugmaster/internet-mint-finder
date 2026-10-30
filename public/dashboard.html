@@ -7,16 +7,22 @@
 <link rel="icon" href="/favicon-32.png?v=2" sizes="32x32" type="image/png" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <meta name="color-scheme" content="light dark" />
-<meta name="theme-color" content="#f6f6f6" media="(prefers-color-scheme: light)" />
-<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light) and (width < 48rem)" />
+<meta name="theme-color" content="#f6f6f6" media="(prefers-color-scheme: light) and (width >= 48rem)" />
+<meta name="theme-color" content="#111111" media="(prefers-color-scheme: dark) and (width < 48rem)" />
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark) and (width >= 48rem)" />
 <!-- The same theme script as THEME_SCRIPT in src/app.rs. -->
 <script>(function(){
 var d=document.documentElement,swaps=0;
 d.dataset.theme=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+d.classList.add('js');
+var tint=function(){var dark=d.dataset.theme==='dark';document.querySelectorAll('meta[name=theme-color]').forEach(function(m){var wide=m.media.indexOf('>=')>0;m.content=dark?(wide?'#000000':'#111111'):(wide?'#f6f6f6':'#ffffff');});};
+tint();
+document.addEventListener('touchstart',function(){},{passive:true});
 document.addEventListener('click',function(e){
 var b=e.target.closest('[data-theme-toggle]');if(!b)return;
 var next=d.dataset.theme==='dark'?'light':'dark',k=++swaps;
-var swap=function(){d.dataset.theme=next;localStorage.setItem('theme',next);};
+var swap=function(){d.dataset.theme=next;localStorage.setItem('theme',next);tint();};
 var end=function(){if(k===swaps)d.classList.remove('theme-swap');};
 d.classList.add('theme-swap');
 if(!document.startViewTransition){swap();requestAnimationFrame(function(){requestAnimationFrame(end);});return;}
@@ -163,7 +169,7 @@ document.startViewTransition(swap).finished.finally(end);
   }
 
   * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; min-height: 100vh; }
+  html, body { margin: 0; padding: 0; min-height: 100vh; min-height: 100svh; }
 
   html {
     background: var(--bg);
@@ -247,9 +253,9 @@ document.startViewTransition(swap).finished.finally(end);
     display: inline-flex; align-items: center; height: 28px; padding: 0 10px;
     border-radius: 6px; color: var(--muted); text-decoration: none;
     font-size: 13px; line-height: 20px; font-weight: 500;
-    transition: color 200ms ease-in-out, background-color 200ms ease-in-out, box-shadow 200ms ease-in-out;
+    transition: color 150ms var(--ease), background-color 150ms var(--ease), box-shadow 150ms var(--ease);
   }
-  .nav-link:hover { color: var(--ink); }
+  @media (hover: hover) and (pointer: fine) { .nav-link:hover { color: var(--ink); } }
   .nav-link[aria-current='page'] {
     color: var(--ink); background-color: var(--surface-strong); background-image: var(--sheen-raised);
     box-shadow: var(--s-tab);
@@ -262,7 +268,7 @@ document.startViewTransition(swap).finished.finally(end);
     background: transparent; color: var(--muted); cursor: pointer;
     transition: color 150ms var(--ease-out), background-color 150ms var(--ease-out);
   }
-  .theme-toggle:hover { background: var(--component); color: var(--ink); }
+  @media (hover: hover) and (pointer: fine) { .theme-toggle:hover { background: var(--component); color: var(--ink); } }
   .theme-toggle > span { display: inline-flex; }
   /* Switching theme, as in style/main.css: the new theme opens from the
      switch as a soft-edged circle and the icon turns in; every colour
@@ -277,11 +283,11 @@ document.startViewTransition(swap).finished.finally(end);
             mask-image: radial-gradient(circle at var(--swap-x) var(--swap-y), #000 calc(var(--swap-reveal) - 160px), transparent var(--swap-reveal));
     animation: theme-reveal 760ms cubic-bezier(0.25, 1, 0.5, 1) both;
   }
-  .theme-swap::view-transition-old(theme-icon) { animation: theme-icon-out 160ms cubic-bezier(0.4, 0, 1, 1) both; }
+  .theme-swap::view-transition-old(theme-icon) { animation: theme-icon-out 160ms var(--ease-out) both; }
   .theme-swap::view-transition-new(theme-icon) { animation: theme-icon-in 480ms var(--ease-arrive) both; }
   @keyframes theme-reveal { to { --swap-reveal: calc(var(--swap-r) + 160px); } }
   @keyframes theme-icon-out { to { opacity: 0; transform: rotate(90deg) scale(0.6); } }
-  @keyframes theme-icon-in { from { opacity: 0; transform: rotate(-90deg) scale(0.6); } }
+  @keyframes theme-icon-in { from { opacity: 0; transform: rotate(-90deg) scale(0.9); } }
   @keyframes theme-fade { from { opacity: 0; } }
   @media (prefers-reduced-motion: reduce) {
     .theme-swap::view-transition-new(root) { -webkit-mask-image: none; mask-image: none; animation: theme-fade 200ms var(--ease) both; }
@@ -317,7 +323,7 @@ document.startViewTransition(swap).finished.finally(end);
     font-size: 13px; line-height: 20px; font-weight: 500; white-space: nowrap; cursor: pointer;
     transition: background-color 150ms var(--ease-out);
   }
-  .tool-btn:hover { background-color: var(--surface-strong-hover); }
+  @media (hover: hover) and (pointer: fine) { .tool-btn:hover { background-color: var(--surface-strong-hover); } }
 
   /* One sentence. */
   .site-footer-inner {
@@ -456,14 +462,14 @@ document.startViewTransition(swap).finished.finally(end);
     box-shadow: var(--s-inverted); color: var(--on-inverted);
     transition: background-color 150ms var(--ease-out);
   }
-  .btn:hover { background-color: var(--inverted-hover); }
+  @media (hover: hover) and (pointer: fine) { .btn:hover { background-color: var(--inverted-hover); } }
   .btn:active { background-color: var(--inverted-active); }
   .btn:disabled { cursor: wait; background: var(--disabled); box-shadow: none; color: var(--fg-disabled); }
   .btn.secondary {
     margin-top: 8px; background-color: var(--surface-strong); background-image: var(--sheen-raised);
     box-shadow: var(--s-raised); color: var(--ink);
   }
-  .btn.secondary:hover { background-color: var(--surface-strong-hover); }
+  @media (hover: hover) and (pointer: fine) { .btn.secondary:hover { background-color: var(--surface-strong-hover); } }
   .btn.secondary:disabled { background: var(--disabled); box-shadow: none; color: var(--fg-disabled); }
 
   /* ===================================================================
@@ -480,9 +486,9 @@ document.startViewTransition(swap).finished.finally(end);
     background: transparent; border: 0; color: var(--muted);
     font: inherit; font-size: 13px; line-height: 20px; font-weight: 500;
     cursor: pointer; border-radius: 6px;
-    transition: color 200ms ease-in-out, background-color 200ms ease-in-out, box-shadow 200ms ease-in-out;
+    transition: color 150ms var(--ease), background-color 150ms var(--ease), box-shadow 150ms var(--ease);
   }
-  .seg button:hover { color: var(--ink); }
+  @media (hover: hover) and (pointer: fine) { .seg button:hover { color: var(--ink); } }
   .seg button.active {
     color: var(--ink); background-color: var(--surface-strong); background-image: var(--sheen-raised);
     box-shadow: var(--s-tab);
@@ -510,7 +516,7 @@ document.startViewTransition(swap).finished.finally(end);
     flex: 1 1 0; min-width: 1px; border-radius: 2px; background: var(--component);
     transition: opacity 120ms var(--ease);
   }
-  .sla-cell:hover { opacity: 0.7; }
+  @media (hover: hover) and (pointer: fine) { .sla-cell:hover { opacity: 0.7; } }
   .sla-cell.ok   { background: var(--ok); }
   .sla-cell.warn { background: var(--warn); }
   .sla-cell.err  { background: var(--error); }
@@ -533,7 +539,7 @@ document.startViewTransition(swap).finished.finally(end);
   td.trunc { width: 100%; max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   td .sep { color: var(--faint); }
   tbody tr td { transition: background-color 120ms var(--ease); }
-  tbody tr:hover td { background: var(--component); }
+  @media (hover: hover) and (pointer: fine) { tbody tr:hover td { background: var(--component); } }
   /* Error categories as Interfere badges, matching the app. */
   .pill {
     display: inline-flex; align-items: center; justify-content: center;
@@ -619,7 +625,7 @@ document.startViewTransition(swap).finished.finally(end);
     -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.5 1.5l7 7M8.5 1.5l-7 7' stroke='black' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E") center / 8px no-repeat;
     mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.5 1.5l7 7M8.5 1.5l-7 7' stroke='black' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E") center / 8px no-repeat;
   }
-  .choices[data-type*="select-multiple"] .choices__button:hover { opacity: 1; }
+  @media (hover: hover) and (pointer: fine) { .choices[data-type*="select-multiple"] .choices__button:hover { opacity: 1; } }
   .choices[data-type*="select-multiple"] .choices__button:focus-visible {
     opacity: 1; outline: 1px solid var(--focus); outline-offset: 1px;
   }
@@ -669,7 +675,7 @@ document.startViewTransition(swap).finished.finally(end);
     .chart { padding-inline: 12px; }
     .section-head { flex-direction: column; gap: 2px; }
   }
-  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition-property: opacity, color, background-color, border-color, text-decoration-color !important; } }
   .icon { width: 16px; height: 16px; flex: none; }
 </style>
 </head>
@@ -1013,7 +1019,8 @@ function baseLayout({ xaxis = {}, yaxis = {}, ...rest } = {}) {
     // Interfere tooltips are dark in both themes.
     hoverlabel: { bgcolor: "#222222", bordercolor: "#222222",
                   font: { color: "#eeeeee", family: FONT, size: 12 } },
-    transition: { duration: 350, easing: "cubic-in-out" },
+    transition: matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? { duration: 0 } : { duration: 350, easing: "cubic-in-out" },
     ...rest,
     xaxis: { ...axisStyle(), ...xaxis },
     yaxis: { ...axisStyle(), ...yaxis },
@@ -1064,14 +1071,16 @@ function countUp(el, target, opts) {
   if (el._animation) cancelAnimationFrame(el._animation);
   const fn = opts && opts.compact ? compact : (n) => fmt.format(Math.round(n));
   const suffix = (opts && opts.suffix) || "";
-  if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  const from = el._value ?? 0;
+  el._value = target;
+  if (from === target || matchMedia("(prefers-reduced-motion: reduce)").matches) {
     el.textContent = fn(target) + suffix;
     return;
   }
   function step(t) {
     const k = Math.min(1, (t - t0) / dur);
     const e = 1 - Math.pow(1 - k, 3);
-    el.textContent = fn(target * e) + suffix;
+    el.textContent = fn(from + (target - from) * e) + suffix;
     if (k < 1) el._animation = requestAnimationFrame(step);
   }
   el._animation = requestAnimationFrame(step);
@@ -1618,8 +1627,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     : Promise.resolve();
   await Promise.all([initFilters(), fontReady]);
   $("refresh").addEventListener("click", renderAll);
-  // The theme script in <head> flips data-theme first; renderAll re-reads it.
-  document.addEventListener("click", e => { if (e.target.closest("[data-theme-toggle]")) renderAll(); });
+  // Redraw once data-theme has changed: the theme script switches it inside
+  // a view transition, after the click. renderAll re-reads it.
+  new MutationObserver(() => renderAll()).observe(document.documentElement, { attributeFilter: ["data-theme"] });
   setRange(30); paintRangeToggle(); paintScatterToggle();
 
   $("filter-toggle").addEventListener("click", () => {

@@ -9,7 +9,7 @@ use crate::server::state::AppState;
 use crate::server::storage::{Donation, Mint};
 use crate::types::{
     AnnouncementRead, AuditorMintView, AuditorRead, DonationPoll, DonationRead, MintRead,
-    MintReviews, MintState, MintStats, ReviewContext, ReviewRead,
+    MintReviews, MintState, MintStats, ReviewContext, ReviewRead, REVIEWS_LOADED,
 };
 use cdk::nuts::nut00::Token;
 use cdk::nuts::nut18::{PaymentRequest, PaymentRequestPayload, Transport, TransportType};
@@ -290,9 +290,13 @@ pub async fn mint_reviews(state: &AppState, mint_id: u64) -> Result<MintReviews,
         .announcement_for_mint(&mint.url, mint_pubkey.clone())
         .await?
         .map(|a| a.pubkey);
+    let (total, rating_count, rating_avg) = state
+        .auditor_db
+        .review_stats(&mint.url, mint_pubkey.clone())
+        .await?;
     let reviews = state
         .auditor_db
-        .reviews_for_mint(&mint.url, mint_pubkey.clone(), 100)
+        .reviews_for_mint(&mint.url, mint_pubkey.clone(), REVIEWS_LOADED)
         .await?
         .into_iter()
         .map(|r| ReviewRead {
@@ -305,6 +309,9 @@ pub async fn mint_reviews(state: &AppState, mint_id: u64) -> Result<MintReviews,
         .collect();
     Ok(MintReviews {
         reviews,
+        total,
+        rating_count,
+        rating_avg,
         context: ReviewContext {
             mint_url: mint.url,
             mint_pubkey,

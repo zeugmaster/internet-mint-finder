@@ -3,11 +3,13 @@ use crate::components::badge::StateBadge;
 use crate::components::icons::{Check, Copy, Cross};
 use crate::components::mint_avatar::MintAvatar;
 use crate::components::reviews::Stars;
-use crate::format::{relative_time, relative_time_from, short_url};
+use crate::format::{format_count, relative_time, relative_time_from, short_url};
 use crate::hooks::use_poll;
 use crate::types::{MintPage, MintRead, MintSort, MintState};
 use chrono::{DateTime, Utc};
 use leptos::prelude::*;
+// Safari's autocorrect switch, which the view macro doesn't know by name.
+use leptos::tachys::html::attribute::custom::custom_attribute;
 use leptos_router::hooks::{use_navigate, use_query_map};
 use leptos_router::NavigateOptions;
 
@@ -155,11 +157,16 @@ pub fn MintList() -> impl IntoView {
             navigate("/", quiet());
         }
     };
-    // Once hydrated, Enter applies the search at once instead of reloading.
+    // Once hydrated, Enter applies the search at once instead of reloading,
+    // and puts the keyboard away so the results aren't under it.
+    let search_input = NodeRef::<leptos::html::Input>::new();
     let on_search = {
         let navigate = navigate.clone();
         move |ev: leptos::ev::SubmitEvent| {
             ev.prevent_default();
+            if let Some(input) = search_input.get_untracked() {
+                let _ = input.blur();
+            }
             let url = view_url(
                 &search.get_untracked(),
                 state_filter.get_untracked(),
@@ -179,7 +186,11 @@ pub fn MintList() -> impl IntoView {
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg>
                     // The attribute carries the search into the server's HTML; the
                     // property keeps it live once hydrated.
+                    // Mint names and URLs, not prose: no capitals, corrections
+                    // or spelling marks, and the keyboard's key says Search.
                     <input type="search" name="q" aria-label="Search mints by name or URL" placeholder="Search name or URL"
+                        node_ref=search_input
+                        autocapitalize="none" {..custom_attribute("autocorrect", "off")} spellcheck="false" enterkeyhint="search"
                         value=search.get_untracked()
                         prop:value=move || search.get() on:input=move |ev| search.set(event_target_value(&ev))/>
                     {move || state_filter.get().map(|state| view! { <input type="hidden" name="status" value=status_slug(state)/> })}
@@ -199,7 +210,7 @@ pub fn MintList() -> impl IntoView {
                 </div>
             </div>
             <Transition fallback=|| view! { <DirectorySkeleton/> }>
-                <div class="directory-results arrives" class:is-updating=updating>
+                <div id="mints" class="directory-results arrives" class:is-updating=updating>
                 {move || mints.get().map(|result| {
                     let data = match result {
                         Ok(data) => Some(data),
@@ -218,9 +229,11 @@ pub fn MintList() -> impl IntoView {
                     let current = page.get();
                     let pages = total.div_ceil(PAGE_SIZE).max(1);
                     let filtered = !applied_search.get().is_empty() || state_filter.get().is_some();
-                    let count = format!("{} {}", total, if total == 1 { "mint" } else { "mints" });
-                    let prev_url = view_url(&applied_search.get(), state_filter.get(), sort.get(), current.saturating_sub(1));
-                    let next_url = view_url(&applied_search.get(), state_filter.get(), sort.get(), current + 1);
+                    let count = format!("{} {}", format_count(total), if total == 1 { "mint" } else { "mints" });
+                    // Previous and Next land on the list (#mints), where the
+                    // reader was, rather than on the page's head.
+                    let prev_url = format!("{}#mints", view_url(&applied_search.get(), state_filter.get(), sort.get(), current.saturating_sub(1)));
+                    let next_url = format!("{}#mints", view_url(&applied_search.get(), state_filter.get(), sort.get(), current + 1));
                     view! {
                         <div class="directory-meta">
                             <span>{count}</span>
@@ -306,10 +319,10 @@ fn MintRating(avg: Option<f64>, count: u64) -> impl IntoView {
     match avg {
         Some(avg) => view! {
             <span class="mint-rating">
-                <span class="sr-only">{format!("Rated {avg:.1} out of 5 from {count} {reviews}")}</span>
+                <span class="sr-only">{format!("Rated {avg:.1} out of 5 from {} {reviews}", format_count(count))}</span>
                 <span class="mint-rating-shown" aria-hidden="true">
                     <Stars value=avg/>
-                    <span class="mint-rating-count">{format!("{count} {reviews}")}</span>
+                    <span class="mint-rating-count">{format!("{} {reviews}", format_count(count))}</span>
                 </span>
             </span>
         }
@@ -336,6 +349,10 @@ pub fn CopyText(text: String, shown: String) -> impl IntoView {
     // not when the row is drawn.
     let used = RwSignal::new(false);
     let title = format!("Copy {text}");
+    // The pending return to idle; a second copy clears it and starts its own,
+    // so the check holds its full moment instead of ending early.
+    #[cfg(feature = "hydrate")]
+    let timer = StoredValue::new(None::<TimeoutHandle>);
     let on_click = move |_| {
         #[cfg(feature = "hydrate")]
         {
@@ -347,12 +364,17 @@ pub fn CopyText(text: String, shown: String) -> impl IntoView {
                 .await;
                 used.try_set(true);
                 copied.try_set(Some(result.is_ok()));
-                set_timeout(
+                if let Some(pending) = timer.try_get_value().flatten() {
+                    pending.clear();
+                }
+                let handle = set_timeout_with_handle(
                     move || {
                         copied.try_set(None);
                     },
                     std::time::Duration::from_millis(1600),
-                );
+                )
+                .ok();
+                timer.try_set_value(handle);
             });
         }
         #[cfg(not(feature = "hydrate"))]
@@ -371,7 +393,15 @@ pub fn CopyText(text: String, shown: String) -> impl IntoView {
             // While it says "Couldn't copy", the button needs no "Copy" before it.
             {move || (copied.get() != Some(false)).then(|| view! { <span class="sr-only">"Copy "</span> })}
             <span class="copy-url-text">
-                {move || if copied.get() == Some(false) { "Couldn't copy".to_string() } else { shown.clone() }}
+                {move || if copied.get() == Some(false) {
+                    view! { <span class="copy-url-head">"Couldn't copy"</span> }.into_any()
+                } else {
+                    let (head, tail) = split_tail(&shown);
+                    view! {
+                        <span class="copy-url-head">{head}</span>
+                        <span class="copy-url-tail">{tail}</span>
+                    }.into_any()
+                }}
             </span>
             {move || match copied.get() {
                 Some(true) => view! { <Check/> }.into_any(),
@@ -387,6 +417,14 @@ pub fn CopyText(text: String, shown: String) -> impl IntoView {
             }}
         </span>
     }
+}
+
+/// A value and its last six characters, which stay in view when the rest is
+/// cut short ("legend.lnbits.c…BiQGoC").
+fn split_tail(shown: &str) -> (String, String) {
+    let chars: Vec<char> = shown.chars().collect();
+    let at = chars.len().saturating_sub(6);
+    (chars[..at].iter().collect(), chars[at..].iter().collect())
 }
 
 /// Loading rows shaped like the real ones: an avatar, a name over a URL, and
@@ -495,8 +533,20 @@ fn urlencode(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{sort_from_slug, sort_slug, status_from_slug, status_slug, view_url};
+    use super::{sort_from_slug, sort_slug, split_tail, status_from_slug, status_slug, view_url};
     use crate::types::{MintSort, MintState};
+
+    #[test]
+    fn the_tail_keeps_the_last_six_characters() {
+        assert_eq!(
+            split_tail("legend.lnbits.com/cashu/api/v1/4gr9Xcmz3XEkUNwiBiQGoC"),
+            (
+                "legend.lnbits.com/cashu/api/v1/4gr9Xcmz3XEkUNwi".into(),
+                "BiQGoC".into()
+            )
+        );
+        assert_eq!(split_tail("mint.ü"), (String::new(), "mint.ü".into()));
+    }
 
     #[test]
     fn directory_urls_round_trip_and_omit_defaults() {

@@ -1,8 +1,10 @@
 use crate::components::brand::FoilStar;
 use crate::components::icons::Star;
-use crate::format::{absolute_time, short_npub};
+use crate::format::{absolute_time, format_count, short_npub};
 use crate::types::{MintReviews, ReviewContext, ReviewRead};
 use leptos::prelude::*;
+// Safari's autocorrect switch, which the view macro doesn't know by name.
+use leptos::tachys::html::attribute::custom::custom_attribute;
 
 /// How many reviews show before "Show all".
 const FIRST_REVIEWS: usize = 4;
@@ -19,19 +21,24 @@ const FIRST_REVIEWS: usize = 4;
 /// nothing says "none yet" twice.
 #[component]
 pub fn ReviewsBlock(data: MintReviews) -> impl IntoView {
-    let MintReviews { reviews, context } = data;
+    let MintReviews {
+        reviews,
+        total,
+        rating_count,
+        rating_avg,
+        context,
+    } = data;
     if reviews.is_empty() {
         return view! {
             <div class="card reviews-card"><ReviewCompose context empty=true/></div>
         }
         .into_any();
     }
-    let for_summary = reviews.clone();
     view! {
         <div class="card reviews-card">
             <div class="reviews">
-                <div class="reviews-summary"><RatingSummary reviews=for_summary/></div>
-                <div class="reviews-main"><ReviewList reviews/></div>
+                <div class="reviews-summary"><RatingSummary avg=rating_avg count=rating_count/></div>
+                <div class="reviews-main"><ReviewList reviews total/></div>
             </div>
             <ReviewCompose context/>
         </div>
@@ -39,12 +46,12 @@ pub fn ReviewsBlock(data: MintReviews) -> impl IntoView {
     .into_any()
 }
 
-/// The overall rating: the average, its stars, and how many ratings it rests on.
+/// The overall rating: the average, its stars, and how many ratings it rests
+/// on, over every stored review, as the directory row counts them.
 #[component]
-fn RatingSummary(reviews: Vec<ReviewRead>) -> impl IntoView {
-    let ratings: Vec<u8> = reviews.iter().filter_map(|r| r.rating).collect();
+fn RatingSummary(avg: Option<f64>, count: u64) -> impl IntoView {
     view! {
-        {match rating_average(&ratings) {
+        {match avg {
             Some(avg) => view! {
                 <div class="rating-big">
                     <span class="rating-value">{format!("{avg:.1}")}</span>
@@ -52,7 +59,7 @@ fn RatingSummary(reviews: Vec<ReviewRead>) -> impl IntoView {
                 </div>
                 <Stars value=avg large=true/>
                 <p class="sr-only">{format!("Rated {avg:.1} out of 5")}</p>
-                <p class="rating-count">{format!("Based on {}", count_label(ratings.len(), "rating", "ratings"))}</p>
+                <p class="rating-count">{format!("Based on {}", count_label(count, "rating", "ratings"))}</p>
             }.into_any(),
             // Reviews that carry no star rating.
             None => view! { <p class="rating-count">"No star ratings yet"</p> }.into_any(),
@@ -60,29 +67,36 @@ fn RatingSummary(reviews: Vec<ReviewRead>) -> impl IntoView {
     }
 }
 
-/// The first reviews and a "Show all" for the rest. The write-a-review row
-/// follows across the card's foot: read what others say before adding your
-/// own.
+/// The first reviews and a "Show N more" for the rest of those loaded, the
+/// latest `REVIEWS_LOADED`; past that a line under them says how many there
+/// are in all. The write-a-review row follows across the card's foot: read
+/// what others say before adding your own.
 #[component]
-fn ReviewList(reviews: Vec<ReviewRead>) -> impl IntoView {
+fn ReviewList(reviews: Vec<ReviewRead>, total: u64) -> impl IntoView {
     let mut first = reviews;
     let rest = if first.len() > FIRST_REVIEWS {
         first.split_off(FIRST_REVIEWS)
     } else {
         Vec::new()
     };
-    let total = first.len() + rest.len();
+    let loaded = (first.len() + rest.len()) as u64;
+    let more = rest.len() as u64;
     view! {
         <ol class="review-list" aria-label="Reviews">
             {first.into_iter().map(|r| view! { <ReviewItem review=r/> }).collect_view()}
         </ol>
         {(!rest.is_empty()).then(|| view! {
-            // A details element, so "Show all" works before hydration.
+            // A details element, so "Show more" works before hydration.
             <details class="reviews-more">
-                <summary class="btn">{format!("Show all {total} reviews")}</summary>
+                <summary class="btn">{format!("Show {} more", format_count(more))}</summary>
                 <ol class="review-list">
                     {rest.into_iter().map(|r| view! { <ReviewItem review=r/> }).collect_view()}
                 </ol>
+                {(total > loaded).then(|| view! {
+                    <p class="reviews-capped">
+                        {format!("The latest {} of {} reviews.", format_count(loaded), format_count(total))}
+                    </p>
+                })}
             </details>
         })}
     }
@@ -90,9 +104,12 @@ fn ReviewList(reviews: Vec<ReviewRead>) -> impl IntoView {
 
 /// One review as a line: its stars, the author's npub cut in the middle (the
 /// whole key on hover), and the date at the right, with the text under it
-/// when there is any. A rating without words is that line alone.
+/// when there is any, its line breaks kept. A rating without words is that
+/// line alone. A long review shows its first lines and a "Read more" (a
+/// details element, so it works before hydration).
 #[component]
 fn ReviewItem(review: ReviewRead) -> impl IntoView {
+    let long = is_long(&review.content);
     let full = if review.npub.is_empty() {
         review.pubkey.clone()
     } else {
@@ -111,7 +128,12 @@ fn ReviewItem(review: ReviewRead) -> impl IntoView {
             <span class="review-date" title=absolute_time(review.created_at)>
                 {review.created_at.format("%b %-d, %Y").to_string()}
             </span>
-            {(!review.content.trim().is_empty()).then(|| view! { <p class="review-text" dir="auto">{review.content}</p> })}
+            {(!review.content.trim().is_empty()).then(|| view! {
+                <p class="review-text" class:is-long=long dir="auto">{review.content.trim().to_string()}</p>
+            })}
+            {long.then(|| view! {
+                <details class="review-read-more"><summary class="text-link">"Read more"</summary></details>
+            })}
         </li>
     }
 }
@@ -149,7 +171,7 @@ fn ReviewCompose(context: ReviewContext, #[prop(optional)] empty: bool) -> impl 
                     <div class="field">
                         <label class="field-label" for="review-nsec">"Your Nostr key (nsec)"</label>
                         <div class="flex gap-2">
-                            <input id="review-nsec" type="password" class="field-input" placeholder="nsec1…" autocomplete="off" spellcheck="false"/>
+                            <input id="review-nsec" type="password" class="field-input" placeholder="nsec1…" autocomplete="off" autocapitalize="none" {..custom_attribute("autocorrect", "off")} spellcheck="false"/>
                             <button type="button" id="review-signin" class="btn">"Sign in"</button>
                         </div>
                         <p class="field-hint">
@@ -235,25 +257,31 @@ pub fn Stars(value: f64, #[prop(optional)] large: bool) -> impl IntoView {
     }
 }
 
-/// Mean of the given 1–5 ratings, or None when there are none.
-fn rating_average(ratings: &[u8]) -> Option<f64> {
-    (!ratings.is_empty())
-        .then(|| ratings.iter().map(|&r| f64::from(r)).sum::<f64>() / ratings.len() as f64)
+fn count_label(n: u64, one: &str, many: &str) -> String {
+    format!("{} {}", format_count(n), if n == 1 { one } else { many })
 }
 
-fn count_label(n: usize, one: &str, many: &str) -> String {
-    format!("{n} {}", if n == 1 { one } else { many })
+/// More than about eight lines of the review column: over 480 characters or
+/// eight lines of its own.
+fn is_long(text: &str) -> bool {
+    let text = text.trim();
+    text.chars().count() > 480 || text.lines().count() > 8
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{count_label, rating_average};
+    use super::{count_label, is_long};
 
     #[test]
-    fn average_and_count_labels() {
-        assert_eq!(rating_average(&[]), None);
-        assert_eq!(rating_average(&[5, 4, 4]), Some(13.0 / 3.0));
+    fn count_labels_and_long_reviews() {
         assert_eq!(count_label(1, "rating", "ratings"), "1 rating");
         assert_eq!(count_label(7, "rating", "ratings"), "7 ratings");
+        assert_eq!(
+            count_label(1284, "rating", "ratings"),
+            "1\u{202F}284 ratings"
+        );
+        assert!(!is_long("Fast and cheap."));
+        assert!(is_long(&"word ".repeat(100)));
+        assert!(is_long(&"line\n".repeat(9)));
     }
 }
