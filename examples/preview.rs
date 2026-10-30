@@ -44,6 +44,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "Signal",
         "Atlas",
         "Common Ground",
+        "Lantern",
+        "Meadow",
+        "Quarry",
+        "Birch",
+        "Orchard",
+        "Tidewater",
+        "Granite",
+        "Kestrel",
+        "Saltmarsh",
+        "Ember",
+        "Bramble",
+        "Marigold",
+        "Cobalt",
+        "Driftwood",
+        "Foxglove",
     ];
     let mut mints = Vec::new();
     for (i, name) in names.iter().enumerate() {
@@ -53,9 +68,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .await?;
         mint.name = name.to_string();
         mint.state = match i {
-            2 => MintState::Warn,
-            4 => MintState::Error,
-            6 => MintState::Unknown,
+            2 | 12 => MintState::Warn,
+            4 | 16 => MintState::Error,
+            6 | 19 => MintState::Unknown,
             _ => MintState::Ok,
         };
         mint.n_mints = 90 + i as u64 * 23;
@@ -130,13 +145,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // never checked.
         for hour in 0..24 {
             let (state, error, category) = match (i, hour) {
-                (1, 7 | 8) | (5, 6..) | (6, _) => continue,
-                (2, 0..=2) => (
+                (1, 7 | 8) | (5, 6..) | (6 | 19, _) => continue,
+                (2 | 12, 0..=2) => (
                     "WARN",
                     Some("HTTP 429 Too Many Requests".to_string()),
                     Some("rate_limit"),
                 ),
-                (3, 15) | (4, 0..=4) => (
+                (3, 15) | (4 | 16, 0..=4) => (
                     "ERROR",
                     Some(format!(
                         "error sending request for url ({url}/v1/info): connection refused"
@@ -154,8 +169,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         mints.push(mint);
     }
-    // Reviews: six for Northstar (five rated, one not), one for Copper, none
-    // elsewhere, so the summary, "Show all" and the empty state all show.
+    // Reviews: six for Northstar (five rated, one not) and one for Copper,
+    // written out; more below. Common Ground and a few others have none, so
+    // the summary, "Show all" and the empty state all show.
     let samples: [(usize, Option<u8>, &str, i64); 7] = [
         (0, Some(5), "Been using it with my wallet for months. Mints and melts go through in a couple of seconds, and it has never lost a payment.", 2),
         (0, Some(4), "Reliable. Lightning withdrawals sometimes take a while to find a route, but they always land.", 6),
@@ -176,6 +192,70 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             created_at: Utc::now() - Duration::days(days),
         })
         .await?;
+    }
+    // Star ratings across the range, from one review to a dozen per mint, so
+    // the directory's stars show every fill and sorting by rating has
+    // something to sort. Text is picked by rating from a small pool.
+    let ratings: [(usize, &[u8]); 15] = [
+        (2, &[2, 3, 2, 1, 3]),
+        (3, &[5, 5, 4, 5, 5, 5, 4, 5, 5]),
+        (4, &[1, 2, 1]),
+        (5, &[4, 3, 4, 4]),
+        (7, &[5]),
+        (8, &[3, 4, 3, 3, 4, 3]),
+        (9, &[1]),
+        (10, &[4, 5, 4, 4, 5, 4, 5, 4, 4, 5, 4, 4]),
+        (11, &[2, 2, 3]),
+        (12, &[5, 4]),
+        (14, &[3, 3, 2, 4]),
+        (15, &[5, 5, 5, 5, 4, 5, 5]),
+        (17, &[1, 1, 2, 1, 1, 1]),
+        (18, &[3, 4]),
+        (21, &[2]),
+    ];
+    let says: [&[&str]; 5] = [
+        &[
+            "Lost a payment and never heard back.",
+            "Melts failed three times in a row. Moved my sats elsewhere.",
+            "Down more often than up.",
+        ],
+        &[
+            "Slow, and the fees were higher than advertised.",
+            "Worked once, then the mint went quiet for a day.",
+            "Withdrawals keep failing to find a route.",
+        ],
+        &[
+            "Does the job, nothing more. Some slow melts.",
+            "Fine for small amounts.",
+            "Had one stuck payment. It cleared the next day.",
+        ],
+        &[
+            "Quick swaps, fair fees.",
+            "Solid. The odd slow withdrawal, but they always land.",
+            "Good mint, responsive operator.",
+        ],
+        &[
+            "Fast, cheap, never lost a sat.",
+            "My daily mint. Payments land in seconds.",
+            "Excellent. The operator answers on Nostr within the hour.",
+        ],
+    ];
+    let mut k = 7;
+    for (mint, stars) in ratings {
+        for (j, &rating) in stars.iter().enumerate() {
+            let pool = says[rating as usize - 1];
+            db.upsert_review(&Review {
+                pubkey: nostr_sdk::prelude::Keys::generate().public_key().to_hex(),
+                d: format!("preview-{mint}"),
+                event_id: format!("{k:064x}"),
+                mint_url: Some(mints[mint].url.clone()),
+                rating: Some(rating),
+                content: pool[(mint + j) % pool.len()].into(),
+                created_at: Utc::now() - Duration::days(3 + ((mint * 5 + j * 9) % 60) as i64),
+            })
+            .await?;
+            k += 1;
+        }
     }
     // Paid swaps and peer auditors feed the audit pages. A directory-only
     // instance has neither, so its uptime comes from the checks alone.
