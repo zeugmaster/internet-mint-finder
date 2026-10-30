@@ -1,29 +1,23 @@
-use crate::components::brand::Masthead;
+use crate::components::brand::HeroTag;
 use crate::components::mint_list::MintList;
-use crate::types::AppConfig;
 use leptos::prelude::*;
 use leptos_meta::Title;
 
 /// The directory: just the mints, with their ratings and uptime, under a
-/// masthead after the IMF's: the sticker with the seal struck on it and the
-/// name in steel capitals under it.
+/// head that carries the brand tag at full size.
 #[component]
 pub fn HomePage() -> impl IntoView {
-    let config = use_context::<Resource<AppConfig>>();
-
     view! {
         <Title text="Directory — Internet Mint Finder"/>
         <div class="shell">
-            <Masthead>
-                <Suspense fallback=|| "Internet Mint Finder".to_string()>
-                    {move || {
-                        config
-                            .and_then(|c| c.get())
-                            .map(|c| c.app_name.clone())
-                            .unwrap_or_else(|| "Internet Mint Finder".to_string())
-                    }}
-                </Suspense>
-            </Masthead>
+            <div class="page-head has-tag">
+                <h1 class="page-title">"Find a Cashu mint."</h1>
+                <p class="page-subtitle">
+                    "Cashu mints found on Nostr, rated by the people who use them. "
+                    "Each one is checked every hour to see if it's online."
+                </p>
+                <HeroTag/>
+            </div>
             <MintList/>
         </div>
     }

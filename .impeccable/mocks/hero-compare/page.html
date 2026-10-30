@@ -218,6 +218,30 @@
     transform: perspective(900px) rotateX(var(--tag-rx)) rotateY(var(--tag-ry));
 }
 
+/* The subtle head refined: one tag on the page, so the header keeps the
+   name and leaves the tag to the head. The tag is no taller than the title
+   and intro beside it and rises above them rather than hanging below, so
+   both end 28px over the search. It takes what the seal has learned since:
+   the rainbow at 20% and the struck colour at 16%, the light and the tilt
+   following together on one soft curve and gliding home on leave. The
+   head sits 28px lower to give back what the tag rises, so the tag keeps
+   the head's 24px from the header. */
+.page-head.is-refined { margin-top: 52px; }
+.page-head.is-refined .brand-tag.is-hero {
+    --tag-w: 164px;
+    align-self: end;
+    margin-top: -28px;
+    transition-property: --tag-px, --tag-py, --tag-bx, --tag-by, --tag-lx, --tag-ly, --tag-rx, --tag-ry;
+    transition-duration: 700ms;
+    transition-timing-function: var(--ease-arrive);
+}
+.page-head.is-refined .brand-tag.is-hero.is-live {
+    transition-duration: 260ms;
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+.page-head.is-refined .brand-tag .holo { opacity: 0.2; }
+.page-head.is-refined .brand-tag-struck .tint { opacity: 0.16; }
+
 @media (max-width: 760px) {
     .page-head.has-tag {
         grid-template-areas: "title tag" "subtitle subtitle";
@@ -227,6 +251,15 @@
     .brand-tag.is-hero { --tag-w: 104px; }
     .brand-sticker.is-hero.is-corner { --sticker-d: 88px; }
     .brand-tag.is-masthead { --tag-w: 224px; }
+
+    /* Refined: under 100px the name along the bottom is too small to read,
+       so the tag carries IMF alone, as imf-mark does, centred and a little
+       larger. */
+    .page-head.is-refined { margin-top: 16px; }
+    .page-head.is-refined .brand-tag.is-hero { --tag-w: 96px; align-self: center; margin-top: 0; }
+    .page-head.is-refined .brand-tag-arc { display: none; }
+    .page-head.is-refined .brand-tag-face { transform: none; }
+    .page-head.is-refined .brand-tag-struck { font-size: calc(var(--tag-w) * 0.29); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -424,6 +457,7 @@
     <header class="cmp-head">
         <h1 class="cmp-title">Directory hero: bold or subtle</h1>
         <p class="cmp-note">The Internet Mint Finder directory three times, with the same page under the hero. Pick a version for each. Move the pointer over a mark. Figures here use a system monospace in place of TX-02.</p>
+        <p class="cmp-note">B is C refined: the header keeps the name and leaves the tag to the head, the tag sits level with the intro instead of hanging toward the search, it takes the seal's quieter rainbow and motion, and on phones it carries IMF alone.</p>
     </header>
 
     <div class="cmp-toolbar">
@@ -479,11 +513,12 @@
 <template id="page"><!--PAGE--></template>
 
 <!-- Runs inside each pane: makes the hero into the chosen version, version
-     being layout-mark ("bold-seal", "subtle-oval"), and lights its mark. -->
+     being layout-mark and an optional take ("bold-seal", "subtle-oval",
+     "subtle-oval-refined"), and lights its mark. -->
 <script type="text/plain" id="frame-js">
 (() => {
     const root = document.documentElement;
-    const [layout, kind] = (root.dataset.version || 'bold-seal').split('-');
+    const [layout, kind, take] = (root.dataset.version || 'bold-seal').split('-');
 
     function light(x, y, prefix) {
         const dx = x - 0.5, dy = y - 0.5, n = Math.hypot(dx, dy);
@@ -550,21 +585,22 @@
         });
     } else {
         // The head from before the seal: the title and its intro with the
-        // mark at the right, and the brand back in the header.
-        const oval = kind === 'oval';
+        // mark at the right, and the brand back in the header (refined, the
+        // name alone, as the head carries the tag).
+        const oval = kind === 'oval', refined = take === 'refined';
         const header = document.querySelector('.site-header');
         header.classList.remove('is-bare');
         const brand = document.createElement('a');
         brand.href = '/';
         brand.className = 'brand';
-        brand.innerHTML = (oval
-            ? '<span class="brand-tag" aria-hidden="true">' + TAG_LAYERS + '<span class="brand-tag-imf">IMF</span></span>'
+        brand.innerHTML = (refined ? ''
+            : oval ? '<span class="brand-tag" aria-hidden="true">' + TAG_LAYERS + '<span class="brand-tag-imf">IMF</span></span>'
             : '<span class="brand-sticker" aria-hidden="true">' + SEAL_LAYERS + '</span>')
             + '<span>Internet Mint Finder</span>';
         header.querySelector('.site-header-inner').prepend(brand);
 
         const head = document.createElement('div');
-        head.className = 'page-head has-tag';
+        head.className = 'page-head has-tag' + (refined ? ' is-refined' : '');
         head.innerHTML = '<h1 class="page-title">Find a Cashu mint.</h1>'
             + '<p class="page-subtitle">Cashu mints found on Nostr, rated by the people who use them. '
             + 'Each one is checked every hour to see if it\'s online.</p>'
@@ -597,9 +633,10 @@
         ['bold-seal', 'Bold masthead, round seal (as shipped)'],
         ['bold-oval', 'Bold masthead, oval tag'],
         ['subtle-oval', 'Subtle head, oval tag (as before the seal)'],
+        ['subtle-oval-refined', 'Subtle head, oval tag, refined'],
         ['subtle-seal', 'Subtle head, round seal'],
     ];
-    const state = { theme: 'light', width: 'desktop', layout: 'side', a: 'bold-seal', b: 'bold-oval', c: 'subtle-oval' };
+    const state = { theme: 'light', width: 'desktop', layout: 'side', a: 'bold-seal', b: 'subtle-oval-refined', c: 'subtle-oval' };
     const frames = Object.fromEntries(['a', 'b', 'c'].map((pane) => [pane, document.getElementById('frame-' + pane)]));
     const css = document.getElementById('app-css').textContent + document.getElementById('variants-css').textContent;
     const page = document.getElementById('page').innerHTML;
