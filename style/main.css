@@ -115,11 +115,12 @@
        enough to show it, a shaded bottom lip on panels and raised controls,
        a soft shade under the top edge of a well. On white a gradient alone
        barely shows, so light mode leans on these edges, and its rings are a
-       step firmer than shadow-default. */
+       step firmer than shadow-default. Fields are flat: a fill and the ring
+       alone (the owner found the well's shade and sheen heavy, 2026-10-30). */
     --s-panel: inset 0 -1px 0 #00000008, 0 0 0 0.5px #00000014;
     --s-lip: inset 0 1px 0 #ffffffcc, inset 0 -1px 0 #00000014;
     --s-raised: var(--s-lip), 0 0 0 0.5px #00000017;
-    --s-well: inset 0 1px 2px #00000014, 0 0 0 0.5px #00000017;
+    --s-field: 0 0 0 0.5px #00000017;
     --s-track: inset 0 1px 2px #00000017;
     --s-tab: inset 0 -1px 0 #00000014, inset 0 0 0 1px var(--tab-border);
     --s-inverted: inset 0 1px 0 #ffffff29;
@@ -189,7 +190,7 @@
     --s-panel: inset 0 1px 0 #ffffff0f, inset 0 0 0 1px #ffffff1a;
     --s-lip: inset 0 1px 0 #ffffff14;
     --s-raised: var(--s-lip), inset 0 0 0 1px #ffffff1a;
-    --s-well: inset 0 1px 1.5px #00000059, inset 0 -1px 0 #ffffff0a, inset 0 0 0 1px #ffffff1a;
+    --s-field: inset 0 0 0 1px #ffffff1a;
     --s-track: inset 0 1px 1.5px #00000066, inset 0 -1px 0 #ffffff0a;
     --s-tab: inset 0 1px 0 #ffffff14, inset 0 0 0 1px var(--tab-border);
     --s-inverted: inset 0 -1px 0 #00000033;
@@ -2061,8 +2062,7 @@ h4.field-label {
     border: 0;
     border-radius: 8px;
     background-color: var(--surface-strong);
-    background-image: var(--sheen-well);
-    box-shadow: var(--s-well);
+    box-shadow: var(--s-field);
     color: var(--fg);
     font-size: 13px;
     line-height: 20px;
@@ -2094,7 +2094,7 @@ h4.field-label {
 .field-input:focus-visible,
 .field-textarea:focus-visible,
 .search-field:focus-within {
-    box-shadow: var(--focus-ring), var(--s-well);
+    box-shadow: var(--focus-ring), var(--s-field);
 }
 
 .field-input {
@@ -2119,19 +2119,18 @@ h4.field-label {
     color: var(--danger-fg);
 }
 
-/* A select is pressed like a button, so it is raised, not a well; the
-   chevron lies over the sheen. */
+/* A select is flat like the fields beside it, its chevron at the right; a
+   press gives a little, like a button's. */
 .filter-select {
     --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000000' stroke-opacity='.45' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.5 6.5L8 10l3.5-3.5'/%3E%3C/svg%3E");
     height: 32px;
     padding: 0 32px 0 10px;
     appearance: none;
     cursor: pointer;
-    background-image: var(--chevron), var(--sheen-raised);
+    background-image: var(--chevron);
     background-repeat: no-repeat;
-    background-position: right 10px center, 0 0;
-    background-size: 16px, auto;
-    box-shadow: var(--s-raised);
+    background-position: right 10px center;
+    background-size: 16px;
 }
 
 :root[data-theme='dark'] .filter-select {
@@ -2139,10 +2138,9 @@ h4.field-label {
 }
 
 .filter-select:focus-visible {
-    box-shadow: var(--focus-ring), var(--s-raised);
+    box-shadow: var(--focus-ring), var(--s-field);
 }
 
-/* Pressed like a button: it gives a little. */
 .filter-select {
     transition: background-color 150ms var(--ease), transform 150ms var(--ease-out);
 }

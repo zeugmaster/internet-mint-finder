@@ -105,7 +105,7 @@ document.startViewTransition(swap).finished.finally(end);
     --s-panel: inset 0 -1px 0 #00000008, 0 0 0 0.5px #00000014;
     --s-lip: inset 0 1px 0 #ffffffcc, inset 0 -1px 0 #00000014;
     --s-raised: var(--s-lip), 0 0 0 0.5px #00000017;
-    --s-well: inset 0 1px 2px #00000014, 0 0 0 0.5px #00000017;
+    --s-field: 0 0 0 0.5px #00000017;
     --s-track: inset 0 1px 2px #00000017;
     --s-tab: inset 0 -1px 0 #00000014, inset 0 0 0 1px var(--tab-border);
     --s-inverted: inset 0 1px 0 #ffffff29;
@@ -149,7 +149,7 @@ document.startViewTransition(swap).finished.finally(end);
     --s-panel: inset 0 1px 0 #ffffff0f, inset 0 0 0 1px #ffffff1a;
     --s-lip: inset 0 1px 0 #ffffff14;
     --s-raised: var(--s-lip), inset 0 0 0 1px #ffffff1a;
-    --s-well: inset 0 1px 1.5px #00000059, inset 0 -1px 0 #ffffff0a, inset 0 0 0 1px #ffffff1a;
+    --s-field: inset 0 0 0 1px #ffffff1a;
     --s-track: inset 0 1px 1.5px #00000066, inset 0 -1px 0 #ffffff0a;
     --s-tab: inset 0 1px 0 #ffffff14, inset 0 0 0 1px var(--tab-border);
     --s-inverted: inset 0 -1px 0 #00000033;
@@ -445,11 +445,11 @@ document.startViewTransition(swap).finished.finally(end);
   .filters legend { margin-top: 0; }
   .filters input[type="date"] {
     width: 100%; min-width: 0; height: 32px; padding: 0 8px;
-    background-color: var(--surface-strong); background-image: var(--sheen-well); box-shadow: var(--s-well);
+    background-color: var(--surface-strong); box-shadow: var(--s-field);
     border: 0; border-radius: 8px;
     color: var(--ink); font-size: 13px;
   }
-  .filters input[type="date"]:focus-visible { outline: 0; box-shadow: var(--focus-ring), var(--s-well); }
+  .filters input[type="date"]:focus-visible { outline: 0; box-shadow: var(--focus-ring), var(--s-field); }
   .filters .row { display: flex; gap: 16px; }
   .filters .row > * { flex: 1; }
 
@@ -575,13 +575,13 @@ document.startViewTransition(swap).finished.finally(end);
   /* Choices.js clips the closed box, which would hide the field's ring. */
   .choices { margin-bottom: 0; font-size: 13px; overflow: visible; }
   .choices__inner {
-    background-color: var(--surface-strong) !important; background-image: var(--sheen-raised); border: 0 !important;
-    box-shadow: var(--s-raised);
+    background-color: var(--surface-strong) !important; border: 0 !important;
+    box-shadow: var(--s-field);
     border-radius: 8px !important; min-height: 32px; padding: 3px 6px 0 !important;
     color: var(--ink); font-size: 13px;
   }
   .choices.is-focused .choices__inner,
-  .choices.is-open .choices__inner { box-shadow: var(--focus-ring), var(--s-raised); }
+  .choices.is-open .choices__inner { box-shadow: var(--focus-ring), var(--s-field); }
   .choices__list--dropdown, .choices__list[aria-expanded] {
     background-color: var(--surface) !important; background-image: var(--sheen-panel);
     border: 0 !important; box-shadow: var(--s-large);
