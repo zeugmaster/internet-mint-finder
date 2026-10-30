@@ -1069,11 +1069,12 @@ button.text-link {
     color: var(--fg-2);
 }
 
-/* The rest as a checklist, read down the first column, then the second. */
+/* Every other NUT the mint names as a checklist, read down the first
+   column, then the second (--nut-rows is half the list, rounded up). */
 .offers-list {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: repeat(3, auto);
+    grid-template-rows: repeat(var(--nut-rows, 3), auto);
     grid-auto-flow: column;
     /* 32px puts the second column under "Pay out" above. */
     gap: 6px 32px;
@@ -1082,16 +1083,26 @@ button.text-link {
     list-style: none;
 }
 
+/* The mark, the number in TX-02, then the spec's title, the number and the
+   title on one baseline; every number is six characters, so the titles line
+   up down each column. */
 .offers-item {
     display: grid;
-    grid-template-columns: 16px minmax(0, 1fr);
+    grid-template-columns: 16px auto minmax(0, 1fr);
+    align-items: baseline;
     gap: 0 10px;
 }
 
 /* Centred on the first 24px line. */
 .offers-item .icon {
+    align-self: start;
     margin-top: 4px;
     color: var(--fg);
+}
+
+.offers-nut {
+    color: var(--fg-2);
+    font-size: 13px;
 }
 
 .offers-item.is-off {
@@ -1100,13 +1111,6 @@ button.text-link {
 
 .offers-item.is-off .icon {
     color: var(--fg-3);
-}
-
-.offers-item-detail {
-    grid-column: 2;
-    color: var(--fg-2);
-    font-size: 13px;
-    line-height: 20px;
 }
 
 /* Where it all comes from, at the foot of the claims it covers. */

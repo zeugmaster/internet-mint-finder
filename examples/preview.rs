@@ -90,9 +90,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 {"method": "email", "info": format!("ops@{host}")},
                 {"method": "nostr", "info": "npub1qe3e5wrvnsgpggtkytxteaqfprz0rgxr8c3l34kk3a9t7e2l3acslezefe"}
             ],
+            // What Nutshell lists, each in its own shape.
             "nuts": {
                 "4": lightning(1, 500_000), "5": lightning(1, 500_000),
-                "7": yes, "8": yes, "9": yes, "10": yes, "11": yes, "12": yes
+                "7": yes, "8": yes, "9": yes, "10": yes, "11": yes, "12": yes, "14": yes,
+                "15": {"methods": [{"method": "bolt11", "unit": "sat"}]},
+                "17": {"supported": [{"method": "bolt11", "unit": "sat", "commands": ["bolt11_mint_quote", "bolt11_melt_quote", "proof_state"]}]},
+                "19": {"ttl": 604_800, "cached_endpoints": [{"method": "POST", "path": "/v1/mint/bolt11"}, {"method": "POST", "path": "/v1/swap"}]},
+                "20": yes
             }
         });
         // One real icon, one that fails to load (the initial shows), the rest none.

@@ -313,12 +313,13 @@ fn About(mint: MintRead) -> impl IntoView {
 
 /// What the mint offers and how to reach it, in one card: Lightning in and
 /// out side by side with their limits, since those decide whether the mint
-/// fits; the rest as a two-column checklist, a check for offered and a cross
-/// for not; then the operator's contacts, software and terms; and at the
-/// foot, where it all comes from.
+/// fits; then every other NUT the mint names, by number and the spec's
+/// title, as a two-column checklist, a check for supported and a cross for
+/// not; then the operator's contacts, software and terms; and at the foot,
+/// where it all comes from.
 #[component]
 fn Offers(
-    features: Option<Vec<Feature>>,
+    features: Option<Features>,
     contacts: Vec<Contact>,
     software: Option<String>,
     terms: Option<String>,
@@ -329,7 +330,7 @@ fn Offers(
     view! {
         <div class="card offers">
             {match features {
-                Some(list) => view! { <OfferRows list/> }.into_any(),
+                Some(features) => view! { <OfferRows features/> }.into_any(),
                 None => view! {
                     <p class="offers-empty">"The mint doesn't list what it offers."</p>
                 }
@@ -376,15 +377,16 @@ fn Offers(
     }
 }
 
-/// The features: Lightning cells, then the checklist.
+/// The features: Lightning cells, then the NUT checklist.
 #[component]
-fn OfferRows(list: Vec<Feature>) -> impl IntoView {
-    let (lightning, rest): (Vec<Feature>, Vec<Feature>) =
-        list.into_iter().partition(|f| matches!(f.nut, 4 | 5));
+fn OfferRows(features: Features) -> impl IntoView {
+    let Features { lightning, nuts } = features;
+    // Read down the first column, then the second.
+    let rows = format!("--nut-rows: {}", nuts.len().div_ceil(2));
     view! {
         <dl class="offers-lightning">
             {lightning.into_iter().map(|feature| {
-                let Feature { name, offered, detail, .. } = feature;
+                let Feature { name, offered, detail } = feature;
                 view! {
                     <div class="offers-cell" class:is-off=!offered>
                         <dt>{name}</dt>
@@ -393,23 +395,24 @@ fn OfferRows(list: Vec<Feature>) -> impl IntoView {
                 }
             }).collect_view()}
         </dl>
-        <ul class="offers-list" aria-label="Features">
-            {rest.into_iter().map(|feature| {
-                let Feature { name, offered, detail, .. } = feature;
-                let unlisted = !offered && detail.is_empty();
-                let has_detail = !detail.is_empty();
-                view! {
-                    <li class="offers-item" class:is-off=!offered>
-                        {if offered { view! { <Check/> }.into_any() } else { view! { <Cross/> }.into_any() }}
-                        <span>
-                            {name}
-                            {unlisted.then(|| view! { <span class="sr-only">", not listed by the mint"</span> })}
-                        </span>
-                        {has_detail.then(|| view! { <span class="offers-item-detail"><Pieces detail/></span> })}
-                    </li>
-                }
-            }).collect_view()}
-        </ul>
+        {(!nuts.is_empty()).then(|| view! {
+            <ul class="offers-list" aria-label="NUTs" style=rows>
+                {nuts.into_iter().map(|nut| {
+                    let Nut { number, supported } = nut;
+                    view! {
+                        <li class="offers-item" class:is-off=!supported>
+                            {if supported { view! { <Check/> }.into_any() } else { view! { <Cross/> }.into_any() }}
+                            <span class="mono offers-nut">{format!("NUT-{number:02}")}</span>
+                            " "
+                            <span>
+                                {nut_title(number)}
+                                {(!supported).then(|| view! { <span class="sr-only">", not supported"</span> })}
+                            </span>
+                        </li>
+                    }
+                }).collect_view()}
+            </ul>
+        })}
     }
 }
 
@@ -425,14 +428,26 @@ fn Pieces(detail: Vec<Piece>) -> impl IntoView {
         .collect_view()
 }
 
-/// A wallet-facing capability in plain words, read from the mint's NUT-06
-/// info.
+/// What the mint lists in its NUT-06 info: Lightning in and out with their
+/// limits, then every optional NUT it names.
+struct Features {
+    lightning: [Feature; 2],
+    nuts: Vec<Nut>,
+}
+
+/// Lightning in or out, read from the mint's NUT-06 info.
 #[derive(Debug, PartialEq)]
 struct Feature {
     name: &'static str,
-    nut: u8,
     offered: bool,
     detail: Vec<Piece>,
+}
+
+/// An optional NUT the mint names, and whether it marks it supported.
+#[derive(Debug, PartialEq)]
+struct Nut {
+    number: u16,
+    supported: bool,
 }
 
 /// A feature's detail: words, with amounts kept apart so they set as figures.
@@ -442,46 +457,86 @@ enum Piece {
     Sats(u64),
 }
 
-/// The same list on every mint, most useful first, so two mints compare line
-/// by line. Only what the mint lists as supported counts as offered.
-fn features(nuts: &serde_json::Map<String, serde_json::Value>) -> Vec<Feature> {
-    let listed = |nut: u8| {
-        nuts.get(&nut.to_string())
-            .and_then(|v| v.get("supported"))
-            .is_some_and(|s| {
-                s.as_bool() == Some(true) || s.as_array().is_some_and(|a| !a.is_empty())
+/// Lightning in and out first, the same two cells on every mint so two mints
+/// compare; then every NUT the mint names from 07 up, in order. 00 to 06 are
+/// the base every mint implements, and 04 and 05 are the Lightning cells.
+fn features(nuts: &serde_json::Map<String, serde_json::Value>) -> Features {
+    let mut listed: Vec<Nut> = nuts
+        .iter()
+        .filter_map(|(key, value)| {
+            let number: u16 = key.parse().ok()?;
+            (number >= 7).then(|| Nut {
+                number,
+                supported: supported(value),
             })
-    };
-    let plain = |nut: u8, name: &'static str| {
-        let offered = listed(nut);
-        Feature {
-            name,
-            nut,
-            offered,
-            detail: Vec::new(),
-        }
-    };
-    // Clear (NUT-21) or blind (NUT-22) auth: the mint wants an account.
-    let account = nuts.contains_key("21") || nuts.contains_key("22");
-    vec![
-        lightning(nuts, 4, "Add funds with Lightning"),
-        lightning(nuts, 5, "Pay out to Lightning"),
-        Feature {
-            name: "Use without an account",
-            nut: 21,
-            offered: !account,
-            detail: if account {
-                text("Sign-in required")
-            } else {
-                Vec::new()
-            },
-        },
-        plain(9, "Restore from a seed phrase"),
-        plain(7, "See when sent ecash is claimed"),
-        plain(11, "Lock ecash to a key"),
-        plain(12, "Check ecash offline"),
-        plain(8, "Refund unused Lightning fees"),
-    ]
+        })
+        .collect();
+    listed.sort_by_key(|nut| nut.number);
+    listed.dedup_by_key(|nut| nut.number);
+    Features {
+        lightning: [
+            lightning(nuts, 4, "Add funds with Lightning"),
+            lightning(nuts, 5, "Pay out to Lightning"),
+        ],
+        nuts: listed,
+    }
+}
+
+/// Whether the mint marks a NUT supported. Most say so in `supported` (true,
+/// or a non-empty list of methods); NUT-15 lists its methods (older mints as
+/// a bare list); the rest, like NUT-19's cache and NUT-21 and 22's auth, are
+/// on by being listed with their settings. Paused is not supported.
+fn supported(value: &serde_json::Value) -> bool {
+    let non_empty = |v: &serde_json::Value| v.as_array().is_some_and(|a| !a.is_empty());
+    if let Some(on) = value.as_bool() {
+        return on;
+    }
+    if value.get("disabled").and_then(|v| v.as_bool()) == Some(true) {
+        return false;
+    }
+    if let Some(s) = value.get("supported") {
+        return s.as_bool() == Some(true) || non_empty(s);
+    }
+    if let Some(methods) = value.get("methods") {
+        return non_empty(methods);
+    }
+    if value.is_array() {
+        return non_empty(value);
+    }
+    true
+}
+
+/// An optional NUT's title, as the spec's index (github.com/cashubtc/nuts)
+/// gives it, in sentence case. A NUT newer than this list shows its number
+/// alone.
+fn nut_title(number: u16) -> Option<&'static str> {
+    Some(match number {
+        7 => "Token state check",
+        8 => "Overpaid Lightning fees",
+        9 => "Signature restore",
+        10 => "Spending conditions",
+        11 => "Pay-To-Pubkey (P2PK)",
+        12 => "DLEQ proofs",
+        13 => "Deterministic secrets",
+        14 => "Hashed Timelock Contracts (HTLCs)",
+        15 => "Partial multi-path payments (MPP)",
+        16 => "Animated QR codes",
+        17 => "WebSocket subscriptions",
+        18 => "Payment requests",
+        19 => "Cached responses",
+        20 => "Signature on mint quote",
+        21 => "Clear authentication",
+        22 => "Blind authentication",
+        23 => "Payment method: BOLT11",
+        24 => "HTTP 402 Payment Required",
+        25 => "Payment method: BOLT12",
+        26 => "Payment request Bech32m encoding",
+        27 => "Nostr mint backup",
+        28 => "Pay to Blinded Key (P2BK)",
+        29 => "Batched mint",
+        30 => "Payment method: Onchain",
+        _ => return None,
+    })
 }
 
 /// Lightning in (NUT-04) or out (NUT-05): offered when the mint lists a
@@ -494,7 +549,6 @@ fn lightning(
 ) -> Feature {
     let off = |why: &str| Feature {
         name,
-        nut,
         offered: false,
         detail: text(why),
     };
@@ -556,7 +610,6 @@ fn lightning(
     }
     Feature {
         name,
-        nut,
         offered: true,
         detail,
     }
@@ -795,7 +848,7 @@ fn uptime_grid_style(bar_count: usize) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{bar_span, contacts, features, uptime_grid_style, Piece};
+    use super::{bar_span, contacts, features, nut_title, uptime_grid_style, Nut, Piece};
     use serde_json::json;
 
     fn nuts(value: serde_json::Value) -> serde_json::Map<String, serde_json::Value> {
@@ -803,18 +856,42 @@ mod tests {
     }
 
     #[test]
-    fn features_count_only_what_the_mint_lists_as_supported() {
+    fn features_list_every_optional_nut_the_mint_names_in_order() {
         let list = features(&nuts(json!({
             "4": {"methods": [{"method": "bolt11", "unit": "sat", "min_amount": 1, "max_amount": 500000}], "disabled": false},
             "5": {"methods": [{"method": "bolt11", "unit": "sat", "min_amount": 100, "max_amount": 250000}], "disabled": true},
-            "7": {"supported": true},
+            "6": {"supported": true},
+            "22": {"bat_max_mint": 50},
             "9": {"supported": false},
             "17": {"supported": [{"method": "bolt11", "unit": "sat", "commands": ["proof_state"]}]},
-            "22": {"bat_max_mint": 50}
+            "15": {"methods": []},
+            "14": [{"method": "bolt11", "unit": "sat"}],
+            "7": {"supported": true},
+            "12": {"supported": true, "disabled": true},
+            "31": {"supported": true},
+            "nut99": {"supported": true}
         })));
-        let by_name = |name: &str| list.iter().find(|f| f.name == name).unwrap();
+        let nut = |number: u16, supported: bool| Nut { number, supported };
+        assert_eq!(
+            list.nuts,
+            [
+                nut(7, true),
+                // Listed, but marked unsupported, empty or paused.
+                nut(9, false),
+                nut(12, false),
+                // The old bare list of methods.
+                nut(14, true),
+                nut(15, false),
+                nut(17, true),
+                // On by being listed with its settings.
+                nut(22, true),
+                nut(31, true),
+            ]
+        );
+        assert_eq!(nut_title(11), Some("Pay-To-Pubkey (P2PK)"));
+        assert_eq!(nut_title(31), None);
 
-        let deposit = by_name("Add funds with Lightning");
+        let [deposit, payout] = &list.lightning;
         assert!(deposit.offered);
         assert_eq!(
             deposit.detail,
@@ -824,16 +901,8 @@ mod tests {
                 Piece::Text(" sat".into())
             ]
         );
-        let payout = by_name("Pay out to Lightning");
         assert!(!payout.offered);
         assert_eq!(payout.detail, [Piece::Text("Paused by the mint".into())]);
-        assert!(by_name("See when sent ecash is claimed").offered);
-        // Listed, but marked unsupported.
-        assert!(!by_name("Restore from a seed phrase").offered);
-        assert!(!by_name("Check ecash offline").offered);
-        let account = by_name("Use without an account");
-        assert!(!account.offered);
-        assert_eq!(account.detail, [Piece::Text("Sign-in required".into())]);
     }
 
     #[test]
@@ -847,7 +916,7 @@ mod tests {
             "5": {"methods": [{"method": "bolt11", "unit": "sat"}, {"method": "bolt11", "unit": "eur"}]}
         })));
         assert_eq!(
-            list[0].detail,
+            list.lightning[0].detail,
             [
                 Piece::Sats(1000),
                 Piece::Text(" to ".into()),
@@ -856,8 +925,8 @@ mod tests {
                 Piece::Text(", also USD".into()),
             ]
         );
-        assert_eq!(list[1].detail, [Piece::Text("In sat and EUR".into())]);
-        assert!(list[1].offered);
+        assert_eq!(list.lightning[1].detail, [Piece::Text("In sat and EUR".into())]);
+        assert!(list.lightning[1].offered);
     }
 
     #[test]
