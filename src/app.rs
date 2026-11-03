@@ -1,5 +1,6 @@
 use crate::api::get_app_config;
 use crate::components::header::Header;
+use crate::components::mint_list::DirectoryMemory;
 use crate::pages::home::HomePage;
 use crate::pages::mint_detail::MintDetailPage;
 use leptos::prelude::*;
@@ -45,7 +46,7 @@ document.startViewTransition(swap).finished.finally(end);
 
 /// The site description, shared by search results and link previews.
 const DESCRIPTION: &str =
-    "Find a Cashu mint that works: hourly uptime checks and reviews from people who use them.";
+    "Find a Cashu mint that works: hourly uptime checks and reviews from Nostr.";
 
 /// An Open Graph tag. The view macro doesn't know the `property` attribute,
 /// so the tag is built directly, as leptos_meta does.
@@ -106,7 +107,7 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
                 <script src="/nostr-tools.js" defer></script>
                 // Versioned like the icons: browsers keep scripts too, so bump
                 // ?v= whenever review.js changes or visitors run the old one.
-                <script src="/review.js?v=4" defer></script>
+                <script src="/review.js?v=5" defer></script>
             </head>
             <body>
                 <App/>
@@ -124,12 +125,13 @@ pub fn App() -> impl IntoView {
         |_| async move { get_app_config().await.unwrap_or_default() },
     );
     provide_context(config);
+    provide_context(DirectoryMemory::new());
 
     view! {
         <Router>
             <div class="page-wrapper">
-                <Header/>
                 <a href="#main-content" class="skip-link">"Skip to content"</a>
+                <Header/>
                 <PageArea>
                     <Routes fallback=NotFound>
                         <Route path=StaticSegment("") view=HomePage/>
@@ -149,7 +151,9 @@ pub fn App() -> impl IntoView {
 }
 
 /// The page area. Once the page has changed, each new page fades in as it
-/// arrives (`.is-navigated` in main.css); the first page load doesn't.
+/// arrives (`.is-navigated` in main.css); the first page load doesn't. A new
+/// page takes the keyboard's and screen reader's focus, so it doesn't fall to
+/// the body. Scrolling on the directory is remembered for coming back to it.
 #[component]
 fn PageArea(children: Children) -> impl IntoView {
     let location = use_location();
@@ -157,8 +161,32 @@ fn PageArea(children: Children) -> impl IntoView {
     let navigated = Memo::new(move |was: Option<&bool>| {
         was.copied().unwrap_or(false) || location.pathname.get() != first
     });
+    let main = NodeRef::<leptos::html::Main>::new();
+    #[cfg(feature = "hydrate")]
+    {
+        Effect::new(move |was: Option<String>| {
+            let path = location.pathname.get();
+            if was.is_some_and(|was| was != path) {
+                if let Some(main) = main.get_untracked() {
+                    let options = leptos::web_sys::FocusOptions::new();
+                    options.set_prevent_scroll(true);
+                    let _ = main.focus_with_options(&options);
+                }
+            }
+            path
+        });
+        // The router scrolls to the top only after the URL has changed, so
+        // leaving the directory doesn't overwrite the place it remembers.
+        let memory = expect_context::<DirectoryMemory>();
+        let scrolling = window_event_listener(leptos::ev::scroll, move |_| {
+            if window().location().pathname().is_ok_and(|path| path == "/") {
+                memory.scroll.set_value(window().scroll_y().unwrap_or(0.0));
+            }
+        });
+        on_cleanup(move || scrolling.remove());
+    }
     view! {
-        <main id="main-content" class="flex-grow" class:is-navigated=move || navigated.get() tabindex="-1">
+        <main id="main-content" class="flex-grow" class:is-navigated=move || navigated.get() tabindex="-1" node_ref=main>
             {children()}
         </main>
     }

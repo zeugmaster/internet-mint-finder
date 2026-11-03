@@ -59,6 +59,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "Cobalt",
         "Driftwood",
         "Foxglove",
+        "Wharf Street Mint",
     ];
     let mut mints = Vec::new();
     for (i, name) in names.iter().enumerate() {
@@ -78,7 +79,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         mint.n_errors = if i == 4 { 12 } else { i as u64 };
         // NUT-06 info shaped like a real mint's, varied so the About section
         // shows each case: limits, another unit, a paused payout, a notice,
-        // an account requirement, contacts and terms, and a bare mint.
+        // an account requirement, contacts and terms, a bare mint, and one with
+        // every NUT-06 field filled in (Wharf Street Mint).
         let lightning = |min: u64, max: u64| serde_json::json!({"methods": [{"method": "bolt11", "unit": "sat", "min_amount": min, "max_amount": max}], "disabled": false});
         let yes = serde_json::json!({"supported": true});
         let host = url.trim_start_matches("https://");
@@ -128,19 +130,70 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 info["nuts"]["5"]["disabled"] = true.into();
             }
             3 => info["contact"] = serde_json::json!([]),
+            // The longest case: a description past eight lines on every screen.
             4 => {
                 info["nuts"]["22"] =
-                    serde_json::json!({"bat_max_mint": 50, "protected_endpoints": []})
+                    serde_json::json!({"bat_max_mint": 50, "protected_endpoints": []});
+                info["description_long"] = "Signal started as a mint for one neighbourhood market and has grown a little every year. We run it from a rented rack with a second Lightning node on standby. Deposits settle in seconds on a good day and in a minute on a bad one. Payouts depend on routing, so a large one can take longer or fail, and when it fails your ecash stays yours. ".repeat(4).trim().into();
             }
             5 => info["nuts"]["4"] = lightning(1_000, 2_000_000),
+            // Past eight lines on a phone only.
+            10 => {
+                info["description_long"] = "Birch is a small mint run by a family in the north of Portugal. We started it to learn how Cashu works and kept it running because a few friends came to rely on it. It has one Lightning node and no standby, so when the power goes out here the mint goes with it. That has happened twice in two years, both times for under an hour. We read every message that comes in, usually within a day. Fees are whatever routing costs us and nothing more. Good for small amounts and for trying Cashu out.".into();
+            }
             6 => {
                 info["description"] = serde_json::Value::Null;
                 info["contact"] = serde_json::json!([]);
                 info["nuts"] = serde_json::json!({"4": lightning(1, 100_000), "5": lightning(1, 100_000), "7": yes});
             }
+            // Every NUT-06 field, every NUT with a title, and one marked off.
+            22 => {
+                let methods = serde_json::json!({"methods": [
+                    {"method": "bolt11", "unit": "sat", "min_amount": 100, "max_amount": 2_000_000},
+                    {"method": "bolt11", "unit": "usd", "min_amount": 1, "max_amount": 50_000},
+                    {"method": "bolt11", "unit": "eur", "min_amount": 1, "max_amount": 50_000}
+                ], "disabled": false});
+                info["icon_url"] = "https://github.com/cashubtc.png".into();
+                info["pubkey"] =
+                    "02a9acc1e48c25eeeb9289b5031cc57da9fe72f3fe2861d264bdc074209b107ba2".into();
+                info["version"] = "Nutshell/0.20.1".into();
+                info["description"] = "A small community mint on the Lisbon waterfront.".into();
+                info["description_long"] = "Wharf Street is run by three people out of a shared workspace on the Lisbon waterfront. We have kept the same Lightning node online since 2023, publish our reserves every month, and never charge more than routing costs us. Good for everyday spending and zaps; please don't keep savings here.".into();
+                info["motd"] = "Scheduled maintenance on Saturday from 02:00 to 04:00 UTC while we upgrade the Lightning node. Swaps keep working, but deposits and payouts will pause for up to two hours.".into();
+                info["tos_url"] = "https://wharf-street-mint.example/terms-of-service".into();
+                info["urls"] = serde_json::json!([
+                    "https://wharf-street-mint.example",
+                    "http://wharfstreetmintexampleonionaddressforpreview.onion"
+                ]);
+                info["time"] = Utc::now().timestamp().into();
+                info["max_array_length"] = serde_json::json!(1000);
+                info["contact"] = serde_json::json!([
+                    {"method": "email", "info": "operators@wharf-street-mint.example"},
+                    {"method": "nostr", "info": "npub1qe3e5wrvnsgpggtkytxteaqfprz0rgxr8c3l34kk3a9t7e2l3acslezefe"},
+                    {"method": "twitter", "info": "@wharfstreetmint"},
+                    {"method": "telegram", "info": "@wharfstreetmint"},
+                    {"method": "matrix", "info": "@operators:wharf-street-mint.example"}
+                ]);
+                info["nuts"] = serde_json::json!({
+                    "4": methods, "5": methods,
+                    "7": yes, "8": yes, "9": yes, "10": yes, "11": yes, "12": yes, "13": yes, "14": yes,
+                    "15": {"methods": [{"method": "bolt11", "unit": "sat"}, {"method": "bolt11", "unit": "usd"}]},
+                    "16": yes,
+                    "17": {"supported": [{"method": "bolt11", "unit": "sat", "commands": ["bolt11_mint_quote", "bolt11_melt_quote", "proof_state"]}]},
+                    "18": yes,
+                    "19": {"ttl": 604_800, "cached_endpoints": [{"method": "POST", "path": "/v1/mint/bolt11"}, {"method": "POST", "path": "/v1/swap"}]},
+                    "20": yes,
+                    "21": {"openid_discovery": "https://auth.wharf-street-mint.example/.well-known/openid-configuration", "client_id": "cashu-client", "protected_endpoints": []},
+                    "22": {"bat_max_mint": 50, "protected_endpoints": []},
+                    "23": yes, "24": yes, "25": yes, "26": yes, "27": yes, "28": yes,
+                    "29": {"max_batch_size": 100, "methods": ["bolt11"]},
+                    "30": {"supported": false}
+                });
+            }
             _ => {}
         }
-        mint.info = Some(info.to_string());
+        // Driftwood has shared nothing: only its head, uptime and reviews show.
+        mint.info = (i != 20).then(|| info.to_string());
         db.upsert_mint(&mint).await?;
         wallets
             .create_wallet(url.parse()?, CurrencyUnit::Sat, None)
@@ -156,7 +209,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Some("HTTP 429 Too Many Requests".to_string()),
                     Some("rate_limit"),
                 ),
-                (3, 15) | (4 | 16, 0..=4) => (
+                // A mint's whole HTML error page, as raw errors can be.
+                (4, 0..=4) => (
+                    "ERROR",
+                    Some(format!(
+                        "HTTP 502 Bad Gateway: <html><head><title>502 Bad Gateway</title></head><body><center><h1>502 Bad Gateway</h1></center><hr><center>nginx</center>{}</body></html>",
+                        "<!-- a padding to disable MSIE and Chrome friendly error page -->".repeat(8)
+                    )),
+                    Some("mint"),
+                ),
+                (3, 15) | (16, 0..=4) => (
                     "ERROR",
                     Some(format!(
                         "error sending request for url ({url}/v1/info): connection refused"
@@ -202,7 +264,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // the directory's stars show every fill and sorting by rating has
     // something to sort. Text is picked by rating from a small pool; a third
     // come without words, and mint 15's all do, as Nostr ratings often do.
-    let ratings: [(usize, &[u8]); 15] = [
+    let ratings: [(usize, &[u8]); 16] = [
         (2, &[2, 3, 2, 1, 3]),
         (3, &[5, 5, 4, 5, 5, 5, 4, 5, 5]),
         (4, &[1, 2, 1]),
@@ -218,6 +280,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         (17, &[1, 1, 2, 1, 1, 1]),
         (18, &[3, 4]),
         (21, &[2]),
+        (22, &[5, 4, 5, 5, 3, 5, 4, 5]),
     ];
     let says: [&[&str]; 5] = [
         &[

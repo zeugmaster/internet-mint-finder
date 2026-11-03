@@ -24,6 +24,34 @@ const STATUS_TABS: [(Option<MintState>, &str); 5] = [
     (Some(MintState::Unknown), "Not checked"),
 ];
 
+/// What the directory remembers while a mint is open, so going back, or up the
+/// breadcrumb, lands on the same filters at the same place in the list.
+#[derive(Clone, Copy)]
+pub struct DirectoryMemory {
+    /// The directory's URL when last seen; the mint page's breadcrumb uses it.
+    pub view: RwSignal<String>,
+    /// How far down the directory the reader has scrolled.
+    pub scroll: StoredValue<f64>,
+    /// Where to land on coming back: set when a mint opens, used once.
+    pub return_to: StoredValue<Option<f64>>,
+}
+
+impl DirectoryMemory {
+    pub fn new() -> Self {
+        Self {
+            view: RwSignal::new("/".to_string()),
+            scroll: StoredValue::new(0.0),
+            return_to: StoredValue::new(None),
+        }
+    }
+}
+
+impl Default for DirectoryMemory {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// The directory: one row per mint with its rating and plain status. Search,
 /// status, sort and page live in the URL (`?q=&status=&sort=&page=`) so Back
 /// and shared links keep the view.
@@ -68,7 +96,12 @@ pub fn MintList() -> impl IntoView {
             let navigate = navigate.clone();
             if let Ok(handle) = set_timeout_with_handle(
                 move || {
-                    let url = view_url(&value, state_filter.get_untracked(), sort.get_untracked(), 0);
+                    let url = view_url(
+                        &value,
+                        state_filter.get_untracked(),
+                        sort.get_untracked(),
+                        0,
+                    );
                     navigate(&url, quiet());
                 },
                 std::time::Duration::from_millis(250),
@@ -97,23 +130,66 @@ pub fn MintList() -> impl IntoView {
     // The view the list on screen answers. Until the list for a new search,
     // filter, sort or page arrives, the old one dims (`.is-updating`); the
     // refresh keeps the view, so it never dims.
-    let view = Memo::new(move |_| (applied_search.get(), state_filter.get(), sort.get(), page.get()));
+    let view = Memo::new(move |_| {
+        (
+            applied_search.get(),
+            state_filter.get(),
+            sort.get(),
+            page.get(),
+        )
+    });
     let shown_view = RwSignal::new(None::<(String, Option<MintState>, MintSort, u64)>);
     let updating = move || shown_view.get().is_some_and(|shown| shown != view.get());
+
+    // Back on the view that was open, the list takes the reader to where they
+    // left it. The browser can't do this itself: the page is shorter than
+    // that until the list arrives.
+    let memory = expect_context::<DirectoryMemory>();
+    let here = view_url(
+        &applied_search.get_untracked(),
+        state_filter.get_untracked(),
+        sort.get_untracked(),
+        page.get_untracked(),
+    );
+    let same_view = memory.view.get_untracked() == here;
+    let return_to = StoredValue::new(memory.return_to.get_value().filter(|_| same_view));
+    memory.return_to.set_value(None);
+    Effect::new(move |_| {
+        memory.view.set(view_url(
+            &applied_search.get(),
+            state_filter.get(),
+            sort.get(),
+            page.get(),
+        ));
+    });
+
     Effect::new(move |_| {
         if let Some(Ok(data)) = mints.get() {
             last_good.set(Some(data));
             updated_at.set(Some(Utc::now()));
             shown_view.set(Some(view.get_untracked()));
+            #[cfg(feature = "hydrate")]
+            if let Some(y) = return_to.get_value() {
+                return_to.set_value(None);
+                // Two frames, so the list is in the page before it scrolls.
+                request_animation_frame(move || {
+                    request_animation_frame(move || window().scroll_to_with_x_and_y(0.0, y));
+                });
+            }
         }
     });
+    #[cfg(not(feature = "hydrate"))]
+    let _ = return_to;
     let freshness = move || {
         tick.track();
         let stale = matches!(mints.get(), Some(Err(_)));
         match (updated_at.get(), stale) {
             (Some(at), false) => format!("Updated {}", relative_time(at)),
             (Some(at), true) => {
-                format!("Couldn't refresh. Showing results from {}, retrying.", relative_time_from(at))
+                format!(
+                    "Couldn't refresh. Showing results from {}, retrying.",
+                    relative_time_from(at)
+                )
             }
             (None, _) => String::new(),
         }
@@ -124,7 +200,12 @@ pub fn MintList() -> impl IntoView {
         move |ev| {
             let sort = sort_from_slug(&event_target_value(&ev));
             navigate(
-                &view_url(&applied_search.get_untracked(), state_filter.get_untracked(), sort, 0),
+                &view_url(
+                    &applied_search.get_untracked(),
+                    state_filter.get_untracked(),
+                    sort,
+                    0,
+                ),
                 quiet(),
             );
         }
@@ -219,7 +300,7 @@ pub fn MintList() -> impl IntoView {
                     let Some(data) = data else {
                         return view! {
                             <div class="card card-pad empty-state" role="alert">
-                                <h3>"Couldn't load mints"</h3>
+                                <h2>"Couldn't load mints"</h2>
                                 <p>"Check your connection. This retries every 15 seconds."</p>
                                 <button type="button" class="btn btn-secondary mt-4" on:click=move |_| mints.refetch()>"Try again"</button>
                             </div>
@@ -229,6 +310,9 @@ pub fn MintList() -> impl IntoView {
                     let current = page.get();
                     let pages = total.div_ceil(PAGE_SIZE).max(1);
                     let filtered = !applied_search.get().is_empty() || state_filter.get().is_some();
+                    // A page number past the list's end, from an old link.
+                    let past_end = data.mints.is_empty() && total > 0;
+                    let first_url = view_url(&applied_search.get(), state_filter.get(), sort.get(), 0);
                     let count = format!("{} {}", format_count(total), if total == 1 { "mint" } else { "mints" });
                     // Previous and Next land on the list (#mints), where the
                     // reader was, rather than on the page's head.
@@ -236,14 +320,23 @@ pub fn MintList() -> impl IntoView {
                     let next_url = format!("{}#mints", view_url(&applied_search.get(), state_filter.get(), sort.get(), current + 1));
                     view! {
                         <div class="directory-meta">
-                            <span>{count}</span>
+                            // Read out when a search or filter changes the count.
+                            <span role="status">{count}</span>
                             <span>{freshness}</span>
                         </div>
-                        {if data.mints.is_empty() {
+                        {if past_end {
+                            view! {
+                                <div class="card card-pad empty-state">
+                                    <h2>"No mints on this page"</h2>
+                                    <p>{format!("This list ends at page {pages}.")}</p>
+                                    <a class="btn btn-secondary mt-4" href=first_url>"Go to the first page"</a>
+                                </div>
+                            }.into_any()
+                        } else if data.mints.is_empty() {
                             if filtered {
                                 view! {
                                     <div class="card card-pad empty-state">
-                                        <h3>"No mints match"</h3>
+                                        <h2>"No mints match"</h2>
                                         <p>"Try another name, or clear the filters."</p>
                                         <button type="button" class="btn btn-secondary mt-4" on:click=clear.clone()>"Clear filters"</button>
                                     </div>
@@ -251,7 +344,7 @@ pub fn MintList() -> impl IntoView {
                             } else {
                                 view! {
                                     <div class="card card-pad empty-state">
-                                        <h3>"No mints yet"</h3>
+                                        <h2>"No mints yet"</h2>
                                         <p>"Mints show up here once they're listed on Nostr."</p>
                                     </div>
                                 }.into_any()
@@ -263,7 +356,7 @@ pub fn MintList() -> impl IntoView {
                                 </ul>
                             }.into_any()
                         }}
-                        <Show when=move || { pages > 1 }>
+                        <Show when=move || { pages > 1 && !past_end }>
                             <nav class="pagination" aria-label="Pages">
                                 {if current > 0 {
                                     view! { <a class="btn btn-ghost btn-small" href=prev_url.clone()>"Previous"</a> }.into_any()
@@ -298,15 +391,24 @@ fn MintRow(mint: MintRead) -> impl IntoView {
     } else {
         mint.name.clone()
     };
+    // Tabbing from row to row reads each mint's status and rating with its
+    // name, not only when browsing the page line by line.
+    let status_id = format!("mint-{}-status", mint.id);
+    let rating_id = format!("mint-{}-rating", mint.id);
+    let described_by = if mint.review_avg.is_some() {
+        format!("{status_id} {rating_id}")
+    } else {
+        status_id.clone()
+    };
     view! {
         <div class="mint-row">
             <MintAvatar name=name.clone() info=mint.info.clone()/>
             <span class="mint-id">
-                <a class="mint-name mint-link" href=href dir="auto">{name}</a>
+                <a class="mint-name mint-link" href=href dir="auto" aria-describedby=described_by>{name}</a>
                 <CopyUrl url=mint.url.clone()/>
             </span>
-            <MintRating avg=mint.review_avg count=mint.review_count/>
-            <StateBadge state=mint.state/>
+            <MintRating avg=mint.review_avg count=mint.review_count id=rating_id/>
+            <StateBadge state=mint.state id=status_id/>
         </div>
     }
 }
@@ -314,12 +416,12 @@ fn MintRow(mint: MintRead) -> impl IntoView {
 /// Five stars filled to the average and the review count in words, or
 /// nothing for an unrated mint. The average itself is on the mint page.
 #[component]
-fn MintRating(avg: Option<f64>, count: u64) -> impl IntoView {
+fn MintRating(avg: Option<f64>, count: u64, id: String) -> impl IntoView {
     let reviews = if count == 1 { "review" } else { "reviews" };
     match avg {
         Some(avg) => view! {
             <span class="mint-rating">
-                <span class="sr-only">{format!("Rated {avg:.1} out of 5 from {} {reviews}", format_count(count))}</span>
+                <span class="sr-only" id=id>{format!("Rated {avg:.1} out of 5 from {} {reviews}", format_count(count))}</span>
                 <span class="mint-rating-shown" aria-hidden="true">
                     <Stars value=avg/>
                     <span class="mint-rating-count">{format!("{} {reviews}", format_count(count))}</span>
@@ -349,6 +451,9 @@ pub fn CopyText(text: String, shown: String) -> impl IntoView {
     // not when the row is drawn.
     let used = RwSignal::new(false);
     let title = format!("Copy {text}");
+    // Named as a whole: the head and tail are separate boxes, which a screen
+    // reader would otherwise read with a space between them.
+    let name = format!("Copy {shown}");
     // The pending return to idle; a second copy clears it and starts its own,
     // so the check holds its full moment instead of ending early.
     #[cfg(feature = "hydrate")]
@@ -388,10 +493,9 @@ pub fn CopyText(text: String, shown: String) -> impl IntoView {
             class:is-failed=move || copied.get() == Some(false)
             class:is-used=move || used.get()
             title=title
+            aria-label=move || if copied.get() == Some(false) { "Couldn't copy".to_string() } else { name.clone() }
             on:click=on_click
         >
-            // While it says "Couldn't copy", the button needs no "Copy" before it.
-            {move || (copied.get() != Some(false)).then(|| view! { <span class="sr-only">"Copy "</span> })}
             <span class="copy-url-text">
                 {move || if copied.get() == Some(false) {
                     view! { <span class="copy-url-head">"Couldn't copy"</span> }.into_any()

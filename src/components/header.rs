@@ -1,5 +1,6 @@
 use crate::components::brand::BrandTag;
 use crate::components::icons::{Moon, Sun};
+use crate::components::mint_list::DirectoryMemory;
 use crate::types::AppConfig;
 use leptos::prelude::*;
 use leptos_router::hooks::use_location;
@@ -13,11 +14,13 @@ pub fn Header() -> impl IntoView {
     let config = use_context::<Resource<AppConfig>>();
     let location = use_location();
     let on_home = move || location.pathname.get() == "/";
+    let memory = expect_context::<DirectoryMemory>();
 
     view! {
         <header class="site-header">
             <div class="site-header-inner">
-                <a href="/" class="brand">
+                // Home means the top of the list, not back to where the reader was.
+                <a href="/" class="brand" on:click=move |_| memory.return_to.set_value(None)>
                     <Show when=move || !on_home()>
                         <BrandTag/>
                     </Show>

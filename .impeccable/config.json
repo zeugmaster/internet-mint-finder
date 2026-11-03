@@ -38,6 +38,15 @@
         ],
         "createdAt": "2026-10-30T09:44:44.735Z",
         "reason": "DESIGN.md Foil Exception Rule: the struck steel IMF is the oval tag's own brand metal, reproduced verbatim from style/main.css at eb2688f for a side-by-side comparison"
+      },
+      {
+        "rule": "nested-cards",
+        "value": "*",
+        "files": [
+          "public/dashboard.html"
+        ],
+        "createdAt": "2026-11-03T01:12:24.706Z",
+        "reason": "Assistant verified 2026-11-03: rendered .card .card count is 0; the static scan misreads the segmented control in a chart card's head."
       }
     ]
   }

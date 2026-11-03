@@ -83,18 +83,18 @@ document.startViewTransition(swap).finished.finally(end);
     --border-strong: #00000026;
     --disabled: #0000000f;
     --fg-disabled: #00000044;
-    --focus: #0084e6a1;
+    --focus: #0077d4;
     --inverted: #000000f2;
     --inverted-hover: #000000cc;
     --inverted-active: #000000b3;
     --on-inverted: #ffffff;
     --brand-subtle: #008ff519;
     --on-brand-subtle: #0090ff;
-    --success-fg: #00713fde;
+    --success-fg: #00713f;
     --warning-bg: #ff9c0029;
-    --warning-fg: #cc4e00;
+    --warning-fg: #b04200;
     --danger-bg: #f52b0018;
-    --danger-fg: #cd2200ea;
+    --danger-fg: #b81e00;
     --s-default: 0 0 0 0.5px #0000 inset, 0 0 0 0.5px #0000000f, 0 1px 1px -1px #0000, 0 1px 2px 0 #0000;
     --s-large: 0 0 0 0.5px #0000000f, 0 2px 3px -2px #0000000f, 0 3px 12px -4px #0000001a, 0 4px 16px -8px #0000000d;
     /* Top-lit sheen and its edges, as in style/main.css. */
@@ -566,7 +566,6 @@ document.startViewTransition(swap).finished.finally(end);
     color: var(--muted); font-size: 13px; line-height: 20px;
     height: 100%; min-height: 120px; gap: 6px; padding: 18px;
   }
-  .empty svg { width: 24px; height: 24px; opacity: 0.6; }
 
   /* ===================================================================
      Choices.js overrides — Interfere select and menu
@@ -695,7 +694,6 @@ document.startViewTransition(swap).finished.finally(end);
     </a>
     <nav class="site-nav" aria-label="Main navigation">
       <a href="/" class="nav-link">Directory</a>
-      <a href="/auditors" class="nav-link">Auditors</a>
       <a href="/dashboard" class="nav-link" aria-current="page">Analytics</a>
     </nav>
     <button type="button" class="theme-toggle" data-theme-toggle="">
@@ -820,7 +818,7 @@ document.startViewTransition(swap).finished.finally(end);
       </div>
       <div class="card chart">
         <div class="head"><span class="ttl">Highest fees by route</span><span class="meta">fee as a share of the amount</span></div>
-        <div style="padding:4px;">
+        <div style="padding:4px; overflow-x:auto;">
           <table id="fees">
             <thead><tr><th>Route</th><th class="num">Payments</th><th class="num">Sent</th><th class="num">Fee</th><th class="num">Fee %</th></tr></thead>
             <tbody><tr><td colspan="5"><div class="skel" style="height:120px"></div></td></tr></tbody>
@@ -1036,9 +1034,7 @@ function emptyState(el, msg) {
   // graph's children directly leaves Plotly's registry pointing at missing
   // nodes, so a later Plotly.react() renders nothing.
   if (window.Plotly && el._fullLayout) Plotly.purge(el);
-  el.innerHTML = `<div class="empty">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 2 5-6" stroke-linecap="round"/></svg>
-    <div>${msg || "No data in this range"}</div></div>`;
+  el.innerHTML = `<div class="empty"><div>${msg || "No data in this range"}</div></div>`;
 }
 
 //===================== KPI strip =====================

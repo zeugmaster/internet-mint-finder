@@ -17,15 +17,10 @@ try { extensionPubkey = localStorage.getItem(EXTENSION_KEY); } catch (_) { /* no
 // quiet() puts the hint back. Each message rises in a little, so saying the
 // same thing twice still answers the click; with reduced motion it only
 // fades (the stylesheet's motion rule doesn't reach a script's animation).
-function say(msg, ok) {
-  const status = document.getElementById('review-status');
-  if (!status) return;
-  if (status.dataset.hint === undefined) status.dataset.hint = status.textContent.trim();
-  status.textContent = msg;
-  status.dataset.ok = ok ? '1' : '0';
-  if (!status.animate) return;
+function rise(el) {
+  if (!el.animate) return;
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  status.animate(
+  el.animate(
     still
       ? [{ opacity: 0 }, { opacity: 1 }]
       : [{ opacity: 0, transform: 'translateY(4px)' }, { opacity: 1, transform: 'none' }],
@@ -33,7 +28,27 @@ function say(msg, ok) {
   );
 }
 
+function say(msg, ok) {
+  const status = document.getElementById('review-status');
+  if (!status) return;
+  if (status.dataset.hint === undefined) status.dataset.hint = status.textContent.trim();
+  status.textContent = msg;
+  status.dataset.ok = ok ? '1' : '0';
+  rise(status);
+}
+
+// A failed sign-in shows by the sign-in fields rather than at the form's foot.
+function sayAtSignIn(msg) {
+  const error = document.getElementById('review-signin-error');
+  if (!error) return;
+  error.textContent = msg;
+  setHidden(error, false);
+  rise(error);
+}
+
 function quiet() {
+  const error = document.getElementById('review-signin-error');
+  if (error) { error.textContent = ''; setHidden(error, true); }
   const status = document.getElementById('review-status');
   if (!status || status.dataset.hint === undefined) return;
   status.textContent = status.dataset.hint;
@@ -91,7 +106,7 @@ window.addEventListener('load', render);
 setTimeout(render, 1500);
 
 async function signInWithExtension(button) {
-  if (!window.nostr) { say('No Nostr extension found in this browser.', false); return; }
+  if (!window.nostr) { sayAtSignIn('No Nostr extension found in this browser.'); return; }
   button.disabled = true;
   try {
     const pubkey = await window.nostr.getPublicKey();
@@ -100,7 +115,7 @@ async function signInWithExtension(button) {
     render();
     quiet();
   } catch (_) {
-    say('Your extension didn’t sign you in. Try again, or paste your nsec.', false);
+    sayAtSignIn('Your extension didn’t sign you in. Try again, or paste your nsec.');
   } finally {
     button.disabled = false;
   }
@@ -113,8 +128,8 @@ document.addEventListener('click', (ev) => {
     const nsec = input.value.trim();
     let decoded = null;
     try { decoded = NostrTools.nip19.decode(nsec); } catch (_) { /* not bech32 */ }
-    if (!decoded || decoded.type !== 'nsec') { say('That isn’t an nsec key. It starts with nsec1.', false); return; }
-    try { localStorage.setItem(NSEC_KEY, nsec); } catch (_) { say('This browser won’t keep your key. Use a Nostr extension instead.', false); return; }
+    if (!decoded || decoded.type !== 'nsec') { sayAtSignIn('That isn’t an nsec key. It starts with nsec1.'); return; }
+    try { localStorage.setItem(NSEC_KEY, nsec); } catch (_) { sayAtSignIn('This browser won’t keep your key. Use a Nostr extension instead.'); return; }
     input.value = '';
     signInWith(null);
     render();
@@ -127,6 +142,14 @@ document.addEventListener('click', (ev) => {
     render();
     quiet();
   }
+});
+
+// A complaint goes as soon as the person changes something in the form.
+document.addEventListener('input', (ev) => {
+  if (!(ev.target instanceof Element) || !ev.target.closest('.review-compose-body')) return;
+  const status = document.getElementById('review-status');
+  const error = document.getElementById('review-signin-error');
+  if ((status && status.dataset.ok === '0') || (error && !error.hidden)) quiet();
 });
 
 document.addEventListener('keydown', (ev) => {
@@ -177,7 +200,7 @@ document.addEventListener('submit', async (ev) => {
       say('Posted. It shows up here once this site picks it up from Nostr.', true);
       form.reset();
     } else {
-      say('Couldn’t post: no Nostr relay accepted it. Try again later.', false);
+      say('Couldn’t post: Nostr didn’t accept it. Try again later.', false);
     }
   } finally {
     button.disabled = false;

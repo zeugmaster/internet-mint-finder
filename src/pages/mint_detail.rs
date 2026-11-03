@@ -1,24 +1,27 @@
-use crate::api::{
-    get_mint_by_id, get_mint_metrics, get_mint_reviews, get_mint_uptime,
-};
+use crate::api::{get_mint_by_id, get_mint_metrics, get_mint_reviews, get_mint_uptime};
 use crate::components::badge::{CategoryPill, StateBadge};
 use crate::components::icons::{Check, Cross, Help};
 use crate::components::mint_avatar::MintAvatar;
-use crate::components::mint_list::{CopyText, CopyUrl};
+use crate::components::mint_list::{CopyText, CopyUrl, DirectoryMemory};
 use crate::components::reviews::ReviewsBlock;
 use crate::format::{
     absolute_time, format_sats, middle_ellipsis, relative_time, relative_time_from, short_url,
 };
 use crate::hooks::use_poll;
-use crate::types::{MintMetrics, MintRead, MintState, MintUptime};
+use crate::types::{MintMetrics, MintRead, MintState, MintUptime, MintUptimeBar};
 use chrono::{DateTime, Utc};
 use leptos::prelude::*;
 use leptos::web_sys::HtmlElement;
 use leptos_meta::Title;
 use leptos_router::hooks::use_params_map;
 
-/// How much of a failure message the mint page shows.
+/// How much of a failure message the mint page shows before "Read more".
 const INCIDENT_CHARS: usize = 300;
+
+/// About eight lines of the mint's words across the page's column, and across
+/// a phone's.
+const WORDS_CHARS: usize = 1100;
+const WORDS_CHARS_ON_PHONES: usize = 460;
 
 /// One mint for a wallet user: is it up, what people say, and what the mint
 /// says about itself. Audit detail (per-auditor results, swaps, funding) is
@@ -35,6 +38,11 @@ pub fn MintDetailPage() -> impl IntoView {
             .and_then(|id| id.parse::<u64>().ok())
             .unwrap_or(0)
     });
+
+    // Going back returns to this place in the list.
+    let memory = expect_context::<DirectoryMemory>();
+    memory.return_to.set_value(Some(memory.scroll.get_value()));
+    let directory = memory.view;
 
     let tick = use_poll(15);
 
@@ -147,8 +155,8 @@ pub fn MintDetailPage() -> impl IntoView {
                             }
                             view! {
                                 <Title text="Mint not found — Internet Mint Finder"/>
-                                <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">"Directory"</a></nav>
-                                <div class="empty-state">"This mint isn't in the directory."</div>
+                                <nav class="breadcrumb" aria-label="Breadcrumb"><a href=move || directory.get()>"Directory"</a></nav>
+                                <div class="empty-state"><h1 class="page-title">"This mint isn't in the directory."</h1></div>
                             }
                             .into_any()
                         }
@@ -187,14 +195,11 @@ pub fn MintDetailPage() -> impl IntoView {
                         </Transition>
                     </section>
 
-                    <section aria-labelledby="about-title">
-                        <h2 class="section-title" id="about-title">"About this mint"</h2>
-                        <Transition fallback=|| ()>
-                            <div class="arrives">
-                                {move || current_mint().and_then(|r| r.ok()).flatten().map(|mint| view! { <About mint/> })}
-                            </div>
-                        </Transition>
-                    </section>
+                    <Transition fallback=|| ()>
+                        <div class="arrives mint-info">
+                            {move || current_mint().and_then(|r| r.ok()).flatten().map(|mint| view! { <MintInfoSections mint/> })}
+                        </div>
+                    </Transition>
                 </div>
                 }))}
             </Transition>
@@ -202,10 +207,17 @@ pub fn MintDetailPage() -> impl IntoView {
     }
 }
 
-/// The mint's avatar, name, state and copyable URL, and the latest failure
-/// verbatim when the mint is not healthy.
+/// The mint's avatar, name, state and copyable URL, the latest failure
+/// verbatim when the mint is not healthy or its newest uptime bar failed, then
+/// the mint's own words: its description and any notice, each skipped when the
+/// mint doesn't give one.
 #[component]
-fn MintHead(mint: MintRead, metrics: Option<MintMetrics>, uptime: Option<MintUptime>) -> impl IntoView {
+fn MintHead(
+    mint: MintRead,
+    metrics: Option<MintMetrics>,
+    uptime: Option<MintUptime>,
+) -> impl IntoView {
+    let directory = expect_context::<DirectoryMemory>().view;
     let metrics = metrics.unwrap_or_default();
     let display_name = if mint.name.trim().is_empty() {
         short_url(&mint.url)
@@ -213,18 +225,28 @@ fn MintHead(mint: MintRead, metrics: Option<MintMetrics>, uptime: Option<MintUpt
         mint.name.clone()
     };
     let page_title = format!("{display_name} — Internet Mint Finder");
+    let info = mint_info(&mint);
+    let description =
+        info_text(&info, "description_long").or_else(|| info_text(&info, "description"));
+    let notice = info_text(&info, "motd");
 
     // The freshest error attributable to *this* mint, whether it came from a
     // paid swap or a free health probe, with its category and timestamp.
+    let newest_failed = uptime
+        .as_ref()
+        .and_then(newest_bar_state)
+        .is_some_and(|state| matches!(state, MintState::Error | MintState::Warn));
     let incident = match (
-        matches!(mint.state, MintState::Error | MintState::Warn),
+        newest_failed || matches!(mint.state, MintState::Error | MintState::Warn),
         pick_incident(&metrics, uptime.as_ref()),
     ) {
         (true, Some((message, category, at))) => {
-            let when = at.map(relative_time).unwrap_or_else(|| "recently".to_string());
+            let when = at
+                .map(relative_time)
+                .unwrap_or_else(|| "recently".to_string());
             let pill = category.map(|c| view! { <CategoryPill category=c/> });
             // A mint's raw error can be a whole HTML error page: the first
-            // 300 characters, and all of it on hover.
+            // 300 characters, and all of it behind "Read more".
             let full = (message.chars().count() > INCIDENT_CHARS).then(|| message.clone());
             let message = if full.is_some() {
                 format!(
@@ -245,7 +267,13 @@ fn MintHead(mint: MintRead, metrics: Option<MintMetrics>, uptime: Option<MintUpt
                         {pill}
                         <span class="incident-when mono">{when}</span>
                     </div>
-                    <div class="incident-msg mono" title=full>{message}</div>
+                    <div class="incident-msg mono">{message}</div>
+                    {full.map(|full| view! {
+                        <details class="incident-more">
+                            <summary class="text-link">"Read more"</summary>
+                            <div class="incident-msg mono">{full}</div>
+                        </details>
+                    })}
                 </div>
             })
         }
@@ -255,7 +283,7 @@ fn MintHead(mint: MintRead, metrics: Option<MintMetrics>, uptime: Option<MintUpt
         <Title text=page_title/>
         // A breadcrumb in words; navigation never gets a back arrow.
         <nav class="breadcrumb" aria-label="Breadcrumb">
-            <a href="/">"Directory"</a>
+            <a href=move || directory.get()>"Directory"</a>
             <span class="breadcrumb-sep" aria-hidden="true">"/"</span>
             <span aria-current="page" dir="auto">{display_name.clone()}</span>
         </nav>
@@ -270,37 +298,88 @@ fn MintHead(mint: MintRead, metrics: Option<MintMetrics>, uptime: Option<MintUpt
             </div>
         </div>
         {incident}
+        {description.map(|text| view! { <MintWords id="about-title" title="Description from the mint" text/> })}
+        {notice.map(|text| view! {
+            <MintWords id="notice-title" title="Notice from the mint" text fetched=mint.updated_at/>
+        })}
     }
 }
 
-/// What the mint says about itself, for a wallet user, in reading order: its
-/// own words, then one card of what it offers and how to reach it.
+/// A section in the mint's own words, running text on the page. A notice
+/// carries no date of its own, so it shows when it was last fetched: the one
+/// sign that the mint is still saying it. Long words show their first eight
+/// lines and a "Read more" (a details element, so it works before hydration).
 #[component]
-fn About(mint: MintRead) -> impl IntoView {
-    let info: Option<serde_json::Value> = mint
-        .info
+fn MintWords(
+    id: &'static str,
+    title: &'static str,
+    text: String,
+    #[prop(optional)] fetched: Option<DateTime<Utc>>,
+) -> impl IntoView {
+    let class = words_class(&text);
+    let clamped = class != "mint-words";
+    view! {
+        <section class=class aria-labelledby=id>
+            <div class="section-head">
+                <h2 class="section-title" id=id>{title}</h2>
+                {fetched.map(|at| view! {
+                    <span title=absolute_time(at)>{format!("Fetched {}", relative_time(at))}</span>
+                })}
+            </div>
+            <p dir="auto">{text}</p>
+            {clamped.then(|| view! {
+                <details class="words-more"><summary class="text-link">"Read more"</summary></details>
+            })}
+        </section>
+    }
+}
+
+/// Whether the mint's words pass eight lines: on every screen, on a phone
+/// alone, or not at all. Between the two the words simply run a little longer,
+/// which beats a "Read more" with nothing behind it.
+fn words_class(text: &str) -> &'static str {
+    let chars = text.chars().count();
+    if chars > WORDS_CHARS || text.lines().count() > 8 {
+        "mint-words words-long"
+    } else if chars > WORDS_CHARS_ON_PHONES {
+        "mint-words words-long-on-phones"
+    } else {
+        "mint-words"
+    }
+}
+
+/// The mint's NUT-06 info; null when it has shared none, so every field reads
+/// as blank and its section is skipped.
+fn mint_info(mint: &MintRead) -> serde_json::Value {
+    mint.info
         .as_deref()
-        .and_then(|raw| serde_json::from_str(raw).ok());
-    let Some(info) = info else {
-        return view! {
-            <p class="section-empty">"This mint hasn't shared any details about itself."</p>
-        }
-        .into_any();
-    };
-    let text = |key: &str| -> Option<String> {
-        info.get(key)
-            .and_then(|v| v.as_str())
-            .map(|s| s.trim().to_string())
-            .filter(|s| !s.is_empty())
-    };
-    let description = text("description_long").or_else(|| text("description"));
-    let motd = text("motd");
+        .and_then(|raw| serde_json::from_str(raw).ok())
+        .unwrap_or_default()
+}
+
+/// A text field of the mint's info, if it says anything.
+fn info_text(info: &serde_json::Value, key: &str) -> Option<String> {
+    info.get(key)
+        .and_then(|v| v.as_str())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+}
+
+/// How to reach the operator, then what the mint offers, each skipped when
+/// the mint lists nothing for it.
+#[component]
+fn MintInfoSections(mint: MintRead) -> impl IntoView {
+    let info = mint_info(&mint);
     // "Nutshell/0.16.3" reads as a name and a version.
-    let software = text("version").map(|v| v.replacen('/', " ", 1));
-    let terms = text("tos_url").filter(|url| url.starts_with("https://"));
+    let software = info_text(&info, "version").map(|v| v.replacen('/', " ", 1));
+    let terms = info_text(&info, "tos_url").filter(|url| url.starts_with("https://"));
     let contacts = contacts(&info);
-    let features = info.get("nuts").and_then(|v| v.as_object()).map(features);
-    let has_meta = !contacts.is_empty() || software.is_some() || terms.is_some();
+    let features = info
+        .get("nuts")
+        .and_then(|v| v.as_object())
+        .filter(|nuts| !nuts.is_empty())
+        .map(features);
+    let lists_offers = features.is_some() || software.is_some() || terms.is_some();
     let note = format!(
         "As listed by the mint. Fetched {}.",
         relative_time(mint.updated_at)
@@ -308,87 +387,77 @@ fn About(mint: MintRead) -> impl IntoView {
     let fetched = absolute_time(mint.updated_at);
 
     view! {
-        <div class="about">
-            {description.map(|d| view! { <p class="about-text" dir="auto">{d}</p> })}
-            {motd.map(|m| view! {
-                <div class="callout about-notice">
-                    <span class="about-notice-label">"Notice from the mint"</span>
-                    <p dir="auto">{m}</p>
-                </div>
-            })}
-            {if features.is_some() || has_meta {
-                view! { <Offers features contacts software terms note fetched/> }.into_any()
-            } else {
-                view! {
-                    <p class="section-empty">"The mint doesn't list what it offers or how to reach it."</p>
-                }
-                .into_any()
-            }}
-        </div>
+        {(!contacts.is_empty()).then(|| view! {
+            <section aria-labelledby="contact-title">
+                <h2 class="section-title" id="contact-title">"Contact"</h2>
+                <ContactCard contacts/>
+            </section>
+        })}
+        {lists_offers.then(|| view! {
+            <section aria-labelledby="offers-title">
+                <h2 class="section-title" id="offers-title">"What it offers"</h2>
+                <Offers features software terms note fetched/>
+            </section>
+        })}
     }
-    .into_any()
 }
 
-/// What the mint offers and how to reach it, in one card: Lightning in and
-/// out side by side with their limits, since those decide whether the mint
-/// fits; then every other NUT the mint names, by number and the spec's
-/// title, as a two-column checklist, a check for supported and a cross for
-/// not; then the operator's contacts, software and terms; and at the foot,
-/// where it all comes from.
+/// How to reach the operator: one card of copy buttons, read down the first
+/// column, then the second.
+#[component]
+fn ContactCard(contacts: Vec<Contact>) -> impl IntoView {
+    let rows = format!("--ledger-rows: {}", contacts.len().div_ceil(2));
+    view! {
+        <div class="card">
+            <dl class="ledger" style=rows>
+                {contacts.into_iter().map(|contact| view! {
+                    <div>
+                        <dt>{contact.label}</dt>
+                        <dd><CopyText text=contact.value shown=contact.shown/></dd>
+                    </div>
+                }).collect_view()}
+            </dl>
+        </div>
+    }
+}
+
+/// What the mint offers, in one card: Lightning in and out side by side with
+/// their limits, since those decide whether the mint fits; then every other
+/// NUT the mint names, by number and the spec's title, as a two-column
+/// checklist, a check for supported and a cross for not; then its software
+/// and terms; and at the foot, where it all comes from.
 #[component]
 fn Offers(
     features: Option<Features>,
-    contacts: Vec<Contact>,
     software: Option<String>,
     terms: Option<String>,
     note: String,
     fetched: String,
 ) -> impl IntoView {
-    let has_contact = !contacts.is_empty() || software.is_some() || terms.is_some();
+    let has_facts = software.is_some() || terms.is_some();
     view! {
         <div class="card offers">
-            {match features {
-                Some(features) => view! { <OfferRows features/> }.into_any(),
-                None => view! {
-                    <p class="offers-empty">"The mint doesn't list what it offers."</p>
-                }
-                .into_any(),
-            }}
-            // Two small ledgers on the card's two columns: how to reach the
-            // operator, then the mint's own facts.
-            {has_contact.then(|| view! {
-                <div class="offers-meta">
-                    {(!contacts.is_empty()).then(|| view! {
-                        <dl class="offers-ledger">
-                            {contacts.into_iter().map(|contact| view! {
-                                <div>
-                                    <dt>{contact.label}</dt>
-                                    <dd><CopyText text=contact.value shown=contact.shown/></dd>
-                                </div>
-                            }).collect_view()}
-                        </dl>
+            {features.map(|features| view! { <OfferRows features/> })}
+            // The mint's own facts, on the card's two columns.
+            {has_facts.then(|| view! {
+                <dl class="ledger">
+                    {software.map(|s| view! { <div><dt>"Software"</dt><dd class="mono">{s}</dd></div> })}
+                    // The address the link opens, like the mint's own.
+                    {terms.map(|url| {
+                        let shown = short_url(&url);
+                        view! {
+                            <div>
+                                <dt>"Terms"</dt>
+                                <dd>
+                                    <a class="text-link mono" href=url target="_blank" rel="noopener noreferrer">
+                                        {shown}
+                                        <span class="sr-only">" (opens in a new tab)"</span>
+                                    </a>
+                                </dd>
+                            </div>
+                        }
                     })}
-                    {(software.is_some() || terms.is_some()).then(|| view! {
-                        <dl class="offers-ledger">
-                            {software.map(|s| view! { <div><dt>"Software"</dt><dd class="mono">{s}</dd></div> })}
-                            // The address the link opens, like the mint's own.
-                            {terms.map(|url| {
-                                let shown = short_url(&url);
-                                view! {
-                                    <div>
-                                        <dt>"Terms"</dt>
-                                        <dd>
-                                            <a class="text-link mono" href=url target="_blank" rel="noopener noreferrer">
-                                                {shown}
-                                                <span class="sr-only">" (opens in a new tab)"</span>
-                                            </a>
-                                        </dd>
-                                    </div>
-                                }
-                            })}
-                        </dl>
-                    })}
-                </div>
+                </dl>
             })}
             <p class="offers-note" title=fetched>{note}</p>
         </div>
@@ -729,16 +798,7 @@ fn UptimePanel(uptime: Option<MintUptime>) -> impl IntoView {
         .uptime_percent
         .map(|percent| format!("{percent:.1}%"))
         .unwrap_or_else(|| "No data".to_string());
-    let latest = uptime.bars.iter().rev().find(|bar| bar.checks > 0).map(|bar| bar.state);
-    let state = match (latest, uptime.current_up_since, uptime.last_checked_at) {
-        (Some(MintState::Ok), Some(since), _) => format!("Up for {}", elapsed_since(since)),
-        (Some(MintState::Ok), None, _) => "Up now".to_string(),
-        (Some(MintState::Warn), _, _) => "Degraded at last check".to_string(),
-        (Some(MintState::Error), _, _) => "Down at last check".to_string(),
-        (Some(MintState::Unknown), _, _) => "No answer at last check".to_string(),
-        (None, _, Some(_)) => format!("No checks in {}h", uptime.window_hours),
-        (None, _, None) => "No checks yet".to_string(),
-    };
+    let state = uptime_state(&uptime);
     let window = format!("{}h", uptime.window_hours);
     let checks = if uptime.checks == 0 {
         format!("No checks in the last {window}")
@@ -753,11 +813,16 @@ fn UptimePanel(uptime: Option<MintUptime>) -> impl IntoView {
         (0, _) | (_, None) => String::new(),
         (_, Some(ts)) => format!(", the last one {}", relative_time(ts)),
     };
+    // When it failed, for anyone who can't hover a bar: a finger, the keyboard
+    // and a screen reader get it here.
+    let failed = failed_bars(&uptime.bars)
+        .map(|words| format!(" {words}"))
+        .unwrap_or_default();
     let note = format!(
-        "{checks}{last}. Each bar is {}; grey means no data, not downtime.",
+        "{checks}{last}.{failed} Each bar is {}; grey means no data, not downtime.",
         bar_span(uptime.bucket_minutes)
     );
-    let label = format!("Observed uptime, last {window}: {value}. {checks}.");
+    let label = format!("Observed uptime, last {window}: {value}. {checks}.{failed}");
     let style = uptime_grid_style(uptime.bars.len());
     let bars = uptime.bars;
 
@@ -820,9 +885,9 @@ fn UptimePanel(uptime: Option<MintUptime>) -> impl IntoView {
                     bars.into_iter()
                         .map(|bar| {
                             let (class, word) = match bar.state {
-                                MintState::Ok => ("uptime-bar ok", "Up"),
+                                MintState::Ok => ("uptime-bar ok", "Healthy"),
                                 MintState::Warn => ("uptime-bar warn", "Degraded"),
-                                MintState::Error => ("uptime-bar err", "Down"),
+                                MintState::Error => ("uptime-bar err", "Failing"),
                                 MintState::Unknown => ("uptime-bar unknown", "No data"),
                             };
                             let title = format!(
@@ -845,6 +910,51 @@ fn UptimePanel(uptime: Option<MintUptime>) -> impl IntoView {
         </div>
     }
     .into_any()
+}
+
+/// The state of the newest bar holding any checks. A bar is the worst result
+/// of its hour, so this can be a failure even when the last check passed.
+fn newest_bar_state(uptime: &MintUptime) -> Option<MintState> {
+    uptime
+        .bars
+        .iter()
+        .rev()
+        .find(|bar| bar.checks > 0)
+        .map(|bar| bar.state)
+}
+
+/// The line across from the uptime figure. It answers for the last check, so
+/// a passed check reads as up even if the newest bar holds an earlier failure.
+fn uptime_state(uptime: &MintUptime) -> String {
+    match (
+        newest_bar_state(uptime),
+        uptime.current_up_since,
+        uptime.last_checked_at,
+    ) {
+        (Some(_), Some(since), _) => match elapsed_since(since).as_str() {
+            "just now" => "Up just now".to_string(),
+            elapsed => format!("Up for {elapsed}"),
+        },
+        (Some(MintState::Ok), None, _) => "Up now".to_string(),
+        (Some(MintState::Warn), None, _) => "Degraded at last check".to_string(),
+        (Some(MintState::Error), None, _) => "Failed at last check".to_string(),
+        (Some(MintState::Unknown), None, _) => "No answer at last check".to_string(),
+        (None, _, Some(_)) => format!("Not checked in {}h", uptime.window_hours),
+        (None, _, None) => "Not checked yet".to_string(),
+    }
+}
+
+/// How many bars hold a failure and when the latest began, or nothing when
+/// none do.
+fn failed_bars(bars: &[MintUptimeBar]) -> Option<String> {
+    let failed = bars.iter().filter(|bar| bar.failures > 0).count();
+    let latest = bars.iter().rev().find(|bar| bar.failures > 0)?;
+    let when = absolute_time(latest.start_at);
+    Some(if failed == 1 {
+        format!("1 bar shows failures, from {when}.")
+    } else {
+        format!("{failed} bars show failures, the latest from {when}.")
+    })
 }
 
 /// Pick the most recent error attributable to this mint, preferring whichever
@@ -904,8 +1014,83 @@ fn uptime_grid_style(bar_count: usize) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{and_list, bar_span, contacts, features, nut_title, uptime_grid_style, Nut, Piece};
+    use super::{
+        and_list, bar_span, contacts, failed_bars, features, nut_title, uptime_grid_style,
+        uptime_state, words_class, Nut, Piece,
+    };
+    use crate::types::{MintState, MintUptime, MintUptimeBar};
+    use chrono::{Duration, TimeZone, Utc};
     use serde_json::json;
+
+    fn bar(state: MintState, checks: u64, failures: u64) -> MintUptimeBar {
+        let start_at = Utc.with_ymd_and_hms(2026, 11, 3, 14, 0, 0).unwrap();
+        MintUptimeBar {
+            start_at,
+            end_at: start_at + Duration::hours(1),
+            state,
+            checks,
+            failures,
+        }
+    }
+
+    #[test]
+    fn the_uptime_line_answers_for_the_last_check() {
+        // Passed, in an hour that also holds a failure: up, not down.
+        let passed = MintUptime {
+            current_up_since: Some(Utc::now() - Duration::minutes(5)),
+            last_checked_at: Some(Utc::now()),
+            bars: vec![bar(MintState::Error, 5, 1)],
+            ..Default::default()
+        };
+        assert_eq!(uptime_state(&passed), "Up for 5m");
+
+        // The first check after a failure can have just passed.
+        let just = MintUptime {
+            current_up_since: Some(Utc::now()),
+            ..passed.clone()
+        };
+        assert_eq!(uptime_state(&just), "Up just now");
+
+        let failed = MintUptime {
+            current_up_since: None,
+            ..passed.clone()
+        };
+        assert_eq!(uptime_state(&failed), "Failed at last check");
+
+        // Up long ago, but nothing checked in the window: not "up".
+        let silent = MintUptime {
+            current_up_since: Some(Utc::now() - Duration::days(9)),
+            last_checked_at: Some(Utc::now() - Duration::days(2)),
+            bars: vec![bar(MintState::Unknown, 0, 0)],
+            ..Default::default()
+        };
+        assert_eq!(uptime_state(&silent), "Not checked in 24h");
+        assert_eq!(uptime_state(&MintUptime::default()), "Not checked yet");
+    }
+
+    #[test]
+    fn failed_bars_say_how_many_and_when_the_latest_began() {
+        assert_eq!(failed_bars(&[bar(MintState::Ok, 1, 0)]), None);
+        assert_eq!(
+            failed_bars(&[bar(MintState::Error, 1, 1)]).as_deref(),
+            Some("1 bar shows failures, from 2026-11-03 14:00:00 UTC.")
+        );
+        assert_eq!(
+            failed_bars(&[bar(MintState::Error, 1, 1), bar(MintState::Warn, 2, 1)]).as_deref(),
+            Some("2 bars show failures, the latest from 2026-11-03 14:00:00 UTC.")
+        );
+    }
+
+    #[test]
+    fn long_words_are_clamped_where_they_pass_eight_lines() {
+        assert_eq!(words_class("A small mint."), "mint-words");
+        assert_eq!(
+            words_class(&"word ".repeat(100)),
+            "mint-words words-long-on-phones"
+        );
+        assert_eq!(words_class(&"word ".repeat(300)), "mint-words words-long");
+        assert_eq!(words_class(&"line\n".repeat(9)), "mint-words words-long");
+    }
 
     fn nuts(value: serde_json::Value) -> serde_json::Map<String, serde_json::Value> {
         value.as_object().cloned().unwrap()

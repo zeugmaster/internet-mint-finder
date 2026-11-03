@@ -140,10 +140,24 @@ fn ReviewItem(review: ReviewRead) -> impl IntoView {
 
 /// The write-a-review row: one line of text and a button. The form stays in a
 /// details element, closed until asked for; `public/review.js` finds its
-/// fields by id either way. With no reviews yet the line says so itself.
+/// fields by id either way. With no reviews yet the line says so itself. A
+/// review needs the mint's public key, so a mint without one gets a line and
+/// no form: nothing asks for a Nostr key that couldn't be used.
 #[component]
 fn ReviewCompose(context: ReviewContext, #[prop(optional)] empty: bool) -> impl IntoView {
-    let can_review = context.mint_pubkey.is_some();
+    if context.mint_pubkey.is_none() {
+        let line = if empty {
+            "No reviews yet. They open once this mint shares its public key."
+        } else {
+            "New reviews open once this mint shares its public key."
+        };
+        return view! {
+            <p class=if empty { "review-compose is-empty" } else { "review-compose" }>
+                <span class="review-compose-line">{line}</span>
+            </p>
+        }
+        .into_any();
+    }
     let relays = context.relays.join(",");
     let line = if empty {
         "No reviews yet. Used this mint? Rate it with your Nostr key."
@@ -174,6 +188,9 @@ fn ReviewCompose(context: ReviewContext, #[prop(optional)] empty: bool) -> impl 
                             <input id="review-nsec" type="password" class="field-input" placeholder="nsec1…" autocomplete="off" autocapitalize="none" {..custom_attribute("autocorrect", "off")} spellcheck="false"/>
                             <button type="button" id="review-signin" class="btn">"Sign in"</button>
                         </div>
+                        // A failed sign-in says so here, by the field, not at
+                        // the form's foot under the on-screen keyboard.
+                        <p id="review-signin-error" class="field-hint is-error" role="alert" hidden=true></p>
                         <p class="field-hint">
                             "It stays in this browser and is only used to sign reviews."
                             <span data-extension="off">" With a Nostr extension like Alby or nos2x, you won't need to paste it."</span>
@@ -192,21 +209,20 @@ fn ReviewCompose(context: ReviewContext, #[prop(optional)] empty: bool) -> impl 
                     data-mint-pubkey=context.mint_pubkey.clone().unwrap_or_default()
                     data-announcer=context.announcer.clone().unwrap_or_default()
                     data-relays=relays>
-                    <StarInput disabled=!can_review/>
+                    <StarInput/>
                     <div class="field">
                         <label class="field-label" for="review-content">"Your experience"</label>
-                        <textarea id="review-content" name="content" class="field-textarea" rows="3" maxlength="1000" disabled=!can_review></textarea>
+                        <textarea id="review-content" name="content" class="field-textarea" rows="3" maxlength="1000"></textarea>
                     </div>
                     <div class="review-submit">
-                        <p id="review-status" class="field-hint" aria-live="polite">
-                            {if can_review { "Posted to Nostr, not to this site." } else { "Reviews open once this mint shares its public key, which it hasn't yet." }}
-                        </p>
-                        <button type="submit" class="btn btn-primary" disabled=!can_review>"Post review"</button>
+                        <p id="review-status" class="field-hint" aria-live="polite">"Posted to Nostr, not to this site."</p>
+                        <button type="submit" class="btn btn-primary">"Post review"</button>
                     </div>
                 </form>
             </div>
         </details>
     }
+    .into_any()
 }
 
 /// The rating as five stars to pick from: hovering fills the stars up to the
@@ -214,10 +230,10 @@ fn ReviewCompose(context: ReviewContext, #[prop(optional)] empty: bool) -> impl 
 /// `rating` (values 1–5), so arrow keys, screen readers, `required` and
 /// `public/review.js` all work, and the stars work before hydration.
 #[component]
-fn StarInput(disabled: bool) -> impl IntoView {
+fn StarInput() -> impl IntoView {
     const WORDS: [&str; 5] = ["avoid", "poor", "okay", "good", "excellent"];
     view! {
-        <fieldset class="field star-field" disabled=disabled>
+        <fieldset class="field star-field">
             <legend class="field-label">"Rating"</legend>
             <div class="star-input">
                 {(1..=5u8).map(|n| {

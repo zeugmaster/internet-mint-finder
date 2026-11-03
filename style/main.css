@@ -78,7 +78,7 @@
     --border-strong: #00000026;       /* border-strong, gray-a6 */
     --tab-border: #d9d9d9;            /* tabs indicator, gray-6 */
     --disabled: #0000000f;
-    --focus: #0084e6a1;               /* brand-border-focus, blue-a8 */
+    --focus: #0077d4;                 /* blue-a8 was 2.3:1 on white; this holds 3:1 */
     --brand: #0090ff;                 /* brand-solid, blue-9 */
     --brand-subtle: #008ff519;
     --on-brand-subtle: #0090ff;
@@ -87,11 +87,11 @@
     --inverted-active: #000000b3;
     --on-inverted: #ffffff;
     --success-bg: #00a43319;          /* positive-subtle */
-    --success-fg: #00713fde;          /* green-a11 */
+    --success-fg: #00713f;            /* green-a11, solid to pass AA on its fill */
     --warning-bg: #ff9c0029;          /* warning-subtle */
-    --warning-fg: #cc4e00;            /* on-warning-subtle-foreground */
+    --warning-fg: #b04200;            /* a step past the subtle foreground, for AA */
     --danger-bg: #f52b0018;           /* danger-subtle-hover */
-    --danger-fg: #cd2200ea;           /* tomato-a11 */
+    --danger-fg: #b81e00;             /* tomato-a11, solid and darker, for AA */
     --danger-subtle: #ff200008;       /* danger-subtle */
     --danger-border: #ff35002c;       /* danger-border-subtle */
     --ok-solid: #30a46c;              /* green-9 */
@@ -207,6 +207,34 @@
     }
 }
 
+/* Forced colours paint every fill and icon the same, so a 1.3 would draw five
+   full stars and the uptime bars would vanish. Empty stars become outlines,
+   filled stars take the system's text colour, the bars keep their state
+   colours, and missing data takes its muted colour. */
+@media (forced-colors: active) {
+    :root .stars-track .star,
+    :root .star-input .star {
+        forced-color-adjust: none;
+        fill: none;
+        stroke: CanvasText;
+    }
+
+    :root .foil-star {
+        forced-color-adjust: none;
+        background: CanvasText;
+    }
+
+    :root .uptime-bar,
+    :root .uptime-empty span {
+        forced-color-adjust: none;
+    }
+
+    :root .uptime-bar.unknown,
+    :root .uptime-empty span {
+        background: GrayText;
+    }
+}
+
 /* ---------------------------------------------------------------------------
    Base
 --------------------------------------------------------------------------- */
@@ -282,6 +310,12 @@ a {
 :focus-visible {
     outline: 1px solid var(--focus);
     outline-offset: -1px;
+}
+
+/* A new page takes focus so the keyboard carries on from it; it isn't a
+   control, so no ring runs round the whole page. */
+#main-content:focus-visible {
+    outline: none;
 }
 
 h1, h2, h3, h4 {
@@ -830,12 +864,13 @@ button.text-link {
     background-color: var(--component);
 }
 
-/* Tabs a finger can hit: 36px tall on touch screens, 28px for a mouse. */
+/* Tabs a finger can hit: 44px tall on touch screens, 28px for a mouse. A ring
+   won't do here, since the track scrolls sideways and would clip one. */
 @media (pointer: coarse) {
     .nav-link,
     .segmented button,
     .segmented a {
-        height: 36px;
+        height: 44px;
     }
 }
 
@@ -1082,55 +1117,107 @@ button.text-link {
 
 /* ---------------------------------------------------------------------------
    Mint page: one column of sections, 48px apart, each a heading on the page
-   with its content 12px below. The one card holds the uptime chart, an
-   instrument read as a whole; reviews and the About rows sit on the page
-   with 0.5px rules.
+   with its content 12px below. Cards hold what's read as a whole; the mint's
+   own words sit on the page.
 --------------------------------------------------------------------------- */
 
-.mint-sections {
+.mint-sections,
+.mint-info {
     display: flex;
     flex-direction: column;
     gap: 48px;
+}
+
+.mint-sections {
     margin-top: 48px;
 }
 
-.mint-sections > section {
+.mint-sections > section,
+.mint-info > section {
     min-width: 0;
 }
 
+/* A mint that lists nothing leaves no gap above the footer. */
+.mint-info:empty {
+    display: none;
+}
 
 .section-empty {
     color: var(--fg-2);
 }
 
-/* About this mint, one column in reading order: the mint's own words, what
-   it offers in one card, then a quiet line of how to reach it. */
-.about {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
+/* The mint's own words, under its head on the same 48px, across the full
+   column with its line breaks kept; an address or key with no spaces breaks
+   anywhere rather than pushing the page wider than a phone. */
+.mint-words {
+    margin-top: 48px;
 }
 
-/* The mint's own words, kept to a readable 65 characters a line, with its
-   line breaks kept; an address or key with no spaces breaks anywhere
-   rather than pushing the page wider than a phone. */
-.about-text,
-.about-notice p {
+/* 6px, not the usual 12px: a line of text carries about 6px of empty leading
+   above its capitals, so text sits as far under its heading as a card does. */
+.mint-words .section-head {
+    margin-bottom: 6px;
+}
+
+.mint-words p {
     overflow-wrap: anywhere;
     white-space: pre-line;
 }
 
-.about-text {
-    max-width: 65ch;
+/* The mint's own words stop at eight lines, so they can't push the evidence
+   down the page, with a "Read more" under them; opened, the whole text, and
+   the link goes. */
+.words-long > p {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 8;
+    line-clamp: 8;
+    overflow: hidden;
 }
 
-.about-notice-label {
+.words-more {
+    display: none;
+    margin-top: 4px;
+    font-size: 13px;
+    line-height: 20px;
+}
+
+.words-long > .words-more {
     display: block;
-    margin-bottom: 2px;
-    color: var(--fg-2);
-    font-size: 12px;
-    line-height: 16px;
-    font-weight: 500;
+}
+
+@media (max-width: 480px) {
+    .words-long-on-phones > p {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 8;
+        line-clamp: 8;
+        overflow: hidden;
+    }
+
+    .words-long-on-phones > .words-more {
+        display: block;
+    }
+}
+
+.words-more > summary {
+    display: inline;
+    list-style: none;
+    cursor: pointer;
+}
+
+.words-more > summary::-webkit-details-marker {
+    display: none;
+}
+
+.mint-words:has(> .words-more[open]) > p {
+    display: block;
+    -webkit-line-clamp: none;
+    line-clamp: none;
+}
+
+.mint-words > .words-more[open] {
+    display: none;
 }
 
 /* Lightning in and out lead, side by side, their limits as the values. */
@@ -1214,59 +1301,53 @@ button.text-link {
     line-height: 20px;
 }
 
-/* No feature list: one quiet line where it would be. */
-.offers-empty {
-    padding: 14px 16px;
-    color: var(--fg-2);
-}
-
-/* How to reach the operator, then the mint's own facts: two small ledgers
-   on the card's two columns, so the second starts under "Pay out" like the
-   checklist's second column; a grey label, then the value, with rows lined
-   up across both. */
-.offers-meta {
+/* Pairs on a card's two columns, read down the first, then the second
+   (--ledger-rows is half the list, rounded up), so the second starts under
+   "Pay out" like the checklist's; a grey label, then the value. */
+.ledger {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
+    grid-template-rows: repeat(var(--ledger-rows, 1), auto);
+    grid-auto-flow: column;
     gap: 4px 32px;
+    margin: 0;
     padding: 14px 16px;
     font-size: 13px;
     line-height: 20px;
 }
 
-.offers-ledger {
+.ledger > div {
     display: grid;
     grid-template-columns: 64px minmax(0, 1fr);
-    grid-auto-rows: minmax(24px, auto);
     align-items: center;
-    gap: 4px 12px;
-    margin: 0;
+    gap: 0 12px;
+    min-width: 0;
+    min-height: 24px;
 }
 
-.offers-ledger > div {
-    display: contents;
-}
-
-.offers-ledger dt {
+.ledger dt {
     color: var(--fg-2);
+    overflow-wrap: anywhere;
 }
 
 /* A long version string ("Nutshell 0.16.5.dev3+g1a2b3c4d…") wraps rather
    than being clipped by the card. */
-.offers-ledger dd {
+.ledger dd {
     min-width: 0;
     margin: 0;
     overflow-wrap: anywhere;
 }
 
-/* Values in ink, like Software beside them; the copy icon stays quiet. */
-.offers-ledger .copy-url {
+/* Values in ink, like Software; the copy icon stays quiet. */
+.ledger .copy-url {
     color: var(--fg);
 }
 
-/* Ink and a darker rule, so it reads as a link beside the copy buttons; a
-   long address is cut short rather than wrapping. */
-.offers-ledger .text-link {
+/* Ink and a darker rule, so it reads as a link; a long address is cut short
+   rather than wrapping. Positioned, so the clip also holds its screen-reader
+   text, which would otherwise widen the page. */
+.ledger .text-link {
+    position: relative;
     display: inline-block;
     max-width: 100%;
     overflow: hidden;
@@ -1278,7 +1359,7 @@ button.text-link {
 }
 
 @media (hover: hover) and (pointer: fine) {
-    .offers-ledger .text-link:hover {
+    .ledger .text-link:hover {
         text-decoration-color: var(--fg);
     }
 }
@@ -1290,7 +1371,7 @@ button.text-link {
 @media (max-width: 640px) {
     .offers-lightning,
     .offers-list,
-    .offers-meta {
+    .ledger {
         grid-template-columns: minmax(0, 1fr);
     }
 
@@ -1299,15 +1380,15 @@ button.text-link {
         border-top: 0.5px solid var(--border);
     }
 
-    .offers-list {
+    .offers-list,
+    .ledger {
         grid-template-rows: none;
         grid-auto-flow: row;
     }
 
     .offers-cell,
     .offers-list,
-    .offers-empty,
-    .offers-meta,
+    .ledger,
     .offers-note {
         padding-inline: 12px;
     }
@@ -1567,7 +1648,7 @@ button.text-link {
 }
 
 /* A press gives a little, like a button's. */
-.star-input input:not(:disabled) + label:active {
+.star-input input + label:active {
     transform: scale(0.94);
 }
 
@@ -1599,23 +1680,18 @@ button.text-link {
 }
 
 @media (hover: hover) and (pointer: fine) {
-    .star-input:not(:has(:disabled)):hover label:not(:hover):not(:has(~ label:hover)) .foil-star {
+    .star-input:hover label:not(:hover):not(:has(~ label:hover)) .foil-star {
         opacity: 0;
     }
 
-    .star-input:not(:has(:disabled)):hover label:hover .foil-star,
-    .star-input:not(:has(:disabled)):hover label:has(~ label:hover) .foil-star {
+    .star-input:hover label:hover .foil-star,
+    .star-input:hover label:has(~ label:hover) .foil-star {
         opacity: 1;
     }
 }
 
 .star-input input:focus-visible + label {
     box-shadow: var(--focus-ring);
-}
-
-.star-input input:disabled + label {
-    color: var(--disabled);
-    cursor: not-allowed;
 }
 
 /* The form's foot: what becomes of the review (or what went wrong) on the
@@ -1976,7 +2052,7 @@ button.text-link {
 }
 
 /* For a finger the small and icon buttons take a wider ring around them
-   (the button itself looks the same): 36px and 44px to aim at. */
+   (the button itself looks the same): 44px tall to aim at. */
 @media (pointer: coarse) {
     .btn-small,
     .btn-icon {
@@ -1988,6 +2064,10 @@ button.text-link {
         content: '';
         position: absolute;
         inset: -6px;
+    }
+
+    .btn-small::before {
+        inset: -10px -6px;
     }
 }
 
@@ -2388,6 +2468,14 @@ button.hallmark {
     height: 40px;
 }
 
+/* On touch screens the toolbar's controls are all 44px tall. */
+@media (pointer: coarse) {
+    .directory-tools .search-field,
+    .sort-field .filter-select {
+        height: 44px;
+    }
+}
+
 .directory-filters {
     display: flex;
     justify-content: space-between;
@@ -2585,9 +2673,12 @@ button.hallmark {
     justify-self: end;
 }
 
+/* The stars are only a picture: a tap on them opens the row like anywhere
+   else, rather than landing on them and doing nothing. */
 .mint-rating {
     grid-area: rating;
     justify-self: start;
+    pointer-events: none;
 }
 
 /* Five stars, then the count in words. Left-aligned, so the stars line up
@@ -3156,6 +3247,7 @@ button.hallmark {
     color: var(--fg-2);
 }
 
+.empty-state h2,
 .empty-state h3 {
     color: var(--fg);
     font-size: 15px;
@@ -3217,6 +3309,19 @@ button.hallmark {
 @media (hover: hover) and (pointer: fine) {
     .breadcrumb a:hover {
         color: var(--fg);
+    }
+}
+
+/* For a finger, a 44px ring to aim at; the link looks the same. */
+@media (pointer: coarse) {
+    .breadcrumb a {
+        position: relative;
+    }
+
+    .breadcrumb a::before {
+        content: '';
+        position: absolute;
+        inset: -12px -8px;
     }
 }
 
@@ -3313,6 +3418,29 @@ button.hallmark {
     font-size: 13px;
     line-height: 20px;
     overflow-wrap: anywhere;
+}
+
+/* A long failure's first lines and a "Read more"; opened, the whole message
+   in its place, and the link goes. */
+.incident-more {
+    margin-top: 4px;
+    font-size: 13px;
+    line-height: 20px;
+}
+
+.incident-more > summary {
+    display: inline;
+    list-style: none;
+    cursor: pointer;
+}
+
+.incident-more > summary::-webkit-details-marker {
+    display: none;
+}
+
+.incident-more[open] > summary,
+.incident:has(> .incident-more[open]) > .incident-msg {
+    display: none;
 }
 
 
@@ -3462,11 +3590,17 @@ button.hallmark {
     background: var(--ok-solid);
 }
 
+/* Height says it too, for anyone who can't tell the colours apart: a degraded
+   bar stands a little short and a failed one at half height. */
 .uptime-bar.warn {
+    align-self: end;
+    height: 75%;
     background: var(--warn-solid);
 }
 
 .uptime-bar.err {
+    align-self: end;
+    height: 50%;
     background: var(--err-solid);
 }
 
@@ -3720,6 +3854,19 @@ button.hallmark {
     .foil-links a:hover {
         color: var(--fg);
         text-decoration-color: var(--border-strong);
+    }
+}
+
+/* For a finger, a 44px ring to aim at; the links look the same. */
+@media (pointer: coarse) {
+    .foil-links a {
+        position: relative;
+    }
+
+    .foil-links a::before {
+        content: '';
+        position: absolute;
+        inset: -12px -8px;
     }
 }
 

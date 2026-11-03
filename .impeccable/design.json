@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-27T13:07:57+00:00",
+  "generatedAt": "2026-11-03T01:09:51+00:00",
   "title": "Design System: Internet Mint Finder",
   "extensions": {
     "colorMeta": {
@@ -232,7 +232,7 @@
       "focus": {
         "role": "primary",
         "displayName": "Focus Blue",
-        "canonical": "#0084e6a1",
+        "canonical": "#0077d4",
         "tonalRamp": [
           "#0d2847",
           "#003362",
@@ -367,7 +367,7 @@
       "success-fg": {
         "role": "tertiary",
         "displayName": "Success Text",
-        "canonical": "#00713fde",
+        "canonical": "#00713f",
         "tonalRamp": [
           "#132d21",
           "#113b29",
@@ -397,7 +397,7 @@
       "warning-fg": {
         "role": "tertiary",
         "displayName": "Warning Orange",
-        "canonical": "#cc4e00",
+        "canonical": "#b04200",
         "tonalRamp": [
           "#331e0b",
           "#462100",
@@ -427,7 +427,7 @@
       "danger-fg": {
         "role": "tertiary",
         "displayName": "Danger Tomato",
-        "canonical": "#cd2200ea",
+        "canonical": "#b81e00",
         "tonalRamp": [
           "#3b1219",
           "#4e1511",
@@ -1148,14 +1148,9 @@
         "purpose": "Page background becomes --shell; below it the page is --container."
       },
       {
-        "name": "donate-two-col",
-        "value": "min-width: 900px",
-        "purpose": "Donate grid splits into two columns."
-      },
-      {
         "name": "header-two-row",
-        "value": "max-width: 960px",
-        "purpose": "Header becomes brand + status over a full-width nav."
+        "value": "max-width: 640px",
+        "purpose": "Header becomes brand and theme switch over a full-width nav, where a nav exists."
       },
       {
         "name": "phone",
@@ -1168,10 +1163,10 @@
       "gutter": "24px, 16px under 760px (--gutter)",
       "sharedBy": "header, page shells, footer",
       "shellPadding": "8px top, 64px bottom (40px on phone)",
-      "sectionGap": "32px, single column (donate splits at 900px)",
+      "sectionGap": "32px, single column",
       "cardPadding": "16px (12px on phone)"
     },
-    "rootCss": ":host{--shell:#f6f6f6;--container:#ffffff;--surface:#ffffff;--surface-strong:#ffffff;--surface-strong-hover:#f9f9f9;--component:#0000000f;--component-hover:#00000017;--component-active:#0000001f;--fg:#000000df;--fg-2:#0000009b;--fg-3:#00000072;--fg-disabled:#00000044;--border:#0000000f;--border-strong:#00000026;--tab-border:#d9d9d9;--focus:#0084e6a1;--brand:#0090ff;--brand-subtle:#008ff519;--on-brand-subtle:#0090ff;--inverted:#000000f2;--inverted-hover:#000000cc;--inverted-active:#000000b3;--on-inverted:#ffffff;--success-bg:#00a43319;--success-fg:#00713fde;--warning-bg:#ff9c0029;--warning-fg:#cc4e00;--danger-bg:#f52b0018;--danger-fg:#cd2200ea;--danger-subtle:#ff200008;--danger-border:#ff35002c;--ok-solid:#30a46c;--warn-solid:#f76b15;--err-solid:#e54d2e;--s-default:0 0 0 0.5px #0000 inset,0 0 0 0.5px #0000000f,0 1px 1px -1px #0000001a,0 1px 2px 0 #0000000d;--focus-ring:inset 0 0 0 0.5px var(--focus),0 0 0 1px var(--focus);--font-sans:'InterVariable',system-ui,-apple-system,'Segoe UI',sans-serif;--font-mono:'TX-02',ui-monospace,'SF Mono',Menlo,monospace;--ease:cubic-bezier(0.4,0,0.2,1);--ease-out:cubic-bezier(0,0,0.2,1);font-family:var(--font-sans);font-feature-settings:'ss03';font-size:15px;line-height:24px;color:var(--fg);background:var(--container);--sheen-panel:linear-gradient(#0000 0,#00000006 160px);--sheen-raised:linear-gradient(#0000,#00000010);--sheen-well:linear-gradient(#00000010,#0000 14px);--sheen-inverted:linear-gradient(#ffffff24,#fff0);--s-panel:inset 0 -1px 0 #00000008,0 0 0 0.5px #00000014;--s-lip:inset 0 1px 0 #ffffffcc,inset 0 -1px 0 #00000014;--s-raised:inset 0 1px 0 #ffffffcc,inset 0 -1px 0 #00000014,0 0 0 0.5px #00000017;--s-well:inset 0 1px 2px #00000014,0 0 0 0.5px #00000017;--s-track:inset 0 1px 2px #00000017;--s-inverted:inset 0 1px 0 #ffffff29;}",
+    "rootCss": ":host{--shell:#f6f6f6;--container:#ffffff;--surface:#ffffff;--surface-strong:#ffffff;--surface-strong-hover:#f9f9f9;--component:#0000000f;--component-hover:#00000017;--component-active:#0000001f;--fg:#000000df;--fg-2:#0000009b;--fg-3:#00000072;--fg-disabled:#00000044;--border:#0000000f;--border-strong:#00000026;--tab-border:#d9d9d9;--focus:#0077d4;--brand:#0090ff;--brand-subtle:#008ff519;--on-brand-subtle:#0090ff;--inverted:#000000f2;--inverted-hover:#000000cc;--inverted-active:#000000b3;--on-inverted:#ffffff;--success-bg:#00a43319;--success-fg:#00713f;--warning-bg:#ff9c0029;--warning-fg:#b04200;--danger-bg:#f52b0018;--danger-fg:#b81e00;--danger-subtle:#ff200008;--danger-border:#ff35002c;--ok-solid:#30a46c;--warn-solid:#f76b15;--err-solid:#e54d2e;--s-default:0 0 0 0.5px #0000 inset,0 0 0 0.5px #0000000f,0 1px 1px -1px #0000001a,0 1px 2px 0 #0000000d;--focus-ring:inset 0 0 0 0.5px var(--focus),0 0 0 1px var(--focus);--font-sans:'InterVariable',system-ui,-apple-system,'Segoe UI',sans-serif;--font-mono:'TX-02',ui-monospace,'SF Mono',Menlo,monospace;--ease:cubic-bezier(0.4,0,0.2,1);--ease-out:cubic-bezier(0,0,0.2,1);font-family:var(--font-sans);font-feature-settings:'ss03';font-size:15px;line-height:24px;color:var(--fg);background:var(--container);--sheen-panel:linear-gradient(#0000 0,#00000006 160px);--sheen-raised:linear-gradient(#0000,#00000010);--sheen-well:linear-gradient(#00000010,#0000 14px);--sheen-inverted:linear-gradient(#ffffff24,#fff0);--s-panel:inset 0 -1px 0 #00000008,0 0 0 0.5px #00000014;--s-lip:inset 0 1px 0 #ffffffcc,inset 0 -1px 0 #00000014;--s-raised:inset 0 1px 0 #ffffffcc,inset 0 -1px 0 #00000014,0 0 0 0.5px #00000017;--s-well:inset 0 1px 2px #00000014,0 0 0 0.5px #00000017;--s-track:inset 0 1px 2px #00000017;--s-inverted:inset 0 1px 0 #ffffff29;}",
     "derivedTokens": [
       {
         "name": "--inverted / --on-inverted",
@@ -1181,7 +1176,7 @@
       },
       {
         "name": "--focus",
-        "light": "#0084e6a1 (blue-a8)",
+        "light": "#0077d4 (blue-a8)",
         "dark": "#0090ff",
         "purpose": "Focus outline and field ring."
       },
@@ -1255,18 +1250,10 @@
       "css": ".ds-badge{display:inline-flex;align-items:center;height:20px;padding:0 6px;border-radius:4px;background:var(--component);color:var(--fg-2);font-family:var(--font-sans);font-size:12px;line-height:16px}.ds-ok{background:var(--success-bg);color:var(--success-fg)}.ds-warn{background:var(--warning-bg);color:var(--warning-fg)}.ds-err{background:var(--danger-bg);color:var(--danger-fg)}.ds-info{background:var(--brand-subtle);color:var(--on-brand-subtle)}"
     },
     {
-      "name": "Hallmarks",
-      "kind": "custom",
-      "refersTo": "hallmark",
-      "description": "The signature: one TX-02 stamp per auditor. Struck, partial, voided, outline.",
-      "html": "<span class=\"ds-hallmarks\"><span class=\"ds-hm ds-struck\">A1</span><span class=\"ds-hm ds-partial\">B2</span><span class=\"ds-hm ds-voided\">C3</span><span class=\"ds-hm\">D4</span></span>",
-      "css": ".ds-hallmarks{display:inline-flex;gap:4px}.ds-hm{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:20px;padding:0 6px;border-radius:4px;box-shadow:inset 0 0 0 1px var(--border);color:var(--fg-2);font-family:var(--font-mono);font-feature-settings:'ss02';font-variant-numeric:tabular-nums;font-size:12px;line-height:16px;font-weight:700}.ds-struck{background:var(--inverted);box-shadow:none;color:var(--on-inverted)}.ds-partial{background:var(--warning-bg);box-shadow:none;color:var(--warning-fg)}.ds-voided{background:var(--danger-bg);box-shadow:none;color:var(--danger-fg);text-decoration:line-through}"
-    },
-    {
       "name": "Directory Row",
       "kind": "custom",
       "refersTo": "mint-row",
-      "description": "Ledger row on the page: avatar (mint icon or initial), name over a copy-URL button, state badge; the name's link is stretched over the row; 0.5px rules; hover tint bleeds past the column.",
+      "description": "One card of rows: avatar (mint icon or a letter on metal), name over a copy-URL button, the rating, state badge; the name's link is stretched over the row; 0.5px rules; the hover tint fills the row.",
       "html": "<ul class=\"ds-list\"><li><div class=\"ds-row\"><span class=\"ds-av\">E</span><span class=\"ds-id\"><b>Example Mint</b><button class=\"ds-url\">mint.example.com<svg viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"5.5\" y=\"5.5\" width=\"8\" height=\"8\" rx=\"1.5\"/><path d=\"M10.5 5.5V4A1.5 1.5 0 0 0 9 2.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5\"/></svg></button></span><span class=\"ds-badge ds-ok\">Healthy</span></div></li><li><div class=\"ds-row\"><span class=\"ds-av\">S</span><span class=\"ds-id\"><b>Second Mint</b><button class=\"ds-url\">ecash.example.org<svg viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"5.5\" y=\"5.5\" width=\"8\" height=\"8\" rx=\"1.5\"/><path d=\"M10.5 5.5V4A1.5 1.5 0 0 0 9 2.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5\"/></svg></button></span><span class=\"ds-badge\">Not checked yet</span></div></li></ul>",
       "css": ".ds-badge{display:inline-flex;align-items:center;height:20px;padding:0 6px;border-radius:4px;background:var(--component);color:var(--fg-2);font-family:var(--font-sans);font-size:12px;line-height:16px}.ds-ok{background:var(--success-bg);color:var(--success-fg)}.ds-list{margin:0;padding:0 12px;list-style:none;width:520px}.ds-list li{border-top:0.5px solid var(--border)}.ds-list li:last-child{border-bottom:0.5px solid var(--border)}.ds-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:0 12px;margin-inline:-12px;padding:10px 12px;border-radius:8px;color:var(--fg);cursor:pointer;transition:background-color 150ms var(--ease)}.ds-row:hover{background:var(--component)}.ds-av{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:var(--component);box-shadow:inset 0 0 0 0.5px var(--border-strong);color:var(--fg-2);font-size:14px;font-weight:600}.ds-id{display:flex;flex-direction:column;align-items:flex-start}.ds-id b{font-weight:500}.ds-url{display:inline-flex;align-items:center;gap:6px;height:24px;margin:0 -6px;padding:0 6px;border:0;border-radius:6px;background:transparent;color:var(--fg-2);font-family:var(--font-mono);font-feature-settings:'ss02';font-size:13px;line-height:20px;cursor:pointer}.ds-url:hover{background:var(--component-hover);color:var(--fg)}.ds-url svg{width:14px;height:14px;color:var(--fg-3)}"
     },
@@ -1282,22 +1269,22 @@
       "name": "Tooltip",
       "kind": "custom",
       "refersTo": "tooltip",
-      "description": "Always dark in both themes; explains a hallmark verdict.",
+      "description": "",
       "html": "<span class=\"ds-tip\">Settled 3 min ago, no failures in 24 h</span>",
       "css": ".ds-tip{display:inline-block;max-width:280px;padding:6px 10px;border-radius:8px;background:#222222;box-shadow:0 0 0 0.5px #ffffff12 inset;color:#ffffffed;font-family:var(--font-sans);font-feature-settings:'ss03';font-size:12px;line-height:16px;font-weight:500}"
     }
   ],
   "narrative": {
     "northStar": "The Assay Register",
-    "overview": "A flat, quiet register built on the Interfere design system (design.interfere.com). Interfere supplies the material: Radix colour scales with hue-free neutrals, Inter for the interface, a mono for figures, and hairline shadow rings in place of borders. The product supplies the one thing that is its own: the hallmark, one small stamp per independent auditor on every mint, read left to right like marks on a bar of metal.\n\nSurfaces are a light grey shell with white containers in light mode, and black with a near-black container in dark mode. Depth comes from 0.5px rings, grey alpha fills and one quiet light from above (the top-lit sheen), never from colour or blur. Hue is spent on state: green, orange and tomato for health, and Interfere blue (#0090ff) only for focus, info badges and one chart series. Everything else is grey and ink. The UI is deliberately restrained; glass styling is rejected outright, and the only gradients outside the brand are the sheen's grey ones.\n\nThe visual system is adapted from Interfere. Earlier layout inspiration came from Umbrel; no Umbrel code is used (Umbrel is PolyForm Noncommercial).",
+    "overview": "A flat, quiet register built on the Interfere design system (design.interfere.com). Interfere supplies the material: Radix colour scales with hue-free neutrals, Inter for the interface, a mono for figures, and hairline shadow rings in place of borders. The product supplies what is its own: the directory ledger, one row per mint with its rating in metal and its health in one word; and the brand tag, IMF struck in a holographic metal sticker, the one place the brand carries colour. V1 ships without the hallmark, the stamp that gave the register its name (the owner's call, 2026-11-03); it is parked under Components for when auditors return.\n\nSurfaces are a light grey shell with white containers in light mode, and black with a near-black container in dark mode. Depth comes from 0.5px rings, grey alpha fills and one quiet light from above (the top-lit sheen), never from colour or blur. Hue is spent on state: green, orange and tomato for health, and Interfere blue (#0090ff) only for focus, info badges and one chart series. Everything else is grey and ink. The UI is deliberately restrained; glass styling is rejected outright, and the only gradients outside the brand are the sheen's grey ones.\n\nThe visual system is adapted from Interfere. Earlier layout inspiration came from Umbrel, and the top-lit sheen follows the light on Umbrel's dark UI (the owner's call, 2026-10-30): the idea only, with values drawn from our own grey steps. No Umbrel code is used (Umbrel is PolyForm Noncommercial).",
     "keyCharacteristics": [
       "Inter Variable with 'ss03' for all interface text; TX-02 with 'ss02' only for figures, URLs, codes and stamps.",
       "Hue-free grey neutrals expressed as alpha steps (gray-a3 to gray-a12), so they sit on any surface.",
       "One brand hue (#0090ff), used sparingly.",
       "Hairline \"shadow-default\" rings instead of borders; 0.5px rules between rows.",
-      "One quiet light from above: panels and controls lightest at the top, fields pressed in.",
+      "One quiet light from above: panels and controls lightest at the top, tab tracks pressed in, fields flat.",
       "Primary actions are inverted: near-black in light, near-white in dark.",
-      "The hallmark row is the signature: Interfere md badges in four verdict states.",
+      "The directory ledger and the brand tag are the signature: metal stars and letter avatars on grey, health in one word.",
       "Light and dark themes are first-class, switched from a sun/moon icon at the top right and set before first paint."
     ],
     "rules": [
@@ -1322,6 +1309,16 @@
         "section": "colors"
       },
       {
+        "name": "The Foil Exception Rule",
+        "body": "The brand (the tag) is the one place gradients, blend modes and shine are allowed: chrome, colour laid into it, a glint, grain. Never on a surface, button, badge or chart. The one extension is the filled star (`.foil-star`, the owner's call): the tag's metal masked to a star, a dark steel with a soft glint in light mode (so a 14px star holds on a white card) and bright chrome in dark, the colour running along a row of stars so the five read as one strip of foil.",
+        "section": "colors"
+      },
+      {
+        "name": "The Five Sizes Rule",
+        "body": "Five sizes carry the whole product: 28 (page title), 24 (figure), 15 (titles and body), 13 (small) and 12 (labels). Analytics uses the same ramp. Weight carries the rest, in three steps: 600 for headings, 500 for interactive labels (buttons, tabs, nav, chart titles), list names, badges and table headers, 400 for everything else. TX-02 is always regular except the hallmark stamp. Avatar initials are graphics: 13px in the 36px avatar, 24px in the 56px one.",
+        "section": "typography"
+      },
+      {
         "name": "The Two Voices Rule",
         "body": "Inter for words, TX-02 for values. Never set prose, headings or buttons in TX-02, and never set a figure, URL or code in Inter.",
         "section": "typography"
@@ -1332,14 +1329,19 @@
         "section": "typography"
       },
       {
+        "name": "The Box Rule",
+        "body": "A white card holds something read as a whole: the directory's mint list, the uptime chart, the reviews, Contact and What it offers. Running text sits on the page. Headings always sit outside, on the page, never inside a card.",
+        "section": "layout"
+      },
+      {
         "name": "The Hairline Not Border Rule",
         "body": "Containers get a 0.5px ring, not a CSS border. Real borders exist only as 0.5px row rules.",
         "section": "elevation"
       },
       {
         "name": "The Top-Lit Rule",
-        "section": "elevation",
-        "body": "One light, from above, the same everywhere: raised things are lightest at the top, wells are shaded under their top edge. The sheen is grey and quiet (a few percent, never a visible band of colour), never on state colour, and nothing glows. Added 2026-10-30 at the owner's request, after Umbrel's dark UI (the idea only; no Umbrel code)."
+        "body": "One light, from above, the same everywhere: raised things are lightest at the top, wells are shaded under their top edge. The sheen is grey and quiet (a few percent, never a visible band of colour), never on state colour, and nothing glows.",
+        "section": "elevation"
       },
       {
         "name": "The No Glass Rule",
@@ -1351,14 +1353,15 @@
       "Do set interface text in InterVariable with 'ss03', and figures, URLs, codes and stamps in TX-02 with 'ss02' and tabular numerals.",
       "Do use the alpha grey tokens (`--fg`, `--fg-2`, `--fg-3`, `--component`, `--border`) so surfaces work in both themes.",
       "Do separate containers with the hairline ring and rows with 0.5px `--border` rules.",
-      "Do light raised panels and controls from above and press fields in, with the `--sheen-*` and `--s-*` tokens, in both themes.",
+      "Do light raised panels and controls from above and press the tab tracks in, with the `--sheen-*` and `--s-*` tokens, in both themes.",
       "Do make the primary action inverted (`--inverted` / `--on-inverted`).",
       "Do keep status colour tied to a real state: success, warning (Radix orange), danger (tomato).",
-      "Do draw every auditor verdict as a hallmark in one of its four states.",
+      "Do let a state read without colour too: a word on a badge, a bar's height, a star's fill.",
       "Do keep the header, pages and footer on the shared 960px column."
     ],
     "donts": [
       "Don't use glass, backdrop blur, glow or coloured gradients; the owner regards them as AI slop. The grey top-lit sheen and the brand's metal are the only gradients.",
+      "Don't separate items with a middle dot (\"·\"), in UI text, meta lines, tooltips or charts; the owner regards it as AI slop. Use space (a flex gap), a comma, or a rule.",
       "Don't tint the neutrals warm or cool, or reintroduce cream fills or amber status.",
       "Don't use #0090ff as a button fill, heading colour or decoration.",
       "Don't add CSS borders to cards or fields; use the hairline shadow.",

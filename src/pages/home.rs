@@ -13,8 +13,8 @@ pub fn HomePage() -> impl IntoView {
             <div class="page-head has-tag">
                 <h1 class="page-title">"Find a Cashu mint."</h1>
                 <p class="page-subtitle">
-                    "Cashu mints found on Nostr, rated by the people who use them. "
-                    "Each one is checked every hour to see if it's online."
+                    "Cashu mints found on Nostr, with the reviews posted there. "
+                    "Each mint is checked every hour to see if it's online."
                 </p>
                 <HeroTag/>
             </div>
