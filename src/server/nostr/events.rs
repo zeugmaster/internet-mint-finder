@@ -316,9 +316,14 @@ pub fn decode_mint_announcement(event: &Event) -> Option<MintAnnouncement> {
     })
 }
 
-/// Only Cashu reviews (`k` = 38172); Fedimint ones are out of scope.
+/// Only Cashu reviews (`k` = 38172); Fedimint ones are out of scope. A
+/// review dated more than ten minutes ahead is refused, as relays do
+/// (NIP-22): it would sort above every real one for good.
 pub fn decode_review(event: &Event) -> Option<Review> {
     if event.kind.as_u16() != KIND_NIP87_REVIEW || value(event, "k")? != "38172" {
+        return None;
+    }
+    if to_datetime(event.created_at) > Utc::now() + chrono::Duration::minutes(10) {
         return None;
     }
     let (rating, content) = parse_rating(&event.content);
@@ -393,6 +398,13 @@ mod tests {
             .sign_with_keys(&keys)
             .unwrap();
         assert!(decode_review(&fedimint).is_none());
+
+        let ahead = EventBuilder::new(Kind::from_u16(KIND_NIP87_REVIEW), "[5/5] from the future")
+            .tags([tag("k", "38172"), Tag::identifier("02abc")])
+            .custom_created_at(Timestamp::from_secs(Timestamp::now().as_secs() + 3600))
+            .sign_with_keys(&keys)
+            .unwrap();
+        assert!(decode_review(&ahead).is_none());
 
         assert_eq!(
             parse_rating("[6/5] too high"),

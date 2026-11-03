@@ -4,7 +4,7 @@ use leptos::prelude::*;
 /// Health as an Interfere badge: one word on a tinted ground, so the state
 /// never relies on colour alone.
 #[component]
-pub fn StateBadge(state: MintState) -> impl IntoView {
+pub fn StateBadge(state: MintState, #[prop(optional, into)] id: Option<String>) -> impl IntoView {
     let (class, label) = match state {
         MintState::Ok => ("badge badge-ok", "Healthy"),
         MintState::Warn => ("badge badge-warn", "Degraded"),
@@ -13,7 +13,7 @@ pub fn StateBadge(state: MintState) -> impl IntoView {
     };
 
     view! {
-        <span class=class>{label}</span>
+        <span class=class id=id>{label}</span>
     }
 }
 

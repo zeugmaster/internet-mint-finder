@@ -171,17 +171,6 @@ impl Auditor {
             Duration::from_secs(self.config.health_check_interval_secs.saturating_mul(2)),
             true,
         );
-        progress.register(
-            "paid audits",
-            Duration::from_secs(self.config.max_swap_delay_secs.saturating_add(1800)),
-            true,
-        );
-        progress.register(
-            "balance snapshots",
-            Duration::from_secs(self.config.snapshot_interval_secs.saturating_add(120)),
-            true,
-        );
-
         // Retry batches can contain overlapping pairs; each wallet has one writer.
         let mut initial_support = HashMap::new();
         match self.auditor_db.get_all_mints().await {
@@ -254,6 +243,23 @@ impl Auditor {
                 "health probes"
             });
         }
+
+        // Everything below moves or tracks real ecash.
+        if !self.config.paid_swaps {
+            info!("Paid swaps are off (AUDITOR_PAID_SWAPS): only the free health checks run");
+            return;
+        }
+
+        progress.register(
+            "paid audits",
+            Duration::from_secs(self.config.max_swap_delay_secs.saturating_add(1800)),
+            true,
+        );
+        progress.register(
+            "balance snapshots",
+            Duration::from_secs(self.config.snapshot_interval_secs.saturating_add(120)),
+            true,
+        );
 
         // One paid worker schedules normal rounds and optional error retries.
         {
@@ -352,6 +358,48 @@ async fn next_paid_round(
 mod tests {
     use super::*;
     use cdk::nuts::{CurrencyUnit, PaymentMethod};
+
+    #[tokio::test]
+    async fn lifecycle_only_monitors_enabled_workers() {
+        for paid_swaps in [false, true] {
+            let mut state = crate::server::state::test_state().await;
+            state.auditor_config.paid_swaps = paid_swaps;
+            let (stop, shutdown) = watch::channel(false);
+            let mut workers = JoinSet::new();
+            Auditor::new(
+                state.wallet_repository.clone(),
+                state.auditor_db.clone(),
+                state.auditor_config.clone(),
+            )
+            .start(
+                &mut workers,
+                shutdown,
+                state.wallet_guards.clone(),
+                state.workers.clone(),
+            )
+            .await;
+            let expected = if paid_swaps {
+                vec!["balance snapshots", "health probes", "paid audits"]
+            } else {
+                vec!["health probes"]
+            };
+            assert_eq!(workers.len(), expected.len());
+            let status = state.workers.status();
+            assert_eq!(status.iter().map(|s| s.name).collect::<Vec<_>>(), expected);
+            assert!(status.iter().all(|s| s.ready && !s.stalled));
+            stop.send(true).unwrap();
+            let mut stopped = Vec::new();
+            while let Some(result) =
+                tokio::time::timeout(Duration::from_secs(2), workers.join_next())
+                    .await
+                    .expect("enabled workers must stop promptly")
+            {
+                stopped.push(result.unwrap());
+            }
+            stopped.sort();
+            assert_eq!(stopped, expected);
+        }
+    }
 
     #[tokio::test(start_paused = true)]
     async fn paid_scheduler_preserves_both_cadences_and_prioritizes_shutdown() {

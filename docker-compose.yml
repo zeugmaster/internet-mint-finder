@@ -47,6 +47,7 @@ services:
       IMF_NOSTR_NSEC: nsec1xdknd0qnqvrg7tc4wwqxvpcqju6zecmmv67xp9cd6nj565yhhq4q4wp4a2
       IMF_AUDITORS: npub1qj4rfl4wzfdpet9lpwjqxjrsqn7r8gjy3qesuygcldagekdmew2ss4wf5m,npub1c4dc6c3sskttnv38t469xa8v0n0hgq6wrnuex8h52n8mgtm82e5qmhf69j
       IMF_RELAYS: ws://strfry:7777,ws://localhost:7777
+      AUDITOR_PAID_SWAPS: "true"
       AUDITOR_MIN_DELAY_SECS: "20"
       AUDITOR_MAX_DELAY_SECS: "60"
       IMF_PUBLIC_URLS: http://localhost:3000
@@ -82,6 +83,7 @@ services:
       IMF_NOSTR_NSEC: nsec19gc6hhldm0h3nd7ce0kd0uuqu9965wrjas6sk2ntpdemfxr5ghxq6fykt3
       IMF_AUDITORS: npub1qj4rfl4wzfdpet9lpwjqxjrsqn7r8gjy3qesuygcldagekdmew2ss4wf5m,npub1c4dc6c3sskttnv38t469xa8v0n0hgq6wrnuex8h52n8mgtm82e5qmhf69j
       IMF_RELAYS: ws://strfry:7777,ws://localhost:7777
+      AUDITOR_PAID_SWAPS: "true"
       AUDITOR_MIN_DELAY_SECS: "20"
       AUDITOR_MAX_DELAY_SECS: "60"
       IMF_PUBLIC_URLS: http://localhost:3001

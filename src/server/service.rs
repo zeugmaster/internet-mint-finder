@@ -9,7 +9,7 @@ use crate::server::state::{local_balance, AppState};
 use crate::server::storage::{Donation, Mint};
 use crate::types::{
     AnnouncementRead, AuditorMintView, AuditorRead, DonationPoll, DonationRead, MintRead,
-    MintReviews, MintState, MintStats, ReviewContext, ReviewRead,
+    MintReviews, MintState, MintStats, ReviewContext, ReviewRead, REVIEWS_LOADED,
 };
 use cdk::nuts::nut00::Token;
 use cdk::nuts::nut18::{PaymentRequest, PaymentRequestPayload, Transport, TransportType};
@@ -96,6 +96,13 @@ async fn receive_for_mint(
     token_str: &str,
     via: &str,
 ) -> Result<ReceiveOutcome, AuditorError> {
+    // Every donation path ends here, so this one check keeps a directory-only
+    // instance from ever holding ecash.
+    if !state.auditor_config.paid_swaps {
+        return Err(AuditorError::InvalidInput(
+            "this server doesn't accept donations".into(),
+        ));
+    }
     let _guard = state.wallet_guards.lock_one(mint_url).await;
     let wallet = state.wallet_for_mint(mint_url).await?;
     let net = crate::server::net::NetConfig::from_env();
@@ -308,9 +315,13 @@ pub async fn mint_reviews(state: &AppState, mint_id: u64) -> Result<MintReviews,
         .announcement_for_mint(&mint.url, mint_pubkey.clone())
         .await?
         .map(|a| a.pubkey);
+    let (total, rating_count, rating_avg) = state
+        .auditor_db
+        .review_stats(&mint.url, mint_pubkey.clone())
+        .await?;
     let reviews = state
         .auditor_db
-        .reviews_for_mint(&mint.url, mint_pubkey.clone(), 100)
+        .reviews_for_mint(&mint.url, mint_pubkey.clone(), REVIEWS_LOADED)
         .await?
         .into_iter()
         .map(|r| ReviewRead {
@@ -323,6 +334,9 @@ pub async fn mint_reviews(state: &AppState, mint_id: u64) -> Result<MintReviews,
         .collect();
     Ok(MintReviews {
         reviews,
+        total,
+        rating_count,
+        rating_avg,
         context: ReviewContext {
             mint_url: mint.url,
             mint_pubkey,
@@ -625,6 +639,19 @@ mod tests {
     use super::{rewrite_token_mint_url, validate_donation_token};
     use cdk::nuts::nut00::Token;
     use std::str::FromStr;
+
+    #[tokio::test]
+    async fn directory_mode_rejects_donations_before_wallet_access() {
+        let state = crate::server::state::test_state().await;
+        let result =
+            super::receive_for_mint(&state, "https://mint.example", "invalid", "token").await;
+        assert!(matches!(
+            result,
+            Err(super::AuditorError::InvalidInput(message))
+                if message == "this server doesn't accept donations"
+        ));
+        assert!(state.wallet_repository.get_wallets().await.is_empty());
+    }
 
     #[test]
     fn invalid_units_and_empty_tokens_are_rejected_before_wallet_access() {

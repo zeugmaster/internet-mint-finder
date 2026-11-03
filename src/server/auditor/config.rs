@@ -4,6 +4,11 @@
 /// fall back to the defaults below.
 #[derive(Debug, Clone)]
 pub struct AuditorConfig {
+    /// Whether this instance moves real ecash: the swap, snapshot and
+    /// error-retry loops, donations, and the analytics page. Off by default,
+    /// so a fresh instance only runs the free hourly checks and holds no
+    /// ecash. `AUDITOR_PAID_SWAPS`
+    pub paid_swaps: bool,
     /// Minimum delay between swap rounds (seconds). `AUDITOR_MIN_DELAY_SECS`
     pub min_swap_delay_secs: u64,
     /// Maximum delay between swap rounds (seconds). `AUDITOR_MAX_DELAY_SECS`
@@ -64,6 +69,7 @@ pub struct AuditorConfig {
 impl Default for AuditorConfig {
     fn default() -> Self {
         Self {
+            paid_swaps: false,
             // Python parity (cashu-auditor/src/auditor.py): single random swap
             // every 5-15 min, 5-100 sat, and a 2% fee reserve. The receive
             // overshoot is clamped to `min_amount` below so a wallet restored
@@ -104,8 +110,16 @@ impl AuditorConfig {
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(default)
         }
+        fn env_bool(key: &str, default: bool) -> bool {
+            match std::env::var(key).map(|v| v.trim().to_ascii_lowercase()) {
+                Ok(v) if matches!(v.as_str(), "1" | "true" | "yes" | "on") => true,
+                Ok(v) if matches!(v.as_str(), "0" | "false" | "no" | "off") => false,
+                _ => default,
+            }
+        }
         let defaults = Self::default();
         let mut config = Self {
+            paid_swaps: env_bool("AUDITOR_PAID_SWAPS", defaults.paid_swaps),
             min_swap_delay_secs: env_u64("AUDITOR_MIN_DELAY_SECS", defaults.min_swap_delay_secs),
             max_swap_delay_secs: env_u64("AUDITOR_MAX_DELAY_SECS", defaults.max_swap_delay_secs),
             min_amount: env_u64("AUDITOR_MIN_AMOUNT", defaults.min_amount),

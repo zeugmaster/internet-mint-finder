@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="darkreader-lock">
+<title>Footer ideas, Internet Mint Finder</title>
+<style>
+@font-face { font-family: InterVariable; src: url(../../public/fonts/InterVariable.woff2) format("woff2"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: TX-02; src: url(../../public/fonts/tx-02-regular.otf) format("opentype"); font-weight: 400; font-display: swap; }
+
+/* Where the light sits across a footer, in percent. Follows the pointer. */
+@property --foil-x { syntax: "<percentage>"; inherits: true; initial-value: 30%; }
+
+:root {
+    color-scheme: light;
+    --page: #ffffff;
+    --shell: #f6f6f6;
+    --surface: #ffffff;
+    --component: #0000000f;
+    --fg: #000000df;
+    --fg-2: #0000009b;
+    --border: #0000000f;
+    --border-strong: #00000026;
+    --ring: 0 0 0 0.5px #0000000f;
+    --tab-border: #d9d9d9;
+    --danger-bg: #f52b0018;
+    --danger-fg: #cd2200ea;
+    --font: InterVariable, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: TX-02, ui-monospace, "SF Mono", Menlo, monospace;
+    --ease: cubic-bezier(0, 0, 0.2, 1);
+
+    /* The tag's metal: steel bands, the colour laid in at 30%, a glint. */
+    --steel: linear-gradient(100deg, #4f5766 0%, #6b7483 14%, #3f4756 30%, #687180 46%, #4f5766 62%, #6b7483 80%, #4f5766 100%);
+    --holo: linear-gradient(100deg, #7a95ff4d 0%, #b48cff4d 18%, #f08ad84d 34%, #ffc4a84d 46%, #7fd8ff4d 60%, #6fe0c04d 76%, #8aa6ff4d 100%);
+    --glint: #ffffff99;
+    --lip: drop-shadow(0 1px 0 #ffffffb3);
+
+    /* Per idea. */
+    --struck-top: #000000a6;
+    --struck-end: #0000000d;
+    --blind-fill: #f6f6f6;
+    --blind-edge: 0 -1px 0 #ffffff, 0 1px 0 #00000026, 0 4px 12px #00000012;
+    --reed-end: #000000a6;
+    --dots-end: #000000cc;
+    --seal-alpha: 0.42;
+}
+
+:root[data-theme='dark'] {
+    color-scheme: dark;
+    --page: #111111;
+    --shell: #000000;
+    --surface: #ffffff09;
+    --component: #ffffff12;
+    --fg: #ffffffed;
+    --fg-2: #ffffffaf;
+    --border: #ffffff12;
+    --border-strong: #ffffff2c;
+    --ring: inset 0 0 0 1px #ffffff1a;
+    --tab-border: #484848;
+    --danger-bg: #ff35232b;
+    --danger-fg: #ff977d;
+
+    --steel: linear-gradient(100deg, #c9ced6 0%, #f7f8fa 14%, #9aa3af 30%, #e6e9ed 46%, #aeb5bf 62%, #ffffff 80%, #c9ced6 100%);
+    --glint: #ffffffd9;
+    --lip: none;
+
+    --struck-top: #000000e6;
+    --struck-end: #00000008;
+    --blind-fill: #080808;
+    --blind-edge: 0 -1px 0 #ffffff2e, 0 1px 0 #00000000;
+    --reed-end: #000000b3;
+    --dots-end: #000000d9;
+    --seal-alpha: 0.5;
+}
+
+* { box-sizing: border-box; }
+
+html {
+    background: var(--page);
+    color: var(--fg);
+    font-family: var(--font);
+    font-feature-settings: 'ss03';
+    font-size: 15px;
+    line-height: 24px;
+    -webkit-font-smoothing: antialiased;
+}
+
+body { margin: 0; }
+
+::selection { background: #0090ff33; }
+
+.page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 48px 24px 96px;
+}
+
+.page-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    justify-content: space-between;
+    gap: 16px 32px;
+    margin-bottom: 40px;
+}
+
+h1 {
+    margin: 0;
+    font-size: 28px;
+    line-height: 36px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.page-head p {
+    margin: 4px 0 0;
+    max-width: 75ch;
+    color: var(--fg-2);
+}
+
+/* Interfere segmented tabs. */
+.tabs {
+    display: inline-flex;
+    border-radius: 6px;
+    background: var(--component);
+}
+
+.tabs button {
+    height: 28px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--fg-2);
+    font: 500 13px/20px var(--font);
+    font-feature-settings: 'ss03';
+    cursor: pointer;
+    transition: color 200ms ease-in-out, background-color 200ms ease-in-out;
+}
+
+.tabs button:hover { color: var(--fg); }
+
+.tabs button[aria-pressed='true'] {
+    background: var(--surface);
+    color: var(--fg);
+    box-shadow: inset 0 0 0 1px var(--tab-border);
+}
+
+:root[data-theme='dark'] .tabs button[aria-pressed='true'] { background: #ffffff12; }
+
+.tabs button:focus-visible,
+.links a:focus-visible {
+    outline: 1px solid #0090ff;
+    outline-offset: 2px;
+}
+
+.idea + .idea { margin-top: 56px; }
+
+/* The first round sits apart from the combinations. */
+.idea + .first-round { margin-top: 112px; }
+
+.idea-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
+    margin-bottom: 12px;
+}
+
+h2 {
+    margin: 0;
+    font-size: 15px;
+    line-height: 24px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.idea-head p {
+    margin: 0;
+    color: var(--fg-2);
+    font-size: 13px;
+    line-height: 20px;
+}
+
+/* One page bottom: the end of the directory card, then the footer. */
+.frame {
+    position: relative;
+    overflow: hidden;
+    border-radius: 12px;
+    background: var(--shell);
+    box-shadow: var(--ring);
+}
+
+.col {
+    width: 100%;
+    max-width: 1008px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+.card-end {
+    border-radius: 0 0 12px 12px;
+    background: var(--surface);
+    box-shadow: var(--ring);
+}
+
+:root:not([data-theme='dark']) .card-end { background: #ffffff; }
+
+.row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0 12px;
+    padding: 12px 16px;
+}
+
+.row + .row { border-top: 0.5px solid var(--border); }
+
+.avatar {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--component);
+    box-shadow: inset 0 0 0 0.5px var(--border-strong);
+    color: var(--fg-2);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.row b { display: block; font-weight: 500; }
+
+.row code {
+    display: block;
+    color: var(--fg-2);
+    font: 13px/20px var(--mono);
+    font-feature-settings: 'ss02';
+}
+
+.badge {
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 4px;
+    background: var(--danger-bg);
+    color: var(--danger-fg);
+    font-size: 12px;
+    line-height: 20px;
+    font-weight: 500;
+}
+
+/* ---------------------------------------------------------------- shared */
+
+.foot {
+    position: relative;
+    margin-top: 64px;
+    transition: --foil-x 500ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* The metal, for any shape that masks it. */
+.metal {
+    background-image:
+        radial-gradient(closest-side, var(--glint), #ffffff00),
+        var(--holo),
+        var(--steel);
+    background-repeat: no-repeat, repeat, repeat;
+    background-size: 32% 180%, 240% 100%, 260% 100%;
+    background-position: var(--foil-x) 50%, calc(100% - var(--foil-x)) 0, var(--foil-x) 0;
+    background-blend-mode: screen, color, normal;
+}
+
+/* The name in brushed steel, TX-02 capitals, as in today's footer. */
+.foil-name {
+    margin-right: -0.3em;
+    color: transparent;
+    font: 12px/16px var(--mono);
+    font-feature-settings: 'ss02';
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    background-image: var(--holo), var(--steel);
+    background-size: 240% 100%, 260% 100%;
+    background-position: calc(100% - var(--foil-x)) 0, var(--foil-x) 0;
+    background-blend-mode: color, normal;
+    -webkit-background-clip: text;
+    background-clip: text;
+    filter: var(--lip);
+}
+
+.links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px 24px;
+    font-size: 13px;
+    line-height: 20px;
+}
+
+.links a {
+    color: var(--fg-2);
+    text-decoration: underline solid 0.1em;
+    text-decoration-color: transparent;
+    text-underline-offset: 20%;
+    transition: color 150ms var(--ease), text-decoration-color 150ms var(--ease);
+}
+
+.links a:hover {
+    color: var(--fg);
+    text-decoration-color: var(--border-strong);
+}
+
+.stack {
+    display: grid;
+    justify-items: center;
+    gap: 12px;
+}
+
+/* The giant letters of A and B: IMF in the tag's own lettering. */
+.giant {
+    display: block;
+    margin: 0;
+    font-family: var(--font);
+    font-feature-settings: 'ss03';
+    font-weight: 820;
+    font-size: clamp(150px, 31vw, 360px);
+    line-height: 0.74;
+    letter-spacing: -0.035em;
+    text-align: center;
+    white-space: nowrap;
+    user-select: none;
+    pointer-events: none;
+}
+
+/* ----------------------------------------------------------------- today */
+
+.foot-now {
+    display: grid;
+    justify-items: center;
+    gap: 20px;
+    padding-top: 40px;
+    padding-bottom: 56px;
+}
+
+.foil-rule {
+    position: relative;
+    width: 100%;
+    height: 2px;
+    border-radius: 1px;
+    isolation: isolate;
+    background:
+        radial-gradient(closest-side, #ffffff 0%, #ffffff00 100%) no-repeat,
+        repeating-linear-gradient(90deg, #9aa3af 0px, #e6e9ed 46px, #7f8896 92px, #d3d8df 138px, #a6aeb9 184px, #9aa3af 230px);
+    background-size: 220px 100%, 100% 100%;
+    background-position: var(--foil-x) 0, 0 0;
+    -webkit-mask: linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent);
+            mask: linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent);
+}
+
+.foil-rule::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, #7a95ff 0%, #b48cff 16%, #f08ad8 30%, #ffc4a8 42%, #7fd8ff 56%, #6fe0c0 70%, #8aa6ff 84%, #c79bff 100%);
+    background-size: 200% 100%;
+    background-position: calc(100% - var(--foil-x)) 0;
+    mix-blend-mode: color;
+    opacity: 0.3;
+}
+
+:root[data-theme='dark'] .foil-rule { filter: brightness(0.8); }
+
+.foot-now .links { margin-top: -8px; }
+
+/* ------------------------------------------------------------- A. struck */
+
+.bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 24px;
+    padding-top: 8px;
+}
+
+.bar .foil-name { margin-right: 0; }
+
+.struck {
+    padding: 56px 0 64px;
+    color: transparent;
+    background-image:
+        radial-gradient(closest-side, var(--glint), #ffffff00),
+        var(--holo),
+        var(--steel);
+    background-repeat: no-repeat, repeat, repeat;
+    background-size: 28% 140%, 240% 100%, 260% 100%;
+    background-position: var(--foil-x) 40%, calc(100% - var(--foil-x)) 0, var(--foil-x) 0;
+    background-blend-mode: screen, color, normal;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-mask: linear-gradient(180deg, transparent 0, transparent 56px, var(--struck-top) 56px, var(--struck-end) calc(100% - 64px));
+            mask: linear-gradient(180deg, transparent 0, transparent 56px, var(--struck-top) 56px, var(--struck-end) calc(100% - 64px));
+}
+
+/* -------------------------------------------------------------- B. blind */
+
+.foot-blind { padding-top: 8px; }
+
+.blind {
+    margin-top: 40px;
+    margin-bottom: -0.17em;
+    color: var(--blind-fill);
+    text-shadow: var(--blind-edge);
+}
+
+.foot-blind .stack { position: relative; z-index: 1; }
+
+/* ------------------------------------------------------------ C. milled */
+
+.foot-milled { padding-top: 8px; }
+
+.reed {
+    height: 64px;
+    margin-top: 48px;
+    -webkit-mask:
+        repeating-linear-gradient(90deg, #000 0 1px, transparent 1px 4px),
+        linear-gradient(180deg, transparent, var(--reed-end));
+    -webkit-mask-composite: source-in;
+            mask:
+        repeating-linear-gradient(90deg, #000 0 1px, transparent 1px 4px),
+        linear-gradient(180deg, transparent, var(--reed-end));
+            mask-composite: intersect;
+}
+
+/* --------------------------------------------------------- D. halftone */
+
+.foot-dots { padding-top: 8px; }
+
+.dots {
+    height: 72px;
+    margin-top: 48px;
+    -webkit-mask:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='72'%3E%3Ccircle cx='4' cy='4' r='0.6'/%3E%3Ccircle cx='0' cy='12' r='0.925'/%3E%3Ccircle cx='8' cy='12' r='0.925'/%3E%3Ccircle cx='4' cy='20' r='1.25'/%3E%3Ccircle cx='0' cy='28' r='1.575'/%3E%3Ccircle cx='8' cy='28' r='1.575'/%3E%3Ccircle cx='4' cy='36' r='1.9'/%3E%3Ccircle cx='0' cy='44' r='2.225'/%3E%3Ccircle cx='8' cy='44' r='2.225'/%3E%3Ccircle cx='4' cy='52' r='2.55'/%3E%3Ccircle cx='0' cy='60' r='2.875'/%3E%3Ccircle cx='8' cy='60' r='2.875'/%3E%3Ccircle cx='4' cy='68' r='3.2'/%3E%3C/svg%3E") 0 0 / 8px 72px repeat-x,
+        linear-gradient(180deg, #00000033, var(--dots-end));
+    -webkit-mask-composite: source-in;
+            mask:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='72'%3E%3Ccircle cx='4' cy='4' r='0.6'/%3E%3Ccircle cx='0' cy='12' r='0.925'/%3E%3Ccircle cx='8' cy='12' r='0.925'/%3E%3Ccircle cx='4' cy='20' r='1.25'/%3E%3Ccircle cx='0' cy='28' r='1.575'/%3E%3Ccircle cx='8' cy='28' r='1.575'/%3E%3Ccircle cx='4' cy='36' r='1.9'/%3E%3Ccircle cx='0' cy='44' r='2.225'/%3E%3Ccircle cx='8' cy='44' r='2.225'/%3E%3Ccircle cx='4' cy='52' r='2.55'/%3E%3Ccircle cx='0' cy='60' r='2.875'/%3E%3Ccircle cx='8' cy='60' r='2.875'/%3E%3Ccircle cx='4' cy='68' r='3.2'/%3E%3C/svg%3E") 0 0 / 8px 72px repeat-x,
+        linear-gradient(180deg, #00000033, var(--dots-end));
+            mask-composite: intersect;
+}
+
+/* ------------------------------------------------------- F, G, H: B + C */
+
+.foot-bc { padding-top: 8px; }
+
+.reed-lines {
+    -webkit-mask:
+        repeating-linear-gradient(90deg, #000 0 1px, transparent 1px 4px),
+        linear-gradient(180deg, transparent, var(--reed-end));
+    -webkit-mask-composite: source-in;
+            mask:
+        repeating-linear-gradient(90deg, #000 0 1px, transparent 1px 4px),
+        linear-gradient(180deg, transparent, var(--reed-end));
+            mask-composite: intersect;
+}
+
+/* F. The raised letters stand in the milled band; their face, in the page's
+   colour, blocks the reeding behind it. */
+.in-rim {
+    position: relative;
+    display: flow-root;
+    margin-top: 40px;
+}
+
+.in-rim .band {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 120px;
+}
+
+.in-rim .blind {
+    position: relative;
+    z-index: 1;
+    margin-top: 0;
+}
+
+/* G. One shape: the raised letters with their face milled, the reeding
+   growing toward the bottom edge. */
+.milled-face {
+    position: relative;
+    margin-top: 40px;
+}
+
+.milled-face .blind { margin-top: 0; }
+
+.milled-face .face {
+    position: absolute;
+    inset: 0;
+    color: transparent;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-mask:
+        repeating-linear-gradient(90deg, #000 0 1px, transparent 1px 4px),
+        linear-gradient(180deg, transparent 15%, var(--reed-end));
+    -webkit-mask-composite: source-in;
+            mask:
+        repeating-linear-gradient(90deg, #000 0 1px, transparent 1px 4px),
+        linear-gradient(180deg, transparent 15%, var(--reed-end));
+            mask-composite: intersect;
+}
+
+/* H. The milled band runs in front of the letters' feet, like the rim of a
+   coin in front of its legend. */
+.behind-rim {
+    position: relative;
+    display: flow-root;
+    margin-top: 40px;
+}
+
+.behind-rim .blind {
+    margin-top: 0;
+    margin-bottom: -0.1em;
+}
+
+.behind-rim .rim-front {
+    position: absolute;
+    z-index: 1;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 48px;
+    background: var(--shell);
+    box-shadow: 0 -0.5px 0 var(--border-strong);
+}
+
+.behind-rim .rim-front .band {
+    position: absolute;
+    inset: 0;
+}
+
+/* ------------------------------------------------------------- E. seal */
+
+.foot-seal { padding-top: 8px; }
+
+.seal {
+    width: 640px;
+    max-width: 130%;
+    aspect-ratio: 1;
+    margin: 40px auto -456px;
+    opacity: var(--seal-alpha);
+    -webkit-mask:
+        url(../../public/brand/imf-seal-mask.svg) center / contain no-repeat,
+        linear-gradient(180deg, #000 0%, #00000040 31%, transparent 34%);
+    -webkit-mask-composite: source-in;
+            mask:
+        url(../../public/brand/imf-seal-mask.svg) center / contain no-repeat,
+        linear-gradient(180deg, #000 0%, #00000040 31%, transparent 34%);
+            mask-composite: intersect;
+}
+
+.seal.metal { background-size: 40% 120%, 240% 100%, 260% 100%; background-position: var(--foil-x) 10%, calc(100% - var(--foil-x)) 0, var(--foil-x) 0; }
+
+@media (max-width: 760px) {
+    .page { padding: 32px 16px 64px; }
+    .col { padding: 0 16px; }
+    .bar { justify-content: center; }
+    .seal { width: 420px; margin-bottom: -290px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .foot, .tabs button, .links a { transition: none; }
+}
+</style>
+</head>
+<body>
+<main class="page">
+    <header class="page-head">
+        <div>
+            <h1>Footer ideas</h1>
+            <p>B and C together, three ways, then today's footer and the first five ideas to compare. Move the pointer across a footer and the light follows it.</p>
+        </div>
+        <div class="tabs" role="group" aria-label="Theme">
+            <button type="button" data-set-theme="light" aria-pressed="true">Light</button>
+            <button type="button" data-set-theme="dark" aria-pressed="false">Dark</button>
+        </div>
+    </header>
+
+    <section class="idea">
+        <div class="idea-head">
+            <h2>F. In the rim</h2>
+            <p>B's raised IMF standing in C's milled edge. The reeding stops at the letters, so they read better than B alone.</p>
+        </div>
+        <div class="frame">
+            <div class="col"><div class="card-end"><div class="row"><span class="avatar">S</span><span><b>Signal</b><code>signal.example</code></span><span class="badge">Failing</span></div></div></div>
+            <footer class="foot foot-bc">
+                <div class="col stack">
+                    <span class="foil-name">Internet Mint Finder</span>
+                    <nav class="links" aria-label="Cashu"><a href="https://cashu.space">cashu.space</a><a href="https://opencash.dev">opencash.dev</a><a href="https://github.com/cashubtc/nuts">GitHub</a></nav>
+                </div>
+                <div class="in-rim" aria-hidden="true">
+                    <div class="band metal reed-lines"></div>
+                    <p class="giant blind">IMF</p>
+                </div>
+            </footer>
+        </div>
+    </section>
+
+    <section class="idea">
+        <div class="idea-head">
+            <h2>G. Milled letters</h2>
+            <p>One shape: the raised IMF with its face milled, the reeding growing toward the bottom edge.</p>
+        </div>
+        <div class="frame">
+            <div class="col"><div class="card-end"><div class="row"><span class="avatar">S</span><span><b>Signal</b><code>signal.example</code></span><span class="badge">Failing</span></div></div></div>
+            <footer class="foot foot-bc">
+                <div class="col stack">
+                    <span class="foil-name">Internet Mint Finder</span>
+                    <nav class="links" aria-label="Cashu"><a href="https://cashu.space">cashu.space</a><a href="https://opencash.dev">opencash.dev</a><a href="https://github.com/cashubtc/nuts">GitHub</a></nav>
+                </div>
+                <div class="milled-face" aria-hidden="true">
+                    <p class="giant blind">IMF</p>
+                    <p class="giant face metal">IMF</p>
+                </div>
+            </footer>
+        </div>
+    </section>
+
+    <section class="idea">
+        <div class="idea-head">
+            <h2>H. Behind the rim</h2>
+            <p>B's letters sinking behind C's milled edge, like the rim of a coin running in front of its legend.</p>
+        </div>
+        <div class="frame">
+            <div class="col"><div class="card-end"><div class="row"><span class="avatar">S</span><span><b>Signal</b><code>signal.example</code></span><span class="badge">Failing</span></div></div></div>
+            <footer class="foot foot-bc">
+                <div class="col stack">
+                    <span class="foil-name">Internet Mint Finder</span>
+                    <nav class="links" aria-label="Cashu"><a href="https://cashu.space">cashu.space</a><a href="https://opencash.dev">opencash.dev</a><a href="https://github.com/cashubtc/nuts">GitHub</a></nav>
+                </div>
+                <div class="behind-rim" aria-hidden="true">
+                    <p class="giant blind">IMF</p>
+                    <div class="rim-front"><div class="band metal reed-lines"></div></div>
+                </div>
+            </footer>
+        </div>
+    </section>
+
+    <section class="idea first-round">
+        <div class="idea-head">
+            <h2>Today</h2>
+            <p>The foil hairline, the name in steel, three links.</p>
+        </div>
+        <div class="frame">
+            <div class="col"><div class="card-end"><div class="row"><span class="avatar">S</span><span><b>Signal</b><code>signal.example</code></span><span class="badge">Failing</span></div></div></div>
+            <footer class="foot">
+                <div class="col foot-now">
+                    <span class="foil-rule" aria-hidden="true"></span>
+                    <span class="foil-name">Internet Mint Finder</span>
+                    <nav class="links" aria-label="Cashu"><a href="https://cashu.space">cashu.space</a><a href="https://opencash.dev">opencash.dev</a><a href="https://github.com/cashubtc/nuts">GitHub</a></nav>
+                </div>
+            </footer>
+        </div>
+    </section>
+
+    <section class="idea">
+        <div class="idea-head">
+            <h2>A. Struck</h2>
+            <p>Dot's move in our metal: IMF across the column in brushed steel, fading into the page, the light following the pointer.</p>
+        </div>
+        <div class="frame">
+            <div class="col"><div class="card-end"><div class="row"><span class="avatar">S</span><span><b>Signal</b><code>signal.example</code></span><span class="badge">Failing</span></div></div></div>
+            <footer class="foot">
+                <div class="col bar">
+                    <span class="foil-name">Internet Mint Finder</span>
+                    <nav class="links" aria-label="Cashu"><a href="https://cashu.space">cashu.space</a><a href="https://opencash.dev">opencash.dev</a><a href="https://github.com/cashubtc/nuts">GitHub</a></nav>
+                </div>
+                <p class="giant struck" aria-hidden="true">IMF</p>
+            </footer>
+        </div>
+    </section>
+
+    <section class="idea">
+        <div class="idea-head">
+            <h2>B. Blind emboss</h2>
+            <p>IMF raised in the page's own colour, only a lit edge and a soft shade, sunk into the bottom of the page. No ink at all.</p>
+        </div>
+        <div class="frame">
+            <div class="col"><div class="card-end"><div class="row"><span class="avatar">S</span><span><b>Signal</b><code>signal.example</code></span><span class="badge">Failing</span></div></div></div>
+            <footer class="foot foot-blind">
+                <div class="col stack">
+                    <span class="foil-name">Internet Mint Finder</span>
+                    <nav class="links" aria-label="Cashu"><a href="https://cashu.space">cashu.space</a><a href="https://opencash.dev">opencash.dev</a><a href="https://github.com/cashubtc/nuts">GitHub</a></nav>
+                </div>
+                <p class="giant blind" aria-hidden="true">IMF</p>
+            </footer>
+        </div>
+    </section>
+
+    <section class="idea">
+        <div class="idea-head">
+            <h2>C. Milled edge</h2>
+            <p>The reeded edge of a coin along the bottom of the page, in steel with the colour laid in faintly.</p>
+        </div>
+        <div class="frame">
+            <div class="col"><div class="card-end"><div class="row"><span class="avatar">S</span><span><b>Signal</b><code>signal.example</code></span><span class="badge">Failing</span></div></div></div>
+            <footer class="foot foot-milled">
+                <div class="col stack">
+                    <span class="foil-name">Internet Mint Finder</span>
+                    <nav class="links" aria-label="Cashu"><a href="https://cashu.space">cashu.space</a><a href="https://opencash.dev">opencash.dev</a><a href="https://github.com/cashubtc/nuts">GitHub</a></nav>
+                </div>
+                <div class="reed metal" aria-hidden="true"></div>
+            </footer>
+        </div>
+    </section>
+
+    <section class="idea">
+        <div class="idea-head">
+            <h2>D. Halftone</h2>
+            <p>Dot's dot band as a strip of foil: rows of dots that grow toward the bottom edge.</p>
+        </div>
+        <div class="frame">
+            <div class="col"><div class="card-end"><div class="row"><span class="avatar">S</span><span><b>Signal</b><code>signal.example</code></span><span class="badge">Failing</span></div></div></div>
+            <footer class="foot foot-dots">
+                <div class="col stack">
+                    <span class="foil-name">Internet Mint Finder</span>
+                    <nav class="links" aria-label="Cashu"><a href="https://cashu.space">cashu.space</a><a href="https://opencash.dev">opencash.dev</a><a href="https://github.com/cashubtc/nuts">GitHub</a></nav>
+                </div>
+                <div class="dots metal" aria-hidden="true"></div>
+            </footer>
+        </div>
+    </section>
+
+    <section class="idea">
+        <div class="idea-head">
+            <h2>E. Rising seal</h2>
+            <p>The masthead's seal, large and faint, rising from the bottom edge, so the page ends on the mark it opened with.</p>
+        </div>
+        <div class="frame">
+            <div class="col"><div class="card-end"><div class="row"><span class="avatar">S</span><span><b>Signal</b><code>signal.example</code></span><span class="badge">Failing</span></div></div></div>
+            <footer class="foot foot-seal">
+                <div class="col stack">
+                    <span class="foil-name">Internet Mint Finder</span>
+                    <nav class="links" aria-label="Cashu"><a href="https://cashu.space">cashu.space</a><a href="https://opencash.dev">opencash.dev</a><a href="https://github.com/cashubtc/nuts">GitHub</a></nav>
+                </div>
+                <div class="seal metal" aria-hidden="true"></div>
+            </footer>
+        </div>
+    </section>
+</main>
+<script>
+    // Theme: one switch for every frame.
+    const buttons = document.querySelectorAll('[data-set-theme]');
+    buttons.forEach((button) => button.addEventListener('click', () => {
+        document.documentElement.dataset.theme = button.dataset.setTheme;
+        buttons.forEach((b) => b.setAttribute('aria-pressed', String(b === button)));
+    }));
+
+    // The light follows the pointer across each footer and eases back on leave.
+    document.querySelectorAll('.foot').forEach((foot) => {
+        foot.addEventListener('pointermove', (event) => {
+            const box = foot.getBoundingClientRect();
+            const x = Math.min(100, Math.max(0, (event.clientX - box.left) / box.width * 100));
+            foot.style.setProperty('--foil-x', x.toFixed(1) + '%');
+        });
+        foot.addEventListener('pointerleave', () => foot.style.removeProperty('--foil-x'));
+    });
+</script>
+</body>
+</html>

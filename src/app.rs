@@ -1,43 +1,113 @@
 use crate::api::get_app_config;
 use crate::components::header::Header;
-use crate::pages::auditors::AuditorsPage;
+use crate::components::mint_list::DirectoryMemory;
 use crate::pages::home::HomePage;
 use crate::pages::mint_detail::MintDetailPage;
-use crate::pages::receive::ReceivePage;
 use leptos::prelude::*;
 use leptos_meta::{provide_meta_context, HashedStylesheet, MetaTags, Title};
 use leptos_router::{
     components::{Route, Router, Routes},
-    ParamSegment, StaticSegment,
+    hooks::use_location,
+    ParamSegment, SsrMode, StaticSegment,
 };
 
 /// Runs before first paint: the saved theme, else the system setting. The
-/// footer toggle is handled here too, by delegation, so it works before (and
-/// without) hydration.
-const THEME_SCRIPT: &str = r#"(function(){var d=document.documentElement;d.dataset.theme=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.addEventListener('click',function(e){if(!e.target.closest('[data-theme-toggle]'))return;var next=d.dataset.theme==='dark'?'light':'dark';d.dataset.theme=next;localStorage.setItem('theme',next);});})();"#;
+/// theme switch is handled here too, by delegation, so it works before (and
+/// without) hydration. Switching runs as a view transition that opens the new
+/// theme from the switch (see `.theme-swap` in main.css). Transitions are off
+/// for the swap, so every colour changes at once instead of some fading and
+/// some snapping; without view transitions the swap is just that, instant.
+/// The browser's bar takes the page's own ground for the chosen theme (the
+/// theme-color tags above it split by width; the script only picks the
+/// theme). `js` on the root marks that scripts run, and an empty touchstart
+/// listener lets iOS show `:active` presses before hydration.
+/// `public/dashboard.html` carries the same script.
+const THEME_SCRIPT: &str = r#"(function(){
+var d=document.documentElement,swaps=0;
+d.dataset.theme=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+d.classList.add('js');
+var tint=function(){var dark=d.dataset.theme==='dark';document.querySelectorAll('meta[name=theme-color]').forEach(function(m){var wide=m.media.indexOf('>=')>0;m.content=dark?(wide?'#000000':'#111111'):(wide?'#f6f6f6':'#ffffff');});};
+tint();
+document.addEventListener('touchstart',function(){},{passive:true});
+document.addEventListener('click',function(e){
+var b=e.target.closest('[data-theme-toggle]');if(!b)return;
+var next=d.dataset.theme==='dark'?'light':'dark',k=++swaps;
+var swap=function(){d.dataset.theme=next;localStorage.setItem('theme',next);tint();};
+var end=function(){if(k===swaps)d.classList.remove('theme-swap');};
+d.classList.add('theme-swap');
+if(!document.startViewTransition){swap();requestAnimationFrame(function(){requestAnimationFrame(end);});return;}
+var r=b.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;
+d.style.setProperty('--swap-x',x+'px');
+d.style.setProperty('--swap-y',y+'px');
+d.style.setProperty('--swap-r',Math.hypot(Math.max(x,innerWidth-x),Math.max(y,innerHeight-y))+'px');
+document.startViewTransition(swap).finished.finally(end);
+});
+})();"#;
+
+/// The site description, shared by search results and link previews.
+const DESCRIPTION: &str =
+    "Find a Cashu mint that works: hourly uptime checks and reviews from Nostr.";
+
+/// An Open Graph tag. The view macro doesn't know the `property` attribute,
+/// so the tag is built directly, as leptos_meta does.
+fn og(property: &'static str, content: impl Into<String>) -> impl IntoView {
+    leptos::html::meta()
+        .attr("property", property)
+        .content(content.into())
+}
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
+    // Link previews want an absolute image URL; without BASE_URL a path is
+    // the best there is, and most previewers resolve it.
+    #[cfg(feature = "ssr")]
+    let preview_image = use_context::<crate::server::state::AppState>()
+        .and_then(|state| state.base_url.clone())
+        .map(|base| format!("{}/brand/og-image.png", base.trim_end_matches('/')))
+        .unwrap_or_else(|| "/brand/og-image.png".to_string());
+    #[cfg(not(feature = "ssr"))]
+    let preview_image = "/brand/og-image.png".to_string();
+
     view! {
         <!DOCTYPE html>
         <html lang="en">
             <head>
                 <meta charset="utf-8"/>
-                <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                // Edge to edge in landscape too; the shell pads itself clear
+                // of the notch (env(safe-area-inset-*) in main.css).
+                <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
                 <meta name="color-scheme" content="light dark"/>
-                <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6f6f6"/>
-                <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000"/>
+                // The page's ground: white (#111 on black) on phones, the
+                // shell from 48rem. THEME_SCRIPT follows the theme switch.
+                <meta name="theme-color" media="(prefers-color-scheme: light) and (width < 48rem)" content="#ffffff"/>
+                <meta name="theme-color" media="(prefers-color-scheme: light) and (width >= 48rem)" content="#f6f6f6"/>
+                <meta name="theme-color" media="(prefers-color-scheme: dark) and (width < 48rem)" content="#111111"/>
+                <meta name="theme-color" media="(prefers-color-scheme: dark) and (width >= 48rem)" content="#000000"/>
                 <script inner_html=THEME_SCRIPT></script>
-                <meta
-                    name="description"
-                    content="Find a Cashu mint that works: uptime, user reviews and real test payments by independent auditors."
-                />
-                <link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
+                <meta name="description" content=DESCRIPTION/>
+                // The favicon is drawn on the 16px pixel grid; the PNGs are for
+                // browsers without SVG icons. All of them come from scripts/brand.
+                // The ?v= is the brand version: browsers keep favicons for a
+                // long time, so bump it whenever the icons change.
+                <link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml"/>
+                <link rel="icon" href="/favicon-32.png?v=2" sizes="32x32" type="image/png"/>
+                <link rel="icon" href="/favicon-16.png?v=2" sizes="16x16" type="image/png"/>
+                <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2"/>
+                {og("og:site_name", "Internet Mint Finder")}
+                {og("og:title", "Internet Mint Finder")}
+                {og("og:description", DESCRIPTION)}
+                {og("og:image", preview_image)}
+                {og("og:image:width", "1200")}
+                {og("og:image:height", "630")}
+                {og("og:image:alt", "The Internet Mint Finder tag: IMF struck in a holographic metal sticker")}
+                <meta name="twitter:card" content="summary_large_image"/>
                 <AutoReload options=options.clone() />
                 <HashedStylesheet id="leptos" options=options.clone()/>
                 <HydrationScripts options/>
                 <MetaTags/>
                 <script src="/nostr-tools.js" defer></script>
-                <script src="/review.js" defer></script>
+                // Versioned like the icons: browsers keep scripts too, so bump
+                // ?v= whenever review.js changes or visitors run the old one.
+                <script src="/review.js?v=5" defer></script>
             </head>
             <body>
                 <App/>
@@ -55,26 +125,70 @@ pub fn App() -> impl IntoView {
         |_| async move { get_app_config().await.unwrap_or_default() },
     );
     provide_context(config);
+    provide_context(DirectoryMemory::new());
 
     view! {
         <Router>
             <div class="page-wrapper">
-                <Header/>
                 <a href="#main-content" class="skip-link">"Skip to content"</a>
-                <main id="main-content" class="flex-grow" tabindex="-1">
+                <Header/>
+                <PageArea>
                     <Routes fallback=NotFound>
                         <Route path=StaticSegment("") view=HomePage/>
-                        <Route path=StaticSegment("receive") view=ReceivePage/>
-                        <Route path=StaticSegment("auditors") view=AuditorsPage/>
+                        // Rendered after its data, so an unknown mint can answer
+                        // 404 before the status is sent.
                         <Route
                             path=(StaticSegment("mints"), ParamSegment("id"))
                             view=MintDetailPage
+                            ssr=SsrMode::Async
                         />
                     </Routes>
-                </main>
+                </PageArea>
                 <Footer/>
             </div>
         </Router>
+    }
+}
+
+/// The page area. Once the page has changed, each new page fades in as it
+/// arrives (`.is-navigated` in main.css); the first page load doesn't. A new
+/// page takes the keyboard's and screen reader's focus, so it doesn't fall to
+/// the body. Scrolling on the directory is remembered for coming back to it.
+#[component]
+fn PageArea(children: Children) -> impl IntoView {
+    let location = use_location();
+    let first = location.pathname.get_untracked();
+    let navigated = Memo::new(move |was: Option<&bool>| {
+        was.copied().unwrap_or(false) || location.pathname.get() != first
+    });
+    let main = NodeRef::<leptos::html::Main>::new();
+    #[cfg(feature = "hydrate")]
+    {
+        Effect::new(move |was: Option<String>| {
+            let path = location.pathname.get();
+            if was.is_some_and(|was| was != path) {
+                if let Some(main) = main.get_untracked() {
+                    let options = leptos::web_sys::FocusOptions::new();
+                    options.set_prevent_scroll(true);
+                    let _ = main.focus_with_options(&options);
+                }
+            }
+            path
+        });
+        // The router scrolls to the top only after the URL has changed, so
+        // leaving the directory doesn't overwrite the place it remembers.
+        let memory = expect_context::<DirectoryMemory>();
+        let scrolling = window_event_listener(leptos::ev::scroll, move |_| {
+            if window().location().pathname().is_ok_and(|path| path == "/") {
+                memory.scroll.set_value(window().scroll_y().unwrap_or(0.0));
+            }
+        });
+        on_cleanup(move || scrolling.remove());
+    }
+    view! {
+        <main id="main-content" class="flex-grow" class:is-navigated=move || navigated.get() tabindex="-1" node_ref=main>
+            {children()}
+        </main>
     }
 }
 
@@ -94,14 +208,49 @@ fn NotFound() -> impl IntoView {
     }
 }
 
+/// The brand's sign-off: the name in brushed steel and quiet links to Cashu
+/// itself, over the milled edge of a coin along the bottom of the page. The
+/// light on the steel follows the pointer across the footer.
 #[component]
 fn Footer() -> impl IntoView {
+    let footer = NodeRef::<leptos::html::Footer>::new();
+    // How far across the footer the pointer is, in percent; None at rest.
+    let light = RwSignal::new(None::<f64>);
+    let on_move = move |ev: leptos::ev::PointerEvent| {
+        // A finger starting a scroll isn't pointing at the steel.
+        if ev.pointer_type() == "touch" {
+            return;
+        }
+        let Some(footer) = footer.get() else {
+            return;
+        };
+        let width = f64::from(footer.client_width());
+        if width > 0.0 {
+            // Against the footer, not whatever is under the pointer (a link,
+            // say). Nothing above it is positioned, so its offset is the
+            // page's.
+            let x = f64::from(ev.client_x() - footer.offset_left()) / width * 100.0;
+            light.set(Some(x.clamp(0.0, 100.0)));
+        }
+    };
+
     view! {
-        <footer class="site-footer">
+        <footer
+            class="site-footer"
+            node_ref=footer
+            style=move || light.get().map(|x| format!("--foil-x: {x:.1}%")).unwrap_or_default()
+            on:pointermove=on_move
+            on:pointerleave=move |_| light.set(None)
+        >
             <div class="site-footer-inner">
-                <p>"Audits move real ecash between mints. Results are measurements, not endorsements."</p>
-                <a href="/receive">"Donate ecash to fund the audits"</a>
+                <span class="foil-mark">"Internet Mint Finder"</span>
+                <nav class="foil-links" aria-label="Cashu">
+                    <a href="https://cashu.space">"Cashu"</a>
+                    <a href="https://opencash.dev">"OpenCash"</a>
+                    <a href="https://github.com/cashubtc/nuts">"GitHub"</a>
+                </nav>
             </div>
+            <span class="footer-reed" aria-hidden="true"></span>
         </footer>
     }
 }

@@ -32,13 +32,25 @@ class Element { constructor(id) { this.id = id; } }
 const input = { value: 'nsec1-test-key' };
 const key = new Uint8Array(32).fill(9);
 const storage = [];
+const persisted = [];
+const pubkey = 'a'.repeat(64);
 const browser = vm.createContext({ Element, HTMLFormElement: class {}, Uint8Array,
   document: { documentElement: {}, querySelectorAll: () => [],
     getElementById: id => id === 'review-nsec' ? input : null,
     addEventListener: (name, handler) => { handlers[name] = handler; } },
   MutationObserver: class { observe() {} },
-  localStorage: { removeItem: name => storage.push(name), setItem: () => assert.fail('persisted private key') },
-  NostrTools: { nip19: { decode: () => ({ type: 'nsec', data: key }) } },
+  window: { addEventListener() {}, nostr: { getPublicKey: async () => pubkey } },
+  setTimeout() {},
+  localStorage: {
+    getItem: () => null,
+    removeItem: name => storage.push(name),
+    setItem: (name, value) => {
+      assert.equal(name, 'imf.extension', 'only the extension public key may be persisted');
+      assert.equal(value, pubkey);
+      persisted.push([name, value]);
+    },
+  },
+  NostrTools: { getPublicKey: () => pubkey, nip19: { decode: () => ({ type: 'nsec', data: key }) } },
 });
 vm.runInContext(review, browser);
 assert.deepEqual(storage, ['imf.nsec']);
@@ -49,4 +61,11 @@ assert.equal(vm.runInContext('storedKey()', browser), key);
 handlers.click({ target: new Element('review-signout') });
 assert.equal(vm.runInContext('storedKey()', browser), null);
 assert(key.every(byte => byte === 0));
+assert.deepEqual(persisted, []);
+await vm.runInContext('signInWithExtension({ disabled: false })', browser);
+assert.deepEqual(persisted, [['imf.extension', pubkey]]);
+assert.equal(vm.runInContext('storedKey()', browser), null);
+handlers.click({ target: new Element('review-signout') });
+assert.equal(vm.runInContext('extensionPubkey', browser), null);
+assert.equal(storage.at(-1), 'imf.extension');
 console.log('Browser security checks passed');
