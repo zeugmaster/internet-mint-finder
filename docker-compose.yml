@@ -44,8 +44,8 @@ services:
     environment:
       APP_NAME: "IMF A (dev)"
       CDK_MNEMONIC: "shock rally bird garage senior false farm picture duty rack vault donkey"
-      IMF_NOSTR_NSEC: nsec1dqusu47ykkazha56pucayjc83ypuhv007yenc2wkp85e7rt0avzs6mh6f2
-      IMF_AUDITORS: npub17dyrarcleswq8sf7zt0v9hda894nfm8sxjpqqracupffyd7gzlzsc0azqn,npub1zx0xhymkaywxpycg3jz9rf25p7wna3mly0us7ughdzs5l4avdczsjy9t2r
+      IMF_NOSTR_NSEC: nsec1xdknd0qnqvrg7tc4wwqxvpcqju6zecmmv67xp9cd6nj565yhhq4q4wp4a2
+      IMF_AUDITORS: npub1qj4rfl4wzfdpet9lpwjqxjrsqn7r8gjy3qesuygcldagekdmew2ss4wf5m,npub1c4dc6c3sskttnv38t469xa8v0n0hgq6wrnuex8h52n8mgtm82e5qmhf69j
       IMF_RELAYS: ws://strfry:7777,ws://localhost:7777
       AUDITOR_MIN_DELAY_SECS: "20"
       AUDITOR_MAX_DELAY_SECS: "60"
@@ -79,8 +79,8 @@ services:
     environment:
       APP_NAME: "IMF B (dev)"
       CDK_MNEMONIC: "private position month coconut club error above park absurd divorce symbol blind"
-      IMF_NOSTR_NSEC: nsec178dq4dlpc6t8vkgac4gh3h9xcyp7tsmlrzyuxfgf4h5nyaf5u9lsmrg7hg
-      IMF_AUDITORS: npub17dyrarcleswq8sf7zt0v9hda894nfm8sxjpqqracupffyd7gzlzsc0azqn,npub1zx0xhymkaywxpycg3jz9rf25p7wna3mly0us7ughdzs5l4avdczsjy9t2r
+      IMF_NOSTR_NSEC: nsec19gc6hhldm0h3nd7ce0kd0uuqu9965wrjas6sk2ntpdemfxr5ghxq6fykt3
+      IMF_AUDITORS: npub1qj4rfl4wzfdpet9lpwjqxjrsqn7r8gjy3qesuygcldagekdmew2ss4wf5m,npub1c4dc6c3sskttnv38t469xa8v0n0hgq6wrnuex8h52n8mgtm82e5qmhf69j
       IMF_RELAYS: ws://strfry:7777,ws://localhost:7777
       AUDITOR_MIN_DELAY_SECS: "20"
       AUDITOR_MAX_DELAY_SECS: "60"
