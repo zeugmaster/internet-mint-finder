@@ -1980,6 +1980,26 @@ impl AuditorDatabase {
         .await
     }
 
+    /// Every stored review of a mint, how many carry a star rating, and their
+    /// average: the same reviews the directory row counts.
+    pub async fn review_stats(
+        &self,
+        url: &str,
+        pubkey: Option<String>,
+    ) -> Result<(u64, u64, Option<f64>), AuditorError> {
+        let url = url.to_string();
+        self.run(move |conn| {
+            let (total, rated, avg): (i64, i64, Option<f64>) = conn.query_row(
+                "SELECT COUNT(*), COUNT(rating), AVG(rating) FROM reviews
+                 WHERE mint_url = ?1 OR (?2 IS NOT NULL AND d = ?2)",
+                params![url, pubkey],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )?;
+            Ok((total.max(0) as u64, rated.max(0) as u64, avg))
+        })
+        .await
+    }
+
     /// Social and audit summary for a directory row. The per-auditor verdict
     /// is each auditor's latest attempt in 24 h that is attributable to this
     /// mint (successes, or failures blamed on it or on nobody).

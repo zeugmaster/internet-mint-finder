@@ -58,21 +58,33 @@ pub fn Check() -> impl IntoView {
     }
 }
 
+/// The check's opposite, for something not offered: a cross reads as "no".
 #[component]
-pub fn Star() -> impl IntoView {
+pub fn Cross() -> impl IntoView {
     view! {
-        <svg class="icon star" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-            <path d="M8 1.25l2.06 4.18 4.61.67-3.34 3.25.79 4.59L8 11.77l-4.12 2.17.79-4.59L1.33 6.1l4.61-.67z"/>
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true">
+            <path d="M4.75 4.75l6.5 6.5M11.25 4.75l-6.5 6.5"/>
+        </svg>
+    }
+}
+
+/// A question mark in a ring, for "what does this mean?".
+#[component]
+pub fn Help() -> impl IntoView {
+    view! {
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="8" cy="8" r="6.25"/>
+            <path d="M6.25 6.25a1.75 1.75 0 1 1 2.5 1.6c-.45.2-.75.6-.75 1.1v.3"/>
+            <path d="M8 11.25h.01"/>
         </svg>
     }
 }
 
 #[component]
-pub fn User() -> impl IntoView {
+pub fn Star() -> impl IntoView {
     view! {
-        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="8" cy="5.5" r="2.75"/>
-            <path d="M2.75 14a5.25 5.25 0 0 1 10.5 0"/>
+        <svg class="icon star" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+            <path d="M8 1.25l2.06 4.18 4.61.67-3.34 3.25.79 4.59L8 11.77l-4.12 2.17.79-4.59L1.33 6.1l4.61-.67z"/>
         </svg>
     }
 }

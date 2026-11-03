@@ -98,13 +98,11 @@ pub fn SwapItem(swap: SwapEventRead) -> impl IntoView {
             <div class="feed-top">
                 <div class="feed-meta">
                     <span>{status_word}</span>
-                    <span>"·"</span>
                     <time datetime=swap.created_at.to_rfc3339() title=absolute_time(swap.created_at)>{relative_time(swap.created_at)}</time>
                     <Show when=move || has_time>
-                        <span>"·"</span>
                         <span>{time_str.clone()}</span>
                     </Show>
-                    {via.map(|pk| view! { <span>"·"</span><span title=pk.clone()>{format!("via {}", pk.get(..4).unwrap_or(&pk))}</span> })}
+                    {via.map(|pk| view! { <span title=pk.clone()>{format!("via {}", pk.get(..4).unwrap_or(&pk))}</span> })}
                 </div>
                 <div class="flex items-baseline gap-2">
                     <span class="feed-amount">{format!("{} sat", format_sats(swap.amount))}</span>

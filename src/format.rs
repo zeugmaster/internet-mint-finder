@@ -2,18 +2,24 @@
 
 use chrono::{DateTime, Utc};
 
-/// Format a sat amount with thin thousands separators: 1234567 -> "1 234 567".
+/// Format a sat amount with narrow thousands separators: 1234567 ->
+/// "1 234 567". The narrow no-break space keeps a figure on one line.
 pub fn format_sats(n: u64) -> String {
     let s = n.to_string();
     let mut out = String::with_capacity(s.len() + s.len() / 3);
     let offset = s.len() % 3;
     for (i, c) in s.chars().enumerate() {
         if i != 0 && (i + 3 - offset).is_multiple_of(3) {
-            out.push('\u{2009}'); // thin space
+            out.push('\u{202F}'); // narrow no-break space
         }
         out.push(c);
     }
     out
+}
+
+/// A count with its thousands grouped like an amount: "1 284 reviews".
+pub fn format_count(n: u64) -> String {
+    format_sats(n)
 }
 
 /// Strip scheme and trailing slash from a mint URL for compact display.
@@ -35,7 +41,8 @@ pub fn format_ms(ms: f64) -> String {
     }
 }
 
-/// Human relative time: "just now", "4m ago", "2h ago", "3d ago".
+/// Human relative time: "just now", "4m ago", "2h ago", "3d ago", then
+/// after a week the date, "Sep 30, 2026", like a review's.
 pub fn relative_time(dt: DateTime<Utc>) -> String {
     let secs = (Utc::now() - dt).num_seconds();
     if secs < 0 {
@@ -46,13 +53,23 @@ pub fn relative_time(dt: DateTime<Utc>) -> String {
         45..=89 => "1m ago".to_string(),
         90..=3599 => format!("{}m ago", secs / 60),
         3600..=86_399 => format!("{}h ago", secs / 3600),
-        _ => format!("{}d ago", secs / 86_400),
+        86_400..=604_799 => format!("{}d ago", secs / 86_400),
+        _ => dt.format("%b %-d, %Y").to_string(),
     }
 }
 
 /// Absolute timestamp for tooltips / detail views.
 pub fn absolute_time(dt: DateTime<Utc>) -> String {
     dt.format("%Y-%m-%d %H:%M:%S UTC").to_string()
+}
+
+/// `relative_time` for after "from": "showing data from a moment ago"
+/// rather than "from just now".
+pub fn relative_time_from(dt: DateTime<Utc>) -> String {
+    match relative_time(dt).as_str() {
+        "just now" => "a moment ago".to_string(),
+        other => other.to_string(),
+    }
 }
 
 /// First characters of a long identifier (pubkey, npub, payment request).
@@ -65,6 +82,30 @@ pub fn short_pubkey(id: &str) -> String {
     }
 }
 
+/// A long key cut in the middle, so both ends stay checkable:
+/// "npub1qe3e5w…ezefe".
+pub fn middle_ellipsis(id: &str) -> String {
+    cut_middle(id, 11, 5)
+}
+
+/// A reviewer's npub, shorter than `middle_ellipsis` for a line of a list:
+/// the "npub1" that says what it is and four characters either side of the
+/// cut, "npub1vhjt…eu3h".
+pub fn short_npub(npub: &str) -> String {
+    cut_middle(npub, 9, 4)
+}
+
+fn cut_middle(id: &str, head: usize, tail: usize) -> String {
+    let chars: Vec<char> = id.chars().collect();
+    if chars.len() <= head + tail + 1 {
+        id.to_string()
+    } else {
+        let start: String = chars[..head].iter().collect();
+        let end: String = chars[chars.len() - tail..].iter().collect();
+        format!("{start}…{end}")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -73,14 +114,38 @@ mod tests {
     fn sats_are_grouped() {
         assert_eq!(format_sats(0), "0");
         assert_eq!(format_sats(999), "999");
-        assert_eq!(format_sats(1000), "1\u{2009}000");
-        assert_eq!(format_sats(1234567), "1\u{2009}234\u{2009}567");
+        assert_eq!(format_sats(1000), "1\u{202F}000");
+        assert_eq!(format_sats(1234567), "1\u{202F}234\u{202F}567");
+        assert_eq!(format_count(1284), "1\u{202F}284");
+    }
+
+    #[test]
+    fn keys_are_cut_in_the_middle() {
+        let npub = "npub1vhjteu3hq8x7wq3l0vdq8m5xa2c9e6ttl2dkqj253vsm2fj8a0xqeu3h";
+        assert_eq!(short_npub(npub), "npub1vhjt…eu3h");
+        assert_eq!(middle_ellipsis(npub), "npub1vhjteu…qeu3h");
+        assert_eq!(short_npub("npub1short"), "npub1short");
     }
 
     #[test]
     fn urls_are_shortened() {
         assert_eq!(short_url("https://mint.example.com/"), "mint.example.com");
         assert_eq!(short_url("http://x.y"), "x.y");
+    }
+
+    #[test]
+    fn times_after_from_read_naturally() {
+        assert_eq!(relative_time_from(Utc::now()), "a moment ago");
+        let earlier = Utc::now() - chrono::Duration::minutes(3);
+        assert_eq!(relative_time_from(earlier), "3m ago");
+        let days = Utc::now() - chrono::Duration::days(6);
+        assert_eq!(relative_time(days), "6d ago");
+        let old = chrono::NaiveDate::from_ymd_opt(2026, 9, 30)
+            .unwrap()
+            .and_hms_opt(12, 0, 0)
+            .unwrap()
+            .and_utc();
+        assert_eq!(relative_time(old), "Sep 30, 2026");
     }
 
     #[test]

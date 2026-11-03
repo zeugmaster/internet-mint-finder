@@ -1,5 +1,6 @@
 pub mod auditor_table;
 pub mod badge;
+pub mod brand;
 pub mod button;
 pub mod hallmarks;
 pub mod header;

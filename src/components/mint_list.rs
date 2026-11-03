@@ -1,12 +1,15 @@
 use crate::api::search_mints;
 use crate::components::badge::StateBadge;
-use crate::components::icons::{Check, Copy, Star};
+use crate::components::icons::{Check, Copy, Cross};
 use crate::components::mint_avatar::MintAvatar;
-use crate::format::{relative_time, short_url};
+use crate::components::reviews::Stars;
+use crate::format::{format_count, relative_time, relative_time_from, short_url};
 use crate::hooks::use_poll;
 use crate::types::{MintPage, MintRead, MintSort, MintState};
 use chrono::{DateTime, Utc};
 use leptos::prelude::*;
+// Safari's autocorrect switch, which the view macro doesn't know by name.
+use leptos::tachys::html::attribute::custom::custom_attribute;
 use leptos_router::hooks::{use_navigate, use_query_map};
 use leptos_router::NavigateOptions;
 
@@ -20,6 +23,34 @@ const STATUS_TABS: [(Option<MintState>, &str); 5] = [
     (Some(MintState::Error), "Failing"),
     (Some(MintState::Unknown), "Not checked"),
 ];
+
+/// What the directory remembers while a mint is open, so going back, or up the
+/// breadcrumb, lands on the same filters at the same place in the list.
+#[derive(Clone, Copy)]
+pub struct DirectoryMemory {
+    /// The directory's URL when last seen; the mint page's breadcrumb uses it.
+    pub view: RwSignal<String>,
+    /// How far down the directory the reader has scrolled.
+    pub scroll: StoredValue<f64>,
+    /// Where to land on coming back: set when a mint opens, used once.
+    pub return_to: StoredValue<Option<f64>>,
+}
+
+impl DirectoryMemory {
+    pub fn new() -> Self {
+        Self {
+            view: RwSignal::new("/".to_string()),
+            scroll: StoredValue::new(0.0),
+            return_to: StoredValue::new(None),
+        }
+    }
+}
+
+impl Default for DirectoryMemory {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 /// The directory: one row per mint with its rating and plain status. Search,
 /// status, sort and page live in the URL (`?q=&status=&sort=&page=`) so Back
@@ -96,12 +127,59 @@ pub fn MintList() -> impl IntoView {
     // A failed background refresh keeps the last good list on screen.
     let last_good = RwSignal::new(None::<MintPage>);
     let updated_at = RwSignal::new(None::<DateTime<Utc>>);
+    // The view the list on screen answers. Until the list for a new search,
+    // filter, sort or page arrives, the old one dims (`.is-updating`); the
+    // refresh keeps the view, so it never dims.
+    let view = Memo::new(move |_| {
+        (
+            applied_search.get(),
+            state_filter.get(),
+            sort.get(),
+            page.get(),
+        )
+    });
+    let shown_view = RwSignal::new(None::<(String, Option<MintState>, MintSort, u64)>);
+    let updating = move || shown_view.get().is_some_and(|shown| shown != view.get());
+
+    // Back on the view that was open, the list takes the reader to where they
+    // left it. The browser can't do this itself: the page is shorter than
+    // that until the list arrives.
+    let memory = expect_context::<DirectoryMemory>();
+    let here = view_url(
+        &applied_search.get_untracked(),
+        state_filter.get_untracked(),
+        sort.get_untracked(),
+        page.get_untracked(),
+    );
+    let same_view = memory.view.get_untracked() == here;
+    let return_to = StoredValue::new(memory.return_to.get_value().filter(|_| same_view));
+    memory.return_to.set_value(None);
+    Effect::new(move |_| {
+        memory.view.set(view_url(
+            &applied_search.get(),
+            state_filter.get(),
+            sort.get(),
+            page.get(),
+        ));
+    });
+
     Effect::new(move |_| {
         if let Some(Ok(data)) = mints.get() {
             last_good.set(Some(data));
             updated_at.set(Some(Utc::now()));
+            shown_view.set(Some(view.get_untracked()));
+            #[cfg(feature = "hydrate")]
+            if let Some(y) = return_to.get_value() {
+                return_to.set_value(None);
+                // Two frames, so the list is in the page before it scrolls.
+                request_animation_frame(move || {
+                    request_animation_frame(move || window().scroll_to_with_x_and_y(0.0, y));
+                });
+            }
         }
     });
+    #[cfg(not(feature = "hydrate"))]
+    let _ = return_to;
     let freshness = move || {
         tick.track();
         let stale = matches!(mints.get(), Some(Err(_)));
@@ -110,7 +188,7 @@ pub fn MintList() -> impl IntoView {
             (Some(at), true) => {
                 format!(
                     "Couldn't refresh. Showing results from {}, retrying.",
-                    relative_time(at)
+                    relative_time_from(at)
                 )
             }
             (None, _) => String::new(),
@@ -160,15 +238,45 @@ pub fn MintList() -> impl IntoView {
             navigate("/", quiet());
         }
     };
+    // Once hydrated, Enter applies the search at once instead of reloading,
+    // and puts the keyboard away so the results aren't under it.
+    let search_input = NodeRef::<leptos::html::Input>::new();
+    let on_search = {
+        let navigate = navigate.clone();
+        move |ev: leptos::ev::SubmitEvent| {
+            ev.prevent_default();
+            if let Some(input) = search_input.get_untracked() {
+                let _ = input.blur();
+            }
+            let url = view_url(
+                &search.get_untracked(),
+                state_filter.get_untracked(),
+                sort.get_untracked(),
+                0,
+            );
+            navigate(&url, quiet());
+        }
+    };
 
     view! {
         <div class="directory">
             <div class="directory-tools">
-                <div class="search-field">
+                // A plain GET form, so search works before (and without)
+                // hydration; the hidden fields keep the status and sort.
+                <form class="search-field" role="search" action="/" method="get" on:submit=on_search>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg>
-                    <input type="search" aria-label="Search mints by name or URL" placeholder="Search name or URL"
+                    // The attribute carries the search into the server's HTML; the
+                    // property keeps it live once hydrated.
+                    // Mint names and URLs, not prose: no capitals, corrections
+                    // or spelling marks, and the keyboard's key says Search.
+                    <input type="search" name="q" aria-label="Search mints by name or URL" placeholder="Search name or URL"
+                        node_ref=search_input
+                        autocapitalize="none" {..custom_attribute("autocorrect", "off")} spellcheck="false" enterkeyhint="search"
+                        value=search.get_untracked()
                         prop:value=move || search.get() on:input=move |ev| search.set(event_target_value(&ev))/>
-                </div>
+                    {move || state_filter.get().map(|state| view! { <input type="hidden" name="status" value=status_slug(state)/> })}
+                    {move || (sort.get() != MintSort::default()).then(|| view! { <input type="hidden" name="sort" value=sort_slug(sort.get())/> })}
+                </form>
                 <div class="directory-filters">
                     <nav class="segmented status-tabs" aria-label="Filter mints by status">{status_tabs}</nav>
                     <label class="sort-field">
@@ -183,6 +291,7 @@ pub fn MintList() -> impl IntoView {
                 </div>
             </div>
             <Transition fallback=|| view! { <DirectorySkeleton/> }>
+                <div id="mints" class="directory-results arrives" class:is-updating=updating>
                 {move || mints.get().map(|result| {
                     let data = match result {
                         Ok(data) => Some(data),
@@ -190,8 +299,8 @@ pub fn MintList() -> impl IntoView {
                     };
                     let Some(data) = data else {
                         return view! {
-                            <div class="empty-state" role="alert">
-                                <h3>"Couldn't load mints"</h3>
+                            <div class="card card-pad empty-state" role="alert">
+                                <h2>"Couldn't load mints"</h2>
                                 <p>"Check your connection. This retries every 15 seconds."</p>
                                 <button type="button" class="btn btn-secondary mt-4" on:click=move |_| mints.refetch()>"Try again"</button>
                             </div>
@@ -201,40 +310,53 @@ pub fn MintList() -> impl IntoView {
                     let current = page.get();
                     let pages = total.div_ceil(PAGE_SIZE).max(1);
                     let filtered = !applied_search.get().is_empty() || state_filter.get().is_some();
-                    let count = format!("{} {}", total, if total == 1 { "mint" } else { "mints" });
-                    let prev_url = view_url(&applied_search.get(), state_filter.get(), sort.get(), current.saturating_sub(1));
-                    let next_url = view_url(&applied_search.get(), state_filter.get(), sort.get(), current + 1);
+                    // A page number past the list's end, from an old link.
+                    let past_end = data.mints.is_empty() && total > 0;
+                    let first_url = view_url(&applied_search.get(), state_filter.get(), sort.get(), 0);
+                    let count = format!("{} {}", format_count(total), if total == 1 { "mint" } else { "mints" });
+                    // Previous and Next land on the list (#mints), where the
+                    // reader was, rather than on the page's head.
+                    let prev_url = format!("{}#mints", view_url(&applied_search.get(), state_filter.get(), sort.get(), current.saturating_sub(1)));
+                    let next_url = format!("{}#mints", view_url(&applied_search.get(), state_filter.get(), sort.get(), current + 1));
                     view! {
                         <div class="directory-meta">
-                            <span>{count}</span>
+                            // Read out when a search or filter changes the count.
+                            <span role="status">{count}</span>
                             <span>{freshness}</span>
                         </div>
-                        {if data.mints.is_empty() {
+                        {if past_end {
+                            view! {
+                                <div class="card card-pad empty-state">
+                                    <h2>"No mints on this page"</h2>
+                                    <p>{format!("This list ends at page {pages}.")}</p>
+                                    <a class="btn btn-secondary mt-4" href=first_url>"Go to the first page"</a>
+                                </div>
+                            }.into_any()
+                        } else if data.mints.is_empty() {
                             if filtered {
                                 view! {
-                                    <div class="empty-state">
-                                        <h3>"No mints match"</h3>
+                                    <div class="card card-pad empty-state">
+                                        <h2>"No mints match"</h2>
                                         <p>"Try another name, or clear the filters."</p>
                                         <button type="button" class="btn btn-secondary mt-4" on:click=clear.clone()>"Clear filters"</button>
                                     </div>
                                 }.into_any()
                             } else {
                                 view! {
-                                    <div class="empty-state">
-                                        <h3>"No mints yet"</h3>
-                                        <p>"Mints show up here once they're listed on Nostr or someone donates ecash from one."</p>
-                                        <a href="/receive" class="text-link">"Donate ecash"</a>
+                                    <div class="card card-pad empty-state">
+                                        <h2>"No mints yet"</h2>
+                                        <p>"Mints show up here once they're listed on Nostr."</p>
                                     </div>
                                 }.into_any()
                             }
                         } else {
                             view! {
-                                <ul class="mint-list" aria-label="Mints">
+                                <ul class="card mint-list" aria-label="Mints">
                                     {data.mints.into_iter().map(|mint| view! { <li><MintRow mint/></li> }).collect_view()}
                                 </ul>
                             }.into_any()
                         }}
-                        <Show when=move || { pages > 1 }>
+                        <Show when=move || { pages > 1 && !past_end }>
                             <nav class="pagination" aria-label="Pages">
                                 {if current > 0 {
                                     view! { <a class="btn btn-ghost btn-small" href=prev_url.clone()>"Previous"</a> }.into_any()
@@ -251,6 +373,7 @@ pub fn MintList() -> impl IntoView {
                         </Show>
                     }.into_any()
                 })}
+                </div>
             </Transition>
         </div>
     }
@@ -268,31 +391,40 @@ fn MintRow(mint: MintRead) -> impl IntoView {
     } else {
         mint.name.clone()
     };
+    // Tabbing from row to row reads each mint's status and rating with its
+    // name, not only when browsing the page line by line.
+    let status_id = format!("mint-{}-status", mint.id);
+    let rating_id = format!("mint-{}-rating", mint.id);
+    let described_by = if mint.review_avg.is_some() {
+        format!("{status_id} {rating_id}")
+    } else {
+        status_id.clone()
+    };
     view! {
         <div class="mint-row">
             <MintAvatar name=name.clone() info=mint.info.clone()/>
             <span class="mint-id">
-                <a class="mint-name mint-link" href=href>{name}</a>
+                <a class="mint-name mint-link" href=href dir="auto" aria-describedby=described_by>{name}</a>
                 <CopyUrl url=mint.url.clone()/>
             </span>
-            <MintRating avg=mint.review_avg count=mint.review_count/>
-            <StateBadge state=mint.state/>
+            <MintRating avg=mint.review_avg count=mint.review_count id=rating_id/>
+            <StateBadge state=mint.state id=status_id/>
         </div>
     }
 }
 
-/// A star, the average and the review count, or nothing for an unrated mint.
+/// Five stars filled to the average and the review count in words, or
+/// nothing for an unrated mint. The average itself is on the mint page.
 #[component]
-fn MintRating(avg: Option<f64>, count: u64) -> impl IntoView {
+fn MintRating(avg: Option<f64>, count: u64, id: String) -> impl IntoView {
     let reviews = if count == 1 { "review" } else { "reviews" };
     match avg {
         Some(avg) => view! {
             <span class="mint-rating">
-                <span class="sr-only">{format!("Rated {avg:.1} out of 5 from {count} {reviews}")}</span>
+                <span class="sr-only" id=id>{format!("Rated {avg:.1} out of 5 from {} {reviews}", format_count(count))}</span>
                 <span class="mint-rating-shown" aria-hidden="true">
-                    <Star/>
-                    <span class="mint-rating-value">{format!("{avg:.1}")}</span>
-                    <span class="mint-rating-count">{format!("({count})")}</span>
+                    <Stars value=avg/>
+                    <span class="mint-rating-count">{format!("{} {reviews}", format_count(count))}</span>
                 </span>
             </span>
         }
@@ -301,49 +433,84 @@ fn MintRating(avg: Option<f64>, count: u64) -> impl IntoView {
     }
 }
 
-/// The mint's address: shows the short form, copies the full URL, and turns
-/// to a check for a moment once it is on the clipboard.
+/// The mint's address: shows the short form, copies the full URL.
 #[component]
 pub fn CopyUrl(url: String) -> impl IntoView {
+    let shown = short_url(&url);
+    view! { <CopyText text=url shown/> }
+}
+
+/// A value as a quiet button: shows `shown`, copies the full `text`, and
+/// turns to a check for a moment once it is on the clipboard, or says
+/// "Couldn't copy" with a cross when the browser refuses.
+#[component]
+pub fn CopyText(text: String, shown: String) -> impl IntoView {
     // None: idle. Some(true): copied. Some(false): the browser refused.
     let copied = RwSignal::new(None::<bool>);
-    let title = format!("Copy {url}");
-    let short = short_url(&url);
+    // Set with the first answer, so the icon animates only when it changes,
+    // not when the row is drawn.
+    let used = RwSignal::new(false);
+    let title = format!("Copy {text}");
+    // Named as a whole: the head and tail are separate boxes, which a screen
+    // reader would otherwise read with a space between them.
+    let name = format!("Copy {shown}");
+    // The pending return to idle; a second copy clears it and starts its own,
+    // so the check holds its full moment instead of ending early.
+    #[cfg(feature = "hydrate")]
+    let timer = StoredValue::new(None::<TimeoutHandle>);
     let on_click = move |_| {
         #[cfg(feature = "hydrate")]
         {
-            let url = url.clone();
+            let text = text.clone();
             leptos::task::spawn_local(async move {
                 let result = wasm_bindgen_futures::JsFuture::from(
-                    window().navigator().clipboard().write_text(&url),
+                    window().navigator().clipboard().write_text(&text),
                 )
                 .await;
+                used.try_set(true);
                 copied.try_set(Some(result.is_ok()));
-                set_timeout(
+                if let Some(pending) = timer.try_get_value().flatten() {
+                    pending.clear();
+                }
+                let handle = set_timeout_with_handle(
                     move || {
                         copied.try_set(None);
                     },
                     std::time::Duration::from_millis(1600),
-                );
+                )
+                .ok();
+                timer.try_set_value(handle);
             });
         }
         #[cfg(not(feature = "hydrate"))]
-        let _ = &url;
+        let _ = &text;
     };
     view! {
         <button
             type="button"
             class="copy-url"
             class:is-copied=move || copied.get() == Some(true)
+            class:is-failed=move || copied.get() == Some(false)
+            class:is-used=move || used.get()
             title=title
+            aria-label=move || if copied.get() == Some(false) { "Couldn't copy".to_string() } else { name.clone() }
             on:click=on_click
         >
-            <span class="sr-only">"Copy "</span>
-            <span class="copy-url-text">{short}</span>
-            {move || if copied.get() == Some(true) {
-                view! { <Check/> }.into_any()
-            } else {
-                view! { <Copy/> }.into_any()
+            <span class="copy-url-text">
+                {move || if copied.get() == Some(false) {
+                    view! { <span class="copy-url-head">"Couldn't copy"</span> }.into_any()
+                } else {
+                    let (head, tail) = split_tail(&shown);
+                    view! {
+                        <span class="copy-url-head">{head}</span>
+                        <span class="copy-url-tail">{tail}</span>
+                    }.into_any()
+                }}
+            </span>
+            {move || match copied.get() {
+                Some(true) => view! { <Check/> }.into_any(),
+                Some(false) => view! { <Cross/> }.into_any(),
+                None => view! { <Copy/> }.into_any(),
             }}
         </button>
         <span class="sr-only" role="status">
@@ -356,13 +523,21 @@ pub fn CopyUrl(url: String) -> impl IntoView {
     }
 }
 
+/// A value and its last six characters, which stay in view when the rest is
+/// cut short ("legend.lnbits.c…BiQGoC").
+fn split_tail(shown: &str) -> (String, String) {
+    let chars: Vec<char> = shown.chars().collect();
+    let at = chars.len().saturating_sub(6);
+    (chars[..at].iter().collect(), chars[at..].iter().collect())
+}
+
 /// Loading rows shaped like the real ones: an avatar, a name over a URL, and
 /// a status.
 #[component]
 fn DirectorySkeleton() -> impl IntoView {
     view! {
         <div class="directory-meta"><span class="skeleton" style="width: 72px; height: 12px;"></span></div>
-        <ul class="mint-list" role="status" aria-label="Loading mints">
+        <ul class="card mint-list" role="status" aria-label="Loading mints">
             {[46, 32, 40, 28, 36, 44].into_iter().map(|w| view! {
                 <li><div class="mint-row is-skeleton">
                     <span class="skeleton mint-avatar"></span>
@@ -370,7 +545,7 @@ fn DirectorySkeleton() -> impl IntoView {
                         <span class="skeleton" style=format!("width: {w}%; height: 14px;")></span>
                         <span class="skeleton" style=format!("width: {}%; height: 12px; margin-top: 6px;", w / 2 + 12)></span>
                     </span>
-                    <span class="mint-rating"><span class="skeleton" style="width: 48px; height: 14px;"></span></span>
+                    <span class="mint-rating"><span class="skeleton" style="width: 78px; height: 14px;"></span></span>
                     <span class="skeleton mint-status-skeleton" style="width: 72px; height: 20px;"></span>
                 </div></li>
             }).collect_view()}
@@ -462,8 +637,20 @@ fn urlencode(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{sort_from_slug, sort_slug, status_from_slug, status_slug, view_url};
+    use super::{sort_from_slug, sort_slug, split_tail, status_from_slug, status_slug, view_url};
     use crate::types::{MintSort, MintState};
+
+    #[test]
+    fn the_tail_keeps_the_last_six_characters() {
+        assert_eq!(
+            split_tail("legend.lnbits.com/cashu/api/v1/4gr9Xcmz3XEkUNwiBiQGoC"),
+            (
+                "legend.lnbits.com/cashu/api/v1/4gr9Xcmz3XEkUNwi".into(),
+                "BiQGoC".into()
+            )
+        );
+        assert_eq!(split_tail("mint.ü"), (String::new(), "mint.ü".into()));
+    }
 
     #[test]
     fn directory_urls_round_trip_and_omit_defaults() {

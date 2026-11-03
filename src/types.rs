@@ -132,11 +132,20 @@ pub struct ReviewContext {
     pub relays: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
 pub struct MintReviews {
+    /// The latest reviews, at most `REVIEWS_LOADED`.
     pub reviews: Vec<ReviewRead>,
+    /// Every stored review, as the directory counts them.
+    pub total: u64,
+    /// How many carry a star rating, and their average.
+    pub rating_count: u64,
+    pub rating_avg: Option<f64>,
     pub context: ReviewContext,
 }
+
+/// How many reviews the mint page loads.
+pub const REVIEWS_LOADED: u64 = 100;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SwapEventRead {

@@ -170,8 +170,10 @@ pub async fn start(
     let announcement = events::Announcement {
         name: state.app_name.clone(),
         urls: state.nostr.public_urls.clone(),
-        donate: service::build_payment_request(state, None)
-            .ok()
+        donate: cfg
+            .paid_swaps
+            .then(|| service::build_payment_request(state, None).ok())
+            .flatten()
             .map(|pr| pr.to_string()),
         software: format!("imf {}", env!("CARGO_PKG_VERSION")),
         frequency_secs: (cfg.min_swap_delay_secs + cfg.max_swap_delay_secs) / 2,
