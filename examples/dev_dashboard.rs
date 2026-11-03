@@ -11,7 +11,7 @@
 async fn main() {
     use cdk_cashu_auditor::server::auditor::AuditorConfig;
     use cdk_cashu_auditor::server::cache::ResponseCache;
-    use cdk_cashu_auditor::server::http::api_router;
+    use cdk_cashu_auditor::server::http::{api_router, paid_router};
     use cdk_cashu_auditor::server::state::{auditor_db_path, open_wallet_repository, AppState};
     use cdk_cashu_auditor::server::storage::AuditorDatabase;
     use leptos::prelude::*;
@@ -36,7 +36,7 @@ async fn main() {
         started_at: std::time::Instant::now(),
     };
 
-    let app = api_router().with_state(state);
+    let app = api_router().merge(paid_router()).with_state(state);
     let addr = "127.0.0.1:3000";
     println!("dev dashboard on http://{addr}/dashboard");
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();

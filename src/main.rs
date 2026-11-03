@@ -6,7 +6,7 @@ async fn main() {
     use axum::Router;
     use cdk_cashu_auditor::app::{shell, App};
     use cdk_cashu_auditor::server::auditor::Auditor;
-    use cdk_cashu_auditor::server::http::{api_router, https_redirect};
+    use cdk_cashu_auditor::server::http::{api_router, https_redirect, paid_router};
     use cdk_cashu_auditor::server::state::AppState;
     use leptos::prelude::*;
     use leptos_axum::{generate_route_list, LeptosRoutes};
@@ -75,8 +75,11 @@ async fn main() {
 
     let routes = generate_route_list(App);
 
-    let app = Router::new()
-        .merge(api_router())
+    let mut app = Router::new().merge(api_router());
+    if state.auditor_config.paid_swaps {
+        app = app.merge(paid_router());
+    }
+    let app = app
         .leptos_routes(&state, routes, {
             let state = state.clone();
             move || {

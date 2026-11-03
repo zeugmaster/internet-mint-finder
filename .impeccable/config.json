@@ -1,0 +1,53 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "gradient-text",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/footer-ideas.html"
+        ],
+        "createdAt": "2026-10-29T22:02:51.947Z",
+        "reason": "DESIGN.md Foil Exception Rule: the footer name in brushed steel already ships (.foil-mark); this mock explores brand-foil footers at the owner's request"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/footer-ideas.html"
+        ],
+        "createdAt": "2026-10-29T22:06:29.278Z",
+        "reason": "DESIGN.md Segmented tabs: Interfere track with tabs flush inside it, as .site-nav and .segmented ship in style/main.css; padding lives inside each 28px tab"
+      },
+      {
+        "rule": "flat-type-hierarchy",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/hero-compare/page.html"
+        ],
+        "createdAt": "2026-10-29T23:28:57.970Z",
+        "reason": "Claude: internal comparison tool; its own chrome is kept to 15/13px on purpose so the two framed pages lead"
+      },
+      {
+        "rule": "gradient-text",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/hero-compare/page.html"
+        ],
+        "createdAt": "2026-10-30T09:44:44.735Z",
+        "reason": "DESIGN.md Foil Exception Rule: the struck steel IMF is the oval tag's own brand metal, reproduced verbatim from style/main.css at eb2688f for a side-by-side comparison"
+      },
+      {
+        "rule": "nested-cards",
+        "value": "*",
+        "files": [
+          "public/dashboard.html"
+        ],
+        "createdAt": "2026-11-03T01:12:24.706Z",
+        "reason": "Assistant verified 2026-11-03: rendered .card .card count is 0; the static scan misreads the segmented control in a chart card's head."
+      }
+    ]
+  }
+}

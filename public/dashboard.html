@@ -3,11 +3,36 @@
 <head>
 <meta charset="utf-8" />
 <title>Analytics — {{APP_NAME}}</title>
+<link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml" />
+<link rel="icon" href="/favicon-32.png?v=2" sizes="32x32" type="image/png" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <meta name="color-scheme" content="light dark" />
-<meta name="theme-color" content="#f6f6f6" media="(prefers-color-scheme: light)" />
-<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
-<script>(function(){var d=document.documentElement;d.dataset.theme=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.addEventListener('click',function(e){if(!e.target.closest('[data-theme-toggle]'))return;var next=d.dataset.theme==='dark'?'light':'dark';d.dataset.theme=next;localStorage.setItem('theme',next);});})();</script>
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light) and (width < 48rem)" />
+<meta name="theme-color" content="#f6f6f6" media="(prefers-color-scheme: light) and (width >= 48rem)" />
+<meta name="theme-color" content="#111111" media="(prefers-color-scheme: dark) and (width < 48rem)" />
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark) and (width >= 48rem)" />
+<!-- The same theme script as THEME_SCRIPT in src/app.rs. -->
+<script>(function(){
+var d=document.documentElement,swaps=0;
+d.dataset.theme=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+d.classList.add('js');
+var tint=function(){var dark=d.dataset.theme==='dark';document.querySelectorAll('meta[name=theme-color]').forEach(function(m){var wide=m.media.indexOf('>=')>0;m.content=dark?(wide?'#000000':'#111111'):(wide?'#f6f6f6':'#ffffff');});};
+tint();
+document.addEventListener('touchstart',function(){},{passive:true});
+document.addEventListener('click',function(e){
+var b=e.target.closest('[data-theme-toggle]');if(!b)return;
+var next=d.dataset.theme==='dark'?'light':'dark',k=++swaps;
+var swap=function(){d.dataset.theme=next;localStorage.setItem('theme',next);tint();};
+var end=function(){if(k===swaps)d.classList.remove('theme-swap');};
+d.classList.add('theme-swap');
+if(!document.startViewTransition){swap();requestAnimationFrame(function(){requestAnimationFrame(end);});return;}
+var r=b.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;
+d.style.setProperty('--swap-x',x+'px');
+d.style.setProperty('--swap-y',y+'px');
+d.style.setProperty('--swap-r',Math.hypot(Math.max(x,innerWidth-x),Math.max(y,innerHeight-y))+'px');
+document.startViewTransition(swap).finished.finally(end);
+});
+})();</script>
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css"/>
@@ -58,20 +83,32 @@
     --border-strong: #00000026;
     --disabled: #0000000f;
     --fg-disabled: #00000044;
-    --focus: #0084e6a1;
+    --focus: #0077d4;
     --inverted: #000000f2;
     --inverted-hover: #000000cc;
     --inverted-active: #000000b3;
     --on-inverted: #ffffff;
     --brand-subtle: #008ff519;
     --on-brand-subtle: #0090ff;
-    --success-fg: #00713fde;
+    --success-fg: #00713f;
     --warning-bg: #ff9c0029;
-    --warning-fg: #cc4e00;
+    --warning-fg: #b04200;
     --danger-bg: #f52b0018;
-    --danger-fg: #cd2200ea;
-    --s-default: 0 0 0 0.5px #0000 inset, 0 0 0 0.5px #0000000f, 0 1px 1px -1px #0000001a, 0 1px 2px 0 #0000000d;
+    --danger-fg: #b81e00;
+    --s-default: 0 0 0 0.5px #0000 inset, 0 0 0 0.5px #0000000f, 0 1px 1px -1px #0000, 0 1px 2px 0 #0000;
     --s-large: 0 0 0 0.5px #0000000f, 0 2px 3px -2px #0000000f, 0 3px 12px -4px #0000001a, 0 4px 16px -8px #0000000d;
+    /* Top-lit sheen and its edges, as in style/main.css. */
+    --sheen-panel: linear-gradient(#0000 0, #00000006 160px);
+    --sheen-raised: linear-gradient(#0000, #00000010);
+    --sheen-well: linear-gradient(#00000010, #0000 14px);
+    --sheen-inverted: linear-gradient(#ffffff24, #fff0);
+    --s-panel: inset 0 -1px 0 #00000008, 0 0 0 0.5px #00000014;
+    --s-lip: inset 0 1px 0 #ffffffcc, inset 0 -1px 0 #00000014;
+    --s-raised: var(--s-lip), 0 0 0 0.5px #00000017;
+    --s-field: 0 0 0 0.5px #00000017;
+    --s-track: inset 0 1px 2px #00000017;
+    --s-tab: inset 0 -1px 0 #00000014, inset 0 0 0 1px var(--tab-border);
+    --s-inverted: inset 0 1px 0 #ffffff29;
   }
   :root[data-theme='dark'] {
     color-scheme: dark;
@@ -103,8 +140,22 @@
     --warning-fg: #ffa057;
     --danger-bg: #ff35232b;
     --danger-fg: #ff977d;
-    --s-default: 0 0 0 0.5px #ffffff12 inset, 0 0 0 0.5px #0000, 0 1px 1px -1px #0000, 0 1px 2px 0 #0000;
+    --s-default: 0 0 0 1px #ffffff1a inset, 0 0 0 0.5px #0000, 0 1px 1px -1px #0000, 0 1px 2px 0 #0000;
     --s-large: 0 0 0 1px #ffffff2c, 0 2px 3px -2px #00000026, 0 3px 8px -2px #00000066, 0 4px 12px -4px #00000080;
+    --sheen-panel: linear-gradient(#ffffff0d 0, #fff0 160px);
+    --sheen-raised: linear-gradient(#ffffff0d, #0000000d);
+    --sheen-well: linear-gradient(#00000040, #ffffff08);
+    --sheen-inverted: linear-gradient(#0000, #00000024);
+    --s-panel: inset 0 1px 0 #ffffff0f, inset 0 0 0 1px #ffffff1a;
+    --s-lip: inset 0 1px 0 #ffffff14;
+    --s-raised: var(--s-lip), inset 0 0 0 1px #ffffff1a;
+    --s-field: inset 0 0 0 1px #ffffff1a;
+    --s-track: inset 0 1px 1.5px #00000066, inset 0 -1px 0 #ffffff0a;
+    --s-tab: inset 0 1px 0 #ffffff14, inset 0 0 0 1px var(--tab-border);
+    --s-inverted: inset 0 -1px 0 #00000033;
+  }
+  @media (forced-colors: active), (prefers-contrast: more) {
+    :root, :root[data-theme='dark'] { --sheen-panel: none; --sheen-raised: none; --sheen-well: none; --sheen-inverted: none; }
   }
   :root {
     --font: 'InterVariable', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -112,12 +163,13 @@
     --focus-ring: inset 0 0 0 0.5px var(--focus), 0 0 0 1px var(--focus);
     --ease: cubic-bezier(0.4, 0, 0.2, 1);
     --ease-out: cubic-bezier(0, 0, 0.2, 1);
+    --ease-arrive: cubic-bezier(0.16, 1, 0.3, 1);
     --column: 960px;
     --gutter: 24px;
   }
 
   * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; min-height: 100vh; }
+  html, body { margin: 0; padding: 0; min-height: 100vh; min-height: 100svh; }
 
   html {
     background: var(--bg);
@@ -160,25 +212,53 @@
   }
   .brand {
     grid-area: brand; min-width: 0; display: flex; align-items: center; gap: 10px;
-    color: var(--ink); font-weight: 600; text-decoration: none; white-space: nowrap;
+    color: var(--ink); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+    text-decoration: none; white-space: nowrap;
   }
   .brand > span:last-child { overflow: hidden; text-overflow: ellipsis; }
-  .brand-mark { flex: none; display: flex; width: 20px; height: 20px; }
-  .brand-mark svg { width: 100%; height: 100%; }
+  /* The brand tag at rest, IMF engraved solid: the app's header has the
+     live one (.brand-tag in style/main.css). */
+  .brand-mark { position: relative; flex: none; display: grid; place-items: center; width: 44px; height: calc(44px * .72); border-radius: 50%; isolation: isolate; }
+  .brand-mark > span:not(.imf) { position: absolute; inset: 0; border-radius: 50%; }
+  .brand-mark .metal {
+    background: linear-gradient(158deg, #fbfcfd 0%, #d3d8df 8%, #98a1ad 16%, #e6e9ed 24%, #ffffff 31%, #bcc3cc 40%,
+      #7f8896 49%, #cfd4db 57%, #f7f8fa 65%, #a6aeb9 74%, #eef0f3 82%, #8d96a3 91%, #e4e7eb 100%) 22% 30% / 200% 200%;
+  }
+  .brand-mark .holo {
+    background: linear-gradient(118deg, #7a95ff 0%, #b48cff 12%, #f08ad8 23%, #ffc4a8 31%, #7fd8ff 42%, #6fe0c0 52%,
+      #8aa6ff 63%, #c79bff 74%, #ff9fcf 84%, #8fe6d4 93%, #7a95ff 100%) 78% 30% / 300% 300%;
+    mix-blend-mode: color; opacity: .2;
+  }
+  .brand-mark .glint {
+    background: radial-gradient(circle at 28% 18%, #ffffffe6 0%, #ffffff59 14%, #ffffff00 38%);
+    mix-blend-mode: screen;
+  }
+  .brand-mark .imf {
+    position: relative; margin-right: -.035em; color: #3a4352eb;
+    font-size: calc(44px * .27); line-height: 1; font-weight: 820; letter-spacing: -.035em;
+  }
+  .brand-mark .bevel {
+    box-shadow: inset 0 1px 0 #ffffffe6, inset 0 -.5px 0 #3a425240, inset 0 0 0 1px #ffffff73, 0 0 0 1px #3a425252;
+  }
+  :root[data-theme='dark'] .brand-mark .metal { filter: brightness(.88); }
+  :root[data-theme='dark'] .brand-mark .bevel {
+    box-shadow: inset 0 1px 0 #ffffffe6, inset 0 -.5px 0 #3a425240, inset 0 0 0 1px #ffffff73, 0 0 0 1px #ffffff2e;
+  }
   .site-nav {
     grid-area: nav; justify-self: start; display: inline-flex;
-    border-radius: 6px; background: var(--component); white-space: nowrap;
+    border-radius: 6px; background-color: var(--component); background-image: var(--sheen-well);
+    box-shadow: var(--s-track); white-space: nowrap;
   }
   .nav-link {
     display: inline-flex; align-items: center; height: 28px; padding: 0 10px;
     border-radius: 6px; color: var(--muted); text-decoration: none;
     font-size: 13px; line-height: 20px; font-weight: 500;
-    transition: color 200ms ease-in-out, background-color 200ms ease-in-out, box-shadow 200ms ease-in-out;
+    transition: color 150ms var(--ease), background-color 150ms var(--ease), box-shadow 150ms var(--ease);
   }
-  .nav-link:hover { color: var(--ink); }
+  @media (hover: hover) and (pointer: fine) { .nav-link:hover { color: var(--ink); } }
   .nav-link[aria-current='page'] {
-    color: var(--ink); background: var(--surface-strong);
-    box-shadow: inset 0 0 0 1px var(--tab-border);
+    color: var(--ink); background-color: var(--surface-strong); background-image: var(--sheen-raised);
+    box-shadow: var(--s-tab);
   }
   /* Interfere icon button: a transparent 32px square. */
   .theme-toggle {
@@ -188,8 +268,32 @@
     background: transparent; color: var(--muted); cursor: pointer;
     transition: color 150ms var(--ease-out), background-color 150ms var(--ease-out);
   }
-  .theme-toggle:hover { background: var(--component); color: var(--ink); }
+  @media (hover: hover) and (pointer: fine) { .theme-toggle:hover { background: var(--component); color: var(--ink); } }
   .theme-toggle > span { display: inline-flex; }
+  /* Switching theme, as in style/main.css: the new theme opens from the
+     switch as a soft-edged circle and the icon turns in; every colour
+     underneath changes at once. */
+  @property --swap-reveal { syntax: "<length>"; inherits: false; initial-value: 0px; }
+  .theme-swap, .theme-swap *, .theme-swap *::before, .theme-swap *::after { transition: none !important; }
+  .theme-swap .theme-toggle > span { view-transition-name: theme-icon; }
+  .theme-swap::view-transition-old(root),
+  .theme-swap::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+  .theme-swap::view-transition-new(root) {
+    -webkit-mask-image: radial-gradient(circle at var(--swap-x) var(--swap-y), #000 calc(var(--swap-reveal) - 160px), transparent var(--swap-reveal));
+            mask-image: radial-gradient(circle at var(--swap-x) var(--swap-y), #000 calc(var(--swap-reveal) - 160px), transparent var(--swap-reveal));
+    animation: theme-reveal 760ms cubic-bezier(0.25, 1, 0.5, 1) both;
+  }
+  .theme-swap::view-transition-old(theme-icon) { animation: theme-icon-out 160ms var(--ease-out) both; }
+  .theme-swap::view-transition-new(theme-icon) { animation: theme-icon-in 480ms var(--ease-arrive) both; }
+  @keyframes theme-reveal { to { --swap-reveal: calc(var(--swap-r) + 160px); } }
+  @keyframes theme-icon-out { to { opacity: 0; transform: rotate(90deg) scale(0.6); } }
+  @keyframes theme-icon-in { from { opacity: 0; transform: rotate(-90deg) scale(0.9); } }
+  @keyframes theme-fade { from { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) {
+    .theme-swap::view-transition-new(root) { -webkit-mask-image: none; mask-image: none; animation: theme-fade 200ms var(--ease) both; }
+    .theme-swap::view-transition-old(theme-icon) { animation: none; opacity: 0; }
+    .theme-swap::view-transition-new(theme-icon) { animation: theme-fade 200ms var(--ease) both; }
+  }
   :root[data-theme='dark'] .when-light,
   :root:not([data-theme='dark']) .when-dark { display: none; }
   .sr-only {
@@ -215,26 +319,19 @@
   .tool-btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
     height: 32px; padding: 0 12px; border: 0; border-radius: 8px;
-    background: var(--surface-strong); box-shadow: var(--s-default); color: var(--ink);
+    background-color: var(--surface-strong); background-image: var(--sheen-raised); box-shadow: var(--s-raised); color: var(--ink);
     font-size: 13px; line-height: 20px; font-weight: 500; white-space: nowrap; cursor: pointer;
     transition: background-color 150ms var(--ease-out);
   }
-  .tool-btn:hover { background: var(--surface-strong-hover); }
+  @media (hover: hover) and (pointer: fine) { .tool-btn:hover { background-color: var(--surface-strong-hover); } }
 
-  /* One sentence and the donate link. */
+  /* One sentence. */
   .site-footer-inner {
     display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline;
     gap: 8px 32px; padding-top: 24px; padding-bottom: 40px;
     color: var(--muted); font-size: 13px; line-height: 20px;
   }
   .site-footer-inner p { margin: 0; }
-  .site-footer-inner a {
-    color: inherit; text-decoration: underline solid 0.1em;
-    text-decoration-color: var(--border-strong); text-underline-offset: 20%;
-    text-decoration-skip-ink: none;
-    transition: text-decoration-color 150ms var(--ease), color 150ms var(--ease);
-  }
-  .site-footer-inner a:hover { color: var(--ink); text-decoration-color: var(--muted); }
 
   /* ===================================================================
      Layout
@@ -258,9 +355,10 @@
      Cards — Interfere card: 12px radius, hairline default shadow
      =================================================================== */
   .card {
-    background: var(--surface);
+    background-color: var(--surface);
+    background-image: var(--sheen-panel);
     border-radius: 12px;
-    box-shadow: var(--s-default);
+    box-shadow: var(--s-panel);
     overflow: hidden;
   }
   .panel { padding: 0; }
@@ -288,7 +386,7 @@
   .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
   .kpi {
     position: relative; padding: 16px;
-    background: var(--surface); border-radius: 12px; box-shadow: var(--s-default);
+    background-color: var(--surface); background-image: var(--sheen-panel); border-radius: 12px; box-shadow: var(--s-panel);
     overflow: hidden; min-width: 0;
   }
   .kpi .lbl { font-size: 13px; line-height: 20px; color: var(--muted); }
@@ -347,11 +445,11 @@
   .filters legend { margin-top: 0; }
   .filters input[type="date"] {
     width: 100%; min-width: 0; height: 32px; padding: 0 8px;
-    background: var(--surface-strong); box-shadow: var(--s-default);
+    background-color: var(--surface-strong); box-shadow: var(--s-field);
     border: 0; border-radius: 8px;
     color: var(--ink); font-size: 13px;
   }
-  .filters input[type="date"]:focus-visible { outline: 0; box-shadow: var(--focus-ring); }
+  .filters input[type="date"]:focus-visible { outline: 0; box-shadow: var(--focus-ring), var(--s-field); }
   .filters .row { display: flex; gap: 16px; }
   .filters .row > * { flex: 1; }
 
@@ -360,16 +458,18 @@
     width: 100%; height: 32px; margin-top: 20px; padding: 0 12px;
     border: 0; border-radius: 8px;
     cursor: pointer; font: inherit; font-weight: 500; font-size: 13px; line-height: 20px;
-    background: var(--inverted); color: var(--on-inverted);
+    background-color: var(--inverted); background-image: var(--sheen-inverted);
+    box-shadow: var(--s-inverted); color: var(--on-inverted);
     transition: background-color 150ms var(--ease-out);
   }
-  .btn:hover { background: var(--inverted-hover); }
-  .btn:active { background: var(--inverted-active); }
-  .btn:disabled { cursor: wait; background: var(--disabled); color: var(--fg-disabled); }
+  @media (hover: hover) and (pointer: fine) { .btn:hover { background-color: var(--inverted-hover); } }
+  .btn:active { background-color: var(--inverted-active); }
+  .btn:disabled { cursor: wait; background: var(--disabled); box-shadow: none; color: var(--fg-disabled); }
   .btn.secondary {
-    margin-top: 8px; background: var(--surface-strong); box-shadow: var(--s-default); color: var(--ink);
+    margin-top: 8px; background-color: var(--surface-strong); background-image: var(--sheen-raised);
+    box-shadow: var(--s-raised); color: var(--ink);
   }
-  .btn.secondary:hover { background: var(--surface-strong-hover); }
+  @media (hover: hover) and (pointer: fine) { .btn.secondary:hover { background-color: var(--surface-strong-hover); } }
   .btn.secondary:disabled { background: var(--disabled); box-shadow: none; color: var(--fg-disabled); }
 
   /* ===================================================================
@@ -377,7 +477,8 @@
      =================================================================== */
   .seg {
     display: inline-flex; gap: 0;
-    background: var(--component); border-radius: 6px;
+    background-color: var(--component); background-image: var(--sheen-well);
+    box-shadow: var(--s-track); border-radius: 6px;
   }
   .seg button {
     display: inline-flex; align-items: center; justify-content: center;
@@ -385,12 +486,12 @@
     background: transparent; border: 0; color: var(--muted);
     font: inherit; font-size: 13px; line-height: 20px; font-weight: 500;
     cursor: pointer; border-radius: 6px;
-    transition: color 200ms ease-in-out, background-color 200ms ease-in-out, box-shadow 200ms ease-in-out;
+    transition: color 150ms var(--ease), background-color 150ms var(--ease), box-shadow 150ms var(--ease);
   }
-  .seg button:hover { color: var(--ink); }
+  @media (hover: hover) and (pointer: fine) { .seg button:hover { color: var(--ink); } }
   .seg button.active {
-    color: var(--ink); background: var(--surface-strong);
-    box-shadow: inset 0 0 0 1px var(--tab-border);
+    color: var(--ink); background-color: var(--surface-strong); background-image: var(--sheen-raised);
+    box-shadow: var(--s-tab);
   }
   .seg button:disabled { cursor: wait; }
   .seg.sm button { height: 24px; padding: 0 8px; font-size: 12px; line-height: 16px; }
@@ -415,7 +516,7 @@
     flex: 1 1 0; min-width: 1px; border-radius: 2px; background: var(--component);
     transition: opacity 120ms var(--ease);
   }
-  .sla-cell:hover { opacity: 0.7; }
+  @media (hover: hover) and (pointer: fine) { .sla-cell:hover { opacity: 0.7; } }
   .sla-cell.ok   { background: var(--ok); }
   .sla-cell.warn { background: var(--warn); }
   .sla-cell.err  { background: var(--error); }
@@ -438,7 +539,7 @@
   td.trunc { width: 100%; max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   td .sep { color: var(--faint); }
   tbody tr td { transition: background-color 120ms var(--ease); }
-  tbody tr:hover td { background: var(--component); }
+  @media (hover: hover) and (pointer: fine) { tbody tr:hover td { background: var(--component); } }
   /* Error categories as Interfere badges, matching the app. */
   .pill {
     display: inline-flex; align-items: center; justify-content: center;
@@ -465,7 +566,6 @@
     color: var(--muted); font-size: 13px; line-height: 20px;
     height: 100%; min-height: 120px; gap: 6px; padding: 18px;
   }
-  .empty svg { width: 24px; height: 24px; opacity: 0.6; }
 
   /* ===================================================================
      Choices.js overrides — Interfere select and menu
@@ -474,21 +574,21 @@
   /* Choices.js clips the closed box, which would hide the field's ring. */
   .choices { margin-bottom: 0; font-size: 13px; overflow: visible; }
   .choices__inner {
-    background: var(--surface-strong) !important; border: 0 !important;
-    box-shadow: var(--s-default);
+    background-color: var(--surface-strong) !important; border: 0 !important;
+    box-shadow: var(--s-field);
     border-radius: 8px !important; min-height: 32px; padding: 3px 6px 0 !important;
     color: var(--ink); font-size: 13px;
   }
   .choices.is-focused .choices__inner,
-  .choices.is-open .choices__inner { box-shadow: var(--focus-ring); }
+  .choices.is-open .choices__inner { box-shadow: var(--focus-ring), var(--s-field); }
   .choices__list--dropdown, .choices__list[aria-expanded] {
-    background: var(--surface) !important;
+    background-color: var(--surface) !important; background-image: var(--sheen-panel);
     border: 0 !important; box-shadow: var(--s-large);
     border-radius: 12px !important; padding: 4px;
     margin-top: 4px !important; overflow: hidden; z-index: 20;
   }
   :root[data-theme='dark'] .choices__list--dropdown,
-  :root[data-theme='dark'] .choices__list[aria-expanded] { background: #191919 !important; }
+  :root[data-theme='dark'] .choices__list[aria-expanded] { background-color: #191919 !important; }
   .choices__list--dropdown .choices__item, .choices__list[aria-expanded] .choices__item {
     color: var(--ink); font-size: 13px; line-height: 20px; border-radius: 8px;
   }
@@ -524,7 +624,7 @@
     -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.5 1.5l7 7M8.5 1.5l-7 7' stroke='black' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E") center / 8px no-repeat;
     mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.5 1.5l7 7M8.5 1.5l-7 7' stroke='black' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E") center / 8px no-repeat;
   }
-  .choices[data-type*="select-multiple"] .choices__button:hover { opacity: 1; }
+  @media (hover: hover) and (pointer: fine) { .choices[data-type*="select-multiple"] .choices__button:hover { opacity: 1; } }
   .choices[data-type*="select-multiple"] .choices__button:focus-visible {
     opacity: 1; outline: 1px solid var(--focus); outline-offset: 1px;
   }
@@ -574,7 +674,7 @@
     .chart { padding-inline: 12px; }
     .section-head { flex-direction: column; gap: 2px; }
   }
-  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition-property: opacity, color, background-color, border-color, text-decoration-color !important; } }
   .icon { width: 16px; height: 16px; flex: none; }
 </style>
 </head>
@@ -589,12 +689,11 @@
 <header class="site-header">
   <div class="site-header-inner">
     <a href="/" class="brand">
-      <span class="brand-mark"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M3 3h18v11c0 4-4 6.6-9 8-5-1.4-9-4-9-8z" fill="var(--inverted)"/><path d="M7.5 15.5v-7l4.5 4.5 4.5-4.5v7" fill="none" stroke="var(--on-inverted)" stroke-width="2" stroke-linejoin="round"/></svg></span>
+      <span class="brand-mark" aria-hidden="true"><span class="metal"></span><span class="holo"></span><span class="glint"></span><span class="bevel"></span><span class="imf">IMF</span></span>
       <span>{{APP_NAME}}</span>
     </a>
     <nav class="site-nav" aria-label="Main navigation">
       <a href="/" class="nav-link">Directory</a>
-      <a href="/auditors" class="nav-link">Auditors</a>
       <a href="/dashboard" class="nav-link" aria-current="page">Analytics</a>
     </nav>
     <button type="button" class="theme-toggle" data-theme-toggle="">
@@ -719,7 +818,7 @@
       </div>
       <div class="card chart">
         <div class="head"><span class="ttl">Highest fees by route</span><span class="meta">fee as a share of the amount</span></div>
-        <div style="padding:4px;">
+        <div style="padding:4px; overflow-x:auto;">
           <table id="fees">
             <thead><tr><th>Route</th><th class="num">Payments</th><th class="num">Sent</th><th class="num">Fee</th><th class="num">Fee %</th></tr></thead>
             <tbody><tr><td colspan="5"><div class="skel" style="height:120px"></div></td></tr></tbody>
@@ -778,7 +877,6 @@
 <footer class="site-footer">
   <div class="site-footer-inner">
     <p>Audits move real ecash between mints. Results are measurements, not endorsements.</p>
-    <a href="/receive">Donate ecash to fund the audits</a>
   </div>
 </footer>
 
@@ -919,7 +1017,8 @@ function baseLayout({ xaxis = {}, yaxis = {}, ...rest } = {}) {
     // Interfere tooltips are dark in both themes.
     hoverlabel: { bgcolor: "#222222", bordercolor: "#222222",
                   font: { color: "#eeeeee", family: FONT, size: 12 } },
-    transition: { duration: 350, easing: "cubic-in-out" },
+    transition: matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? { duration: 0 } : { duration: 350, easing: "cubic-in-out" },
     ...rest,
     xaxis: { ...axisStyle(), ...xaxis },
     yaxis: { ...axisStyle(), ...yaxis },
@@ -935,9 +1034,7 @@ function emptyState(el, msg) {
   // graph's children directly leaves Plotly's registry pointing at missing
   // nodes, so a later Plotly.react() renders nothing.
   if (window.Plotly && el._fullLayout) Plotly.purge(el);
-  el.innerHTML = `<div class="empty">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 2 5-6" stroke-linecap="round"/></svg>
-    <div>${msg || "No data in this range"}</div></div>`;
+  el.innerHTML = `<div class="empty"><div>${msg || "No data in this range"}</div></div>`;
 }
 
 //===================== KPI strip =====================
@@ -970,14 +1067,16 @@ function countUp(el, target, opts) {
   if (el._animation) cancelAnimationFrame(el._animation);
   const fn = opts && opts.compact ? compact : (n) => fmt.format(Math.round(n));
   const suffix = (opts && opts.suffix) || "";
-  if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  const from = el._value ?? 0;
+  el._value = target;
+  if (from === target || matchMedia("(prefers-reduced-motion: reduce)").matches) {
     el.textContent = fn(target) + suffix;
     return;
   }
   function step(t) {
     const k = Math.min(1, (t - t0) / dur);
     const e = 1 - Math.pow(1 - k, 3);
-    el.textContent = fn(target * e) + suffix;
+    el.textContent = fn(from + (target - from) * e) + suffix;
     if (k < 1) el._animation = requestAnimationFrame(step);
   }
   el._animation = requestAnimationFrame(step);
@@ -1068,7 +1167,7 @@ async function renderSLA() {
     $("sla-meta").textContent = `${g.rows.length} mints, ${compact(totalChecks)} checks`;
     const cells = agg.map((a, i) => {
       const cls = bucketClass(a.checks, a.failures);
-      const tip = a.checks ? `${g.buckets[i]}\n${a.checks} checks · ${a.failures} failed · ${((a.checks-a.failures)/a.checks*100).toFixed(1)}%` : `${g.buckets[i]}\nno data`;
+      const tip = a.checks ? `${g.buckets[i]}\n${a.checks} checks, ${a.failures} failed, ${((a.checks-a.failures)/a.checks*100).toFixed(1)}%` : `${g.buckets[i]}\nno data`;
       return `<div class="sla-cell ${cls}" title="${tip}"></div>`;
     }).join("");
     const pct = (uptime * 100).toFixed(uptime >= 0.9995 ? 1 : 2);
@@ -1128,7 +1227,7 @@ async function renderBlame() {
       type: "bar", orientation: "h",
       marker: { color: C.err },
       customdata: rows.map(r => r.top_category),
-      hovertemplate: "%{y}<br>%{x} failures · %{customdata}<extra></extra>",
+      hovertemplate: "%{y}<br>%{x} failures, %{customdata}<extra></extra>",
     }], baseLayout({ bargap: 0.3, margin: { l: 150, r: 16, t: 10, b: 34 },
           xaxis: { title: "failures" },
           yaxis: { type: "category", automargin: true, autorange: "reversed" } }), config);
@@ -1220,7 +1319,7 @@ async function renderFlow() {
         value: f.links.map(l => l.value),
         customdata: f.links.map(l => l.fee),
         color: withAlpha(C.muted, 0.2),
-        hovertemplate: "%{source.label} → %{target.label}<br>%{value} sats net · fee %{customdata}<extra></extra>",
+        hovertemplate: "%{source.label} → %{target.label}<br>%{value} sats net, fee %{customdata}<extra></extra>",
       },
       // Plain node labels: no halo/text-shadow.
       textfont: { color: C.ink, family: FONT, size: 13, shadow: "none" },
@@ -1293,7 +1392,7 @@ async function renderDonations() {
       margin: { l: 52, r: 62, t: 14, b: 38 },
       hovermode: "x unified",
     }), config);
-    meta.textContent = `${s.events} donation${s.events === 1 ? "" : "s"} · ${compact(s.total)} sats`;
+    meta.textContent = `${s.events} donation${s.events === 1 ? "" : "s"}, ${compact(s.total)} sats`;
   } catch (e) { console.error(e); emptyState(el, "Couldn't load this chart"); meta.textContent = ""; }
 }
 async function renderFees() {
@@ -1524,8 +1623,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     : Promise.resolve();
   await Promise.all([initFilters(), fontReady]);
   $("refresh").addEventListener("click", renderAll);
-  // The theme script in <head> flips data-theme first; renderAll re-reads it.
-  document.addEventListener("click", e => { if (e.target.closest("[data-theme-toggle]")) renderAll(); });
+  // Redraw once data-theme has changed: the theme script switches it inside
+  // a view transition, after the click. renderAll re-reads it.
+  new MutationObserver(() => renderAll()).observe(document.documentElement, { attributeFilter: ["data-theme"] });
   setRange(30); paintRangeToggle(); paintScatterToggle();
 
   $("filter-toggle").addEventListener("click", () => {

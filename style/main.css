@@ -78,7 +78,7 @@
     --border-strong: #00000026;       /* border-strong, gray-a6 */
     --tab-border: #d9d9d9;            /* tabs indicator, gray-6 */
     --disabled: #0000000f;
-    --focus: #0084e6a1;               /* brand-border-focus, blue-a8 */
+    --focus: #0077d4;                 /* blue-a8 was 2.3:1 on white; this holds 3:1 */
     --brand: #0090ff;                 /* brand-solid, blue-9 */
     --brand-subtle: #008ff519;
     --on-brand-subtle: #0090ff;
@@ -87,25 +87,57 @@
     --inverted-active: #000000b3;
     --on-inverted: #ffffff;
     --success-bg: #00a43319;          /* positive-subtle */
-    --success-fg: #00713fde;          /* green-a11 */
+    --success-fg: #00713f;            /* green-a11, solid to pass AA on its fill */
     --warning-bg: #ff9c0029;          /* warning-subtle */
-    --warning-fg: #cc4e00;            /* on-warning-subtle-foreground */
+    --warning-fg: #b04200;            /* a step past the subtle foreground, for AA */
     --danger-bg: #f52b0018;           /* danger-subtle-hover */
-    --danger-fg: #cd2200ea;           /* tomato-a11 */
+    --danger-fg: #b81e00;             /* tomato-a11, solid and darker, for AA */
     --danger-subtle: #ff200008;       /* danger-subtle */
     --danger-border: #ff35002c;       /* danger-border-subtle */
     --ok-solid: #30a46c;              /* green-9 */
     --warn-solid: #f76b15;            /* orange-9 */
     --err-solid: #e54d2e;             /* tomato-9 */
-    /* shadow-default: a hairline ring plus a 1-2px drop. */
-    --s-default: 0 0 0 0.5px #0000 inset, 0 0 0 0.5px #0000000f, 0 1px 1px -1px #0000001a, 0 1px 2px 0 #0000000d;
+    /* shadow-default: only a hairline ring, as in dark. Nothing casts a
+       shadow; surfaces are flat. */
+    --s-default: 0 0 0 0.5px #0000 inset, 0 0 0 0.5px #0000000f, 0 1px 1px -1px #0000, 0 1px 2px 0 #0000;
     --s-large: 0 0 0 0.5px #0000000f, 0 2px 3px -2px #0000000f, 0 3px 12px -4px #0000001a, 0 4px 16px -8px #0000000d;
     --focus-ring: inset 0 0 0 0.5px var(--focus), 0 0 0 1px var(--focus);
+    /* Top-lit sheen: light falls from above. Panels and controls are
+       lightest at the top and settle a hair darker; wells are shaded under
+       their top edge. Each sheen is a background-image over the element's
+       own fill, so hover and press still fade the colour underneath. On
+       white the light can't show, so light mode leans on the shade. */
+    --sheen-panel: linear-gradient(#0000 0, #00000006 160px);
+    --sheen-raised: linear-gradient(#0000, #00000010);
+    --sheen-well: linear-gradient(#00000010, #0000 14px);
+    --sheen-inverted: linear-gradient(#ffffff24, #fff0);
+    /* The edges that go with them: a lit top lip where the fill is dark
+       enough to show it, a shaded bottom lip on panels and raised controls,
+       a soft shade under the top edge of a well. On white a gradient alone
+       barely shows, so light mode leans on these edges, and its rings are a
+       step firmer than shadow-default. Fields are flat: a fill and the ring
+       alone (the owner found the well's shade and sheen heavy, 2026-10-30). */
+    --s-panel: inset 0 -1px 0 #00000008, 0 0 0 0.5px #00000014;
+    --s-lip: inset 0 1px 0 #ffffffcc, inset 0 -1px 0 #00000014;
+    --s-raised: var(--s-lip), 0 0 0 0.5px #00000017;
+    --s-field: 0 0 0 0.5px #00000017;
+    --s-track: inset 0 1px 2px #00000017;
+    --s-tab: inset 0 -1px 0 #00000014, inset 0 0 0 1px var(--tab-border);
+    --s-inverted: inset 0 1px 0 #ffffff29;
 
     --font-sans: 'InterVariable', system-ui, -apple-system, 'Segoe UI', sans-serif;
     --font-mono: 'TX-02', ui-monospace, 'SF Mono', Menlo, monospace;
     --ease: cubic-bezier(0.4, 0, 0.2, 1);
     --ease-out: cubic-bezier(0, 0, 0.2, 1);
+    /* Arrivals (reveals, tips, the light settling): fast, then a long, soft
+       deceleration. */
+    --ease-arrive: cubic-bezier(0.16, 1, 0.3, 1);
+    /* The light sweeping across metal (the tag, the footer's steel): quick
+       to start, easing long into place. */
+    --ease-sweep: cubic-bezier(0.2, 0.7, 0.2, 1);
+    /* Movement from one place on screen to another (the status pill):
+       accelerate, then decelerate. */
+    --ease-move: cubic-bezier(0.77, 0, 0.175, 1);
     /* One column for header, pages and footer, so every edge lines up. */
     --column: 960px;
     --gutter: 24px;
@@ -145,17 +177,79 @@
     --danger-fg: #ff977d;
     --danger-subtle: #ff55330f;
     --danger-border: #fd201142;
-    /* In dark, shadow-default is only an inner hairline. */
-    --s-default: 0 0 0 0.5px #ffffff12 inset, 0 0 0 0.5px #0000, 0 1px 1px -1px #0000, 0 1px 2px 0 #0000;
+    /* In dark, shadow-default is only an inner ring: a full pixel, a step
+       brighter than the row rules, so cards and fields read on black. */
+    --s-default: 0 0 0 1px #ffffff1a inset, 0 0 0 0.5px #0000, 0 1px 1px -1px #0000, 0 1px 2px 0 #0000;
     --s-large: 0 0 0 1px #ffffff2c, 0 2px 3px -2px #00000026, 0 3px 8px -2px #00000066, 0 4px 12px -4px #00000080;
+    /* On black the light shows: a brighter top band and a lit top edge
+       over the inner ring. The inverted button takes light mode's shade. */
+    --sheen-panel: linear-gradient(#ffffff0d 0, #fff0 160px);
+    --sheen-raised: linear-gradient(#ffffff0d, #0000000d);
+    --sheen-well: linear-gradient(#00000040, #ffffff08);
+    --sheen-inverted: linear-gradient(#0000, #00000024);
+    --s-panel: inset 0 1px 0 #ffffff0f, inset 0 0 0 1px #ffffff1a;
+    --s-lip: inset 0 1px 0 #ffffff14;
+    --s-raised: var(--s-lip), inset 0 0 0 1px #ffffff1a;
+    --s-field: inset 0 0 0 1px #ffffff1a;
+    --s-track: inset 0 1px 1.5px #00000066, inset 0 -1px 0 #ffffff0a;
+    --s-tab: inset 0 1px 0 #ffffff14, inset 0 0 0 1px var(--tab-border);
+    --s-inverted: inset 0 -1px 0 #00000033;
+}
+
+/* Plain fills where the user asks for plain colours or more contrast. */
+@media (forced-colors: active), (prefers-contrast: more) {
+    :root,
+    :root[data-theme='dark'] {
+        --sheen-panel: none;
+        --sheen-raised: none;
+        --sheen-well: none;
+        --sheen-inverted: none;
+    }
+}
+
+/* Forced colours paint every fill and icon the same, so a 1.3 would draw five
+   full stars and the uptime bars would vanish. Empty stars become outlines,
+   filled stars take the system's text colour, the bars keep their state
+   colours, and missing data takes its muted colour. */
+@media (forced-colors: active) {
+    :root .stars-track .star,
+    :root .star-input .star {
+        forced-color-adjust: none;
+        fill: none;
+        stroke: CanvasText;
+    }
+
+    :root .foil-star {
+        forced-color-adjust: none;
+        background: CanvasText;
+    }
+
+    :root .uptime-bar,
+    :root .uptime-empty span {
+        forced-color-adjust: none;
+    }
+
+    :root .uptime-bar.unknown,
+    :root .uptime-empty span {
+        background: GrayText;
+    }
 }
 
 /* ---------------------------------------------------------------------------
    Base
 --------------------------------------------------------------------------- */
 
+/* The page's ground is painted on body, so the html background shows only
+   where the window rubber-bands past the page. At the top that is the
+   ground; at the bottom, in light, it is the reeding's steel, so the milled
+   edge carries on instead of ending on a pale strip. The scroll swaps them
+   halfway down. On black the ground serves both ends. */
 html {
-    background: var(--container);
+    --ground: var(--container);
+    --ground-below: #4f5766;
+    background: var(--ground);
+    animation: ground-below linear both;
+    animation-timeline: scroll(root);
     color: var(--fg);
     font-family: var(--font-sans);
     font-size: 15px;
@@ -165,16 +259,47 @@ html {
     text-rendering: optimizeLegibility;
     -webkit-text-size-adjust: 100%;
     -webkit-font-smoothing: antialiased;
+    /* Presses show as the controls' own :active states, not the browser's
+       grey flash. */
+    -webkit-tap-highlight-color: transparent;
 }
 
 @media (min-width: 48rem) {
     html {
-        background: var(--shell);
+        --ground: var(--shell);
     }
+}
+
+/* Hover styles are for a mouse: each sits in
+   `@media (hover: hover) and (pointer: fine)`, so a tap on a phone doesn't
+   leave a control tinted. Controls take a tap at once, with no wait for a
+   double-tap zoom. */
+a, button, summary, label, select {
+    touch-action: manipulation;
+}
+
+/* Holding a control doesn't select its label or open the link menu. */
+.segmented a,
+.copy-url,
+.help-tip-button,
+.star-input label {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+}
+
+:root[data-theme='dark'] {
+    --ground-below: var(--ground);
+}
+
+@keyframes ground-below {
+    from, 50% { background-color: var(--ground); }
+    50.01%, to { background-color: var(--ground-below); }
 }
 
 body {
     margin: 0;
+    background: var(--ground);
 }
 
 a {
@@ -185,6 +310,12 @@ a {
 :focus-visible {
     outline: 1px solid var(--focus);
     outline-offset: -1px;
+}
+
+/* A new page takes focus so the keyboard carries on from it; it isn't a
+   control, so no ring runs round the whole page. */
+#main-content:focus-visible {
+    outline: none;
 }
 
 h1, h2, h3, h4 {
@@ -241,7 +372,6 @@ kbd,
 .feed-amount,
 .feed-fee,
 .pr-string,
-.tag,
 .hallmark,
 .uptime-value,
 .incident-msg,
@@ -254,7 +384,6 @@ kbd,
 
 /* Interfere text links: a quiet underline that darkens on hover. */
 .text-link,
-.site-footer-inner a,
 .stack-table td a:not(.btn) {
     color: inherit;
     text-decoration: underline solid 0.1em;
@@ -264,11 +393,12 @@ kbd,
     transition: text-decoration-color 150ms var(--ease), color 150ms var(--ease);
 }
 
-.text-link:hover,
-.site-footer-inner a:hover,
-.stack-table td a:not(.btn):hover {
-    color: var(--fg);
-    text-decoration-color: var(--fg-2);
+@media (hover: hover) and (pointer: fine) {
+    .text-link:hover,
+    .stack-table td a:not(.btn):hover {
+        color: var(--fg);
+        text-decoration-color: var(--fg-2);
+    }
 }
 
 button.text-link {
@@ -282,8 +412,11 @@ button.text-link {
    Page chrome
 --------------------------------------------------------------------------- */
 
+/* Full height of the small viewport (the phone's toolbars showing), so on a
+   short page the milled edge sits on the bottom of what's visible. */
 .page-wrapper {
     min-height: 100vh;
+    min-height: 100svh;
     display: flex;
     flex-direction: column;
 }
@@ -302,7 +435,10 @@ button.text-link {
     width: 100%;
     max-width: calc(var(--column) + 2 * var(--gutter));
     margin: 0 auto;
-    padding-inline: var(--gutter);
+    /* Clear of the notch when a phone lies on its side (the page runs edge
+       to edge: viewport-fit=cover). */
+    padding-left: max(var(--gutter), env(safe-area-inset-left, 0px));
+    padding-right: max(var(--gutter), env(safe-area-inset-right, 0px));
 }
 
 .shell {
@@ -359,13 +495,16 @@ button.text-link {
     padding-bottom: 16px;
 }
 
+/* The name in capitals in 700, tracked open. */
 .brand {
     grid-area: brand;
     min-width: 0;
     display: flex;
     align-items: center;
     gap: 10px;
-    font-weight: 600;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
     white-space: nowrap;
 }
 
@@ -374,26 +513,321 @@ button.text-link {
     text-overflow: ellipsis;
 }
 
-.brand-mark {
+/* The IMF tag, the brand: an oval sticker of holographic metal and the one
+   place the brand carries colour. Bottom to top: chrome, colour laid into
+   it, a glint, grain and a bevelled edge. --tag-w sets every measure, so the
+   header mark and the hero tag share it all. The same sticker, held at the
+   hero light, is in public/brand (scripts/brand builds it). The --tag
+   properties place the light: the glint, the bands and colour, the struck
+   edges (--tag-lx and --tag-ly point at the light) and the tilt. */
+@property --tag-px { syntax: "<percentage>"; inherits: true; initial-value: 28%; }
+@property --tag-py { syntax: "<percentage>"; inherits: true; initial-value: 18%; }
+@property --tag-bx { syntax: "<percentage>"; inherits: true; initial-value: 22%; }
+@property --tag-by { syntax: "<percentage>"; inherits: true; initial-value: 30%; }
+@property --tag-lx { syntax: "<number>"; inherits: true; initial-value: -0.57; }
+@property --tag-ly { syntax: "<number>"; inherits: true; initial-value: -0.82; }
+@property --tag-rx { syntax: "<angle>"; inherits: true; initial-value: 0deg; }
+@property --tag-ry { syntax: "<angle>"; inherits: true; initial-value: 0deg; }
+
+.brand-tag {
+    --tag-w: 44px;
+    --tag-edge: #3a425252;
+    position: relative;
     flex: none;
-    display: flex;
-    width: 20px;
-    height: 20px;
+    display: grid;
+    place-items: center;
+    width: var(--tag-w);
+    height: calc(var(--tag-w) * 0.72);
+    border-radius: 50%;
+    isolation: isolate;
 }
 
-.brand-mark svg {
+.brand-tag > * {
+    pointer-events: none;
+}
+
+.brand-tag-layer {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+}
+
+.brand-tag .metal {
+    background: linear-gradient(158deg,
+        #fbfcfd 0%, #d3d8df 8%, #98a1ad 16%, #e6e9ed 24%, #ffffff 31%, #bcc3cc 40%,
+        #7f8896 49%, #cfd4db 57%, #f7f8fa 65%, #a6aeb9 74%, #eef0f3 82%, #8d96a3 91%, #e4e7eb 100%);
+    background-size: 200% 200%;
+    background-position: var(--tag-bx) var(--tag-by);
+}
+
+/* Hue from the rainbow, light and shade from the metal: a sheen of colour
+   that shifts with the light, kept low so the metal leads (toned down from
+   38% at the owner's request). Cool-led with one soft peach: warm hues turn
+   olive on the dark bands. */
+.brand-tag .holo {
+    background: linear-gradient(118deg,
+        #7a95ff 0%, #b48cff 12%, #f08ad8 23%, #ffc4a8 31%, #7fd8ff 42%, #6fe0c0 52%,
+        #8aa6ff 63%, #c79bff 74%, #ff9fcf 84%, #8fe6d4 93%, #7a95ff 100%);
+    background-size: 300% 300%;
+    background-position: calc(100% - var(--tag-bx)) var(--tag-by);
+    mix-blend-mode: color;
+    opacity: 0.2;
+}
+
+.brand-tag .glint {
+    background:
+        radial-gradient(circle at var(--tag-px) var(--tag-py), #ffffffe6 0%, #ffffff59 14%, #ffffff00 38%),
+        linear-gradient(112deg, #ffffff00 38%, #ffffffb3 47%, #ffffff00 56%);
+    background-size: 100% 100%, 260% 100%;
+    background-position: center, calc(100% - var(--tag-px)) center;
+    background-repeat: no-repeat;
+    mix-blend-mode: screen;
+}
+
+.brand-tag .grain {
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+    background-size: 180px;
+    mix-blend-mode: overlay;
+    opacity: 0.38;
+}
+
+/* The die-cut edge: a lit top lip, a shaded bottom, and a 1px outline that
+   holds on a light page. */
+.brand-tag .bevel {
+    box-shadow:
+        inset 0 max(1px, calc(var(--tag-w) * 0.008)) 0 #ffffffe6,
+        inset 0 min(-0.5px, calc(var(--tag-w) * -0.008)) 0 #3a425240,
+        inset 0 0 0 max(1px, calc(var(--tag-w) * 0.006)) #ffffff73,
+        inset 0 calc(var(--tag-w) * -0.04) calc(var(--tag-w) * 0.08) #2a324314,
+        0 0 0 1px var(--tag-edge);
+}
+
+/* Header size: IMF engraved solid, where shaded steel would melt into the
+   silver. */
+.brand-tag-imf {
+    position: relative;
+    margin-right: -0.035em;
+    color: #3a4352eb;
+    font-size: calc(var(--tag-w) * 0.27);
+    line-height: 1;
+    font-weight: 820;
+    letter-spacing: -0.035em;
+}
+
+/* On black: a light edge, and the chrome a step down so it doesn't glare. */
+:root[data-theme='dark'] .brand-tag {
+    --tag-edge: #ffffff2e;
+}
+
+:root[data-theme='dark'] .brand-tag .metal {
+    filter: brightness(0.88);
+}
+
+/* The header mark: still at rest; the light sweeps across it once on hover
+   of the link (a mouse only; not on keyboard focus, which shouldn't set
+   things moving), from the far side back to where it rests, so it ends
+   where it started rather than snapping home. */
+@media (hover: hover) and (pointer: fine) {
+    .brand:hover .brand-tag {
+        animation: brand-tag-sweep 1.3s var(--ease-sweep);
+    }
+}
+
+@keyframes brand-tag-sweep {
+    from { --tag-bx: 92%; --tag-px: 90%; }
+}
+
+/* Changing page, the header's mark fades in with the page rather than
+   popping in at full strength (one tag per page: the directory has the
+   hero instead). Not on the first load. */
+.brand .brand-tag {
+    transition: opacity 180ms var(--ease-out);
+}
+
+@starting-style {
+    :root:has(main.is-navigated) .brand .brand-tag {
+        opacity: 0;
+    }
+}
+
+/* The hero: the tag at full size in the directory's head, set at a slight
+   angle like a sticker pressed onto the page. The light sweeps in once as
+   the site first loads and settles at the hero light (not again on coming
+   back to the directory, and held until the page has hydrated, so its
+   frames don't compete with the page coming alive); then it follows the
+   pointer over the tag, the sticker tilting toward it. The light and the
+   tilt move together on one soft curve, a beat behind the pointer, and
+   glide home together on leave. */
+.brand-tag.is-hero {
+    --tag-w: 164px;
+    --e: calc(var(--tag-w) * 0.006);
+    grid-area: tag;
+    justify-self: end;
+    transform: rotate(-6deg) perspective(700px) rotateX(var(--tag-rx)) rotateY(var(--tag-ry));
+    transition-property: --tag-px, --tag-py, --tag-bx, --tag-by, --tag-lx, --tag-ly, --tag-rx, --tag-ry;
+    transition-duration: 700ms;
+    transition-timing-function: var(--ease-arrive);
+    animation: brand-tag-arrive 1.6s var(--ease-sweep) 0.1s backwards;
+}
+
+.js .brand-tag.is-hero:not(.is-hydrated) {
+    animation-play-state: paused;
+}
+
+.is-navigated .brand-tag.is-hero {
+    animation: none;
+}
+
+/* The arrival is left alone when the pointer comes: switching it off and
+   back on would replay it, from the right, on every leave. */
+.brand-tag.is-hero.is-live {
+    transition-duration: 260ms;
+    transition-timing-function: var(--ease-arrive);
+}
+
+/* From the right to the hero light, and the struck edges turn with it. */
+@keyframes brand-tag-arrive {
+    from { --tag-bx: 90%; --tag-by: 46%; --tag-px: 92%; --tag-py: 40%; --tag-lx: 0.8; --tag-ly: -0.6; }
+}
+
+/* IMF struck in raised steel: a lit lip toward the light, a soft shade
+   away from it, steel inside with the colour laid in faintly. */
+.brand-tag-face {
+    position: relative;
+    display: grid;
+    place-items: center;
+    transform: translateY(calc(var(--tag-w) * -0.045));
+}
+
+.brand-tag-struck {
+    display: inline-grid;
+    /* Centred on the letters, not their trailing tracking, and nudged
+       right for the F's open side. */
+    margin-right: -0.035em;
+    transform: translateX(calc(var(--tag-w) * 0.004));
+    font-size: calc(var(--tag-w) * 0.25);
+    line-height: 1;
+    font-weight: 820;
+    letter-spacing: -0.035em;
+    white-space: nowrap;
+}
+
+/* Positioned, so they stack in source order: transforms would otherwise
+   lift the lips above the steel. */
+.brand-tag-struck > span {
+    position: relative;
+    grid-area: 1 / 1;
+}
+
+.brand-tag-struck .lo {
+    color: #1c222f8c;
+    transform: translate(calc(var(--e) * -1.4 * var(--tag-lx)), calc(var(--e) * -1.4 * var(--tag-ly)));
+    filter: blur(calc(var(--e) * 0.8));
+}
+
+.brand-tag-struck .hi {
+    color: #fffffff0;
+    transform: translate(calc(var(--e) * 1.1 * var(--tag-lx)), calc(var(--e) * 1.1 * var(--tag-ly)));
+}
+
+.brand-tag-struck .steel,
+.brand-tag-struck .tint {
+    color: transparent;
+    -webkit-background-clip: text;
+    background-clip: text;
+}
+
+/* background-image, not the shorthand: the shorthand resets the clip. */
+.brand-tag-struck .steel {
+    background-image: linear-gradient(172deg, #a7afbb 0%, #6b7483 28%, #b9c0ca 50%, #545c6b 72%, #8f98a6 100%);
+    background-size: 100% 220%;
+    background-position: 0 var(--tag-by);
+}
+
+.brand-tag-struck .tint {
+    background-image: linear-gradient(118deg,
+        #6f8fff 0%, #a685ff 18%, #52b0ff 36%, #5fdca6 52%, #ef6fd0 70%, #6f8fff 86%, #52b0ff 100%);
+    background-size: calc(var(--tag-w) * 2.6) 100%;
+    background-position: var(--tag-bx) 0;
+    mix-blend-mode: color;
+    opacity: 0.16;
+}
+
+/* The name, pressed in: shade on the upper lip, light on the lower, both
+   turning with the light. */
+.brand-tag-arc {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
+    overflow: visible;
 }
 
-/* Interfere tabs: a component track; the active tab is a raised pill with a
-   1px gray edge. */
+.brand-tag-arc text {
+    font-family: var(--font-mono);
+    font-feature-settings: 'ss02';
+    font-size: 5px;
+    letter-spacing: 0.6px;
+}
+
+.brand-tag-arc .lo {
+    fill: #1c222fb8;
+}
+
+.brand-tag-arc .hi {
+    fill: #fffffff2;
+    transform: translate(calc(var(--tag-lx) * -0.35px), calc(var(--tag-ly) * -0.35px));
+}
+
+/* The directory's head: the title and intro on the left, the tag on the
+   right across both. The tag is no taller than they are: it rises above the
+   title rather than hanging below the intro, so both end the head's 28px
+   over the search. The head sits 28px lower to give back what the tag
+   rises, so the tag keeps the head's 24px from the header. */
+.page-head.has-tag {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+        "title tag"
+        "subtitle tag";
+    align-items: center;
+    gap: 0 48px;
+    margin-top: 52px;
+}
+
+.page-head.has-tag .page-title {
+    grid-area: title;
+    align-self: end;
+}
+
+.page-head.has-tag .page-subtitle {
+    grid-area: subtitle;
+    align-self: start;
+}
+
+.page-head.has-tag .brand-tag {
+    align-self: end;
+    margin-top: -28px;
+}
+
+/* Reduced motion: no sweep and no tilt. */
+@media (prefers-reduced-motion: reduce) {
+    .brand-tag.is-hero {
+        transform: rotate(-6deg);
+        animation: none;
+    }
+}
+
+/* Interfere tabs: a component track, pressed in; the active tab is a raised
+   pill with a 1px gray edge. */
 .site-nav {
     grid-area: nav;
     justify-self: start;
     display: inline-flex;
     border-radius: 6px;
-    background: var(--component);
+    background-color: var(--component);
+    background-image: var(--sheen-well);
+    box-shadow: var(--s-track);
     white-space: nowrap;
 }
 
@@ -411,21 +845,42 @@ button.text-link {
     font-size: 13px;
     line-height: 20px;
     font-weight: 500;
-    transition: color 200ms ease-in-out, background-color 200ms ease-in-out, box-shadow 200ms ease-in-out;
+    transition: color 150ms var(--ease-out), background-color 150ms var(--ease-out), box-shadow 150ms var(--ease-out);
 }
 
-.nav-link:hover,
-.segmented button:hover,
-.segmented a:hover {
+@media (hover: hover) and (pointer: fine) {
+    .nav-link:hover,
+    .segmented button:hover,
+    .segmented a:hover {
+        color: var(--fg);
+    }
+}
+
+/* A press darkens the tab under the finger or pointer. */
+.nav-link:active:not([aria-current='page']),
+.segmented button:active:not([aria-pressed='true']),
+.segmented a:active:not([aria-current='true']) {
     color: var(--fg);
+    background-color: var(--component);
+}
+
+/* Tabs a finger can hit: 44px tall on touch screens, 28px for a mouse. A ring
+   won't do here, since the track scrolls sideways and would clip one. */
+@media (pointer: coarse) {
+    .nav-link,
+    .segmented button,
+    .segmented a {
+        height: 44px;
+    }
 }
 
 .nav-link[aria-current='page'],
 .segmented button[aria-pressed='true'],
 .segmented a[aria-current='true'] {
     color: var(--fg);
-    background: var(--surface-strong);
-    box-shadow: inset 0 0 0 1px var(--tab-border);
+    background-color: var(--surface-strong);
+    background-image: var(--sheen-raised);
+    box-shadow: var(--s-tab);
 }
 
 /* Interfere icon button: a transparent 32px square. */
@@ -436,6 +891,107 @@ button.text-link {
 
 .theme-toggle > span {
     display: inline-flex;
+}
+
+/* Switching theme: the new theme opens from the switch as a soft-edged
+   circle, fast at first and settling as it reaches the far corner, like
+   light (or dusk) flooding the page, and the switch's icon turns in. The
+   theme script sets --swap-x and --swap-y (the switch's centre) and
+   --swap-r (the distance to the farthest corner). Transitions are off for
+   the swap, so every colour underneath changes at once. */
+@property --swap-reveal { syntax: "<length>"; inherits: false; initial-value: 0px; }
+
+.theme-swap,
+.theme-swap *,
+.theme-swap *::before,
+.theme-swap *::after {
+    transition: none !important;
+}
+
+/* Only one icon shows at a time, so both can carry the name. */
+.theme-swap .theme-toggle > span {
+    view-transition-name: theme-icon;
+}
+
+.theme-swap::view-transition-old(root),
+.theme-swap::view-transition-new(root) {
+    animation: none;
+    mix-blend-mode: normal;
+}
+
+.theme-swap::view-transition-new(root) {
+    -webkit-mask-image: radial-gradient(circle at var(--swap-x) var(--swap-y),
+        #000 calc(var(--swap-reveal) - 160px), transparent var(--swap-reveal));
+            mask-image: radial-gradient(circle at var(--swap-x) var(--swap-y),
+        #000 calc(var(--swap-reveal) - 160px), transparent var(--swap-reveal));
+    animation: theme-reveal 760ms cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+
+.theme-swap::view-transition-old(theme-icon) {
+    animation: theme-icon-out 160ms var(--ease-out) both;
+}
+
+.theme-swap::view-transition-new(theme-icon) {
+    animation: theme-icon-in 480ms var(--ease-arrive) both;
+}
+
+@keyframes theme-reveal {
+    to { --swap-reveal: calc(var(--swap-r) + 160px); }
+}
+
+@keyframes theme-icon-out {
+    to { opacity: 0; transform: rotate(90deg) scale(0.9); }
+}
+
+@keyframes theme-icon-in {
+    from { opacity: 0; transform: rotate(-90deg) scale(0.9); }
+}
+
+@keyframes theme-fade {
+    from { opacity: 0; }
+}
+
+/* Changing page: the new page fades in as it arrives, opacity only, so the
+   scroll position and late data change inside the fade rather than around
+   it, and the header's mark fades in with it (`.brand .brand-tag`). Not on
+   the first load. (A view transition was
+   tried and dropped as jumpy: the router changes the header before the old
+   page is captured, and the scroll and data land after the new one is.) */
+.is-navigated > * {
+    animation: page-in 180ms var(--ease-out) both;
+}
+
+@keyframes page-in {
+    from { opacity: 0; }
+}
+
+/* What a page loads after it arrives (the directory's list, a mint's head
+   and sections) fades in where its skeleton was instead of snapping in.
+   Opacity only, like the page. Each wrapper is built once, so the 15s
+   refresh doesn't replay it; not on the first load, which comes with its
+   data. It lets go of opacity once done, so the directory's dim
+   (`.directory-results`) can still ease. Short: it follows the page's own
+   fade, up to four times on a mint page. */
+.is-navigated .arrives {
+    animation: page-in 150ms var(--ease-out) backwards;
+}
+
+/* Reduced motion: no spreading circle or turning icon, a short crossfade. */
+@media (prefers-reduced-motion: reduce) {
+    .theme-swap::view-transition-new(root) {
+        -webkit-mask-image: none;
+                mask-image: none;
+        animation: theme-fade 200ms var(--ease) both;
+    }
+
+    .theme-swap::view-transition-old(theme-icon) {
+        animation: none;
+        opacity: 0;
+    }
+
+    .theme-swap::view-transition-new(theme-icon) {
+        animation: theme-fade 200ms var(--ease) both;
+    }
 }
 
 /* ---------------------------------------------------------------------------
@@ -452,11 +1008,13 @@ button.text-link {
 }
 
 /* heading-4 */
+/* Tracked in tighter than body headings: Inter wants about -0.02em at 24
+   and 28px. */
 .page-title {
     font-size: 28px;
     line-height: 36px;
     font-weight: 600;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
 }
 
 /* The intro runs the full column, at the owner's request. */
@@ -516,13 +1074,16 @@ button.text-link {
 }
 
 /* ---------------------------------------------------------------------------
-   Surfaces: Interfere card (12px radius, default hairline shadow)
+   Surfaces: Interfere card (12px radius, hairline ring), top-lit
 --------------------------------------------------------------------------- */
 
+/* The sheen runs a fixed 160px, so a tall card and a short one catch the
+   same light along their top edge. */
 .card {
-    background: var(--surface);
+    background-color: var(--surface);
+    background-image: var(--sheen-panel);
     border-radius: 12px;
-    box-shadow: var(--s-default);
+    box-shadow: var(--s-panel);
     overflow: hidden;
 }
 
@@ -556,59 +1117,287 @@ button.text-link {
 
 /* ---------------------------------------------------------------------------
    Mint page: one column of sections, 48px apart, each a heading on the page
-   with its content 12px below. The one card holds the uptime chart, an
-   instrument read as a whole; reviews and the About rows sit on the page
-   with 0.5px rules.
+   with its content 12px below. Cards hold what's read as a whole; the mint's
+   own words sit on the page.
 --------------------------------------------------------------------------- */
 
-.mint-sections {
+.mint-sections,
+.mint-info {
     display: flex;
     flex-direction: column;
     gap: 48px;
+}
+
+.mint-sections {
     margin-top: 48px;
 }
 
-.mint-sections > section {
+.mint-sections > section,
+.mint-info > section {
     min-width: 0;
 }
 
+/* A mint that lists nothing leaves no gap above the footer. */
+.mint-info:empty {
+    display: none;
+}
 
 .section-empty {
     color: var(--fg-2);
 }
 
-/* Label and value rows, a rule above each. */
-.kv-ledger {
-    display: grid;
-    grid-template-columns: 160px minmax(0, 1fr);
-    margin: 0;
-    border-bottom: 0.5px solid var(--border);
+/* The mint's own words, under its head on the same 48px, across the full
+   column with its line breaks kept; an address or key with no spaces breaks
+   anywhere rather than pushing the page wider than a phone. */
+.mint-words {
+    margin-top: 48px;
+}
+
+/* 6px, not the usual 12px: a line of text carries about 6px of empty leading
+   above its capitals, so text sits as far under its heading as a card does. */
+.mint-words .section-head {
+    margin-bottom: 6px;
+}
+
+.mint-words p {
+    overflow-wrap: anywhere;
+    white-space: pre-line;
+}
+
+/* The mint's own words stop at eight lines, so they can't push the evidence
+   down the page, with a "Read more" under them; opened, the whole text, and
+   the link goes. */
+.words-long > p {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 8;
+    line-clamp: 8;
+    overflow: hidden;
+}
+
+.words-more {
+    display: none;
+    margin-top: 4px;
     font-size: 13px;
     line-height: 20px;
 }
 
-.kv-ledger dt,
-.kv-ledger dd {
-    margin: 0;
-    padding: 10px 0;
-    border-top: 0.5px solid var(--border);
+.words-long > .words-more {
+    display: block;
 }
 
-.kv-ledger dt {
-    padding-right: 24px;
+@media (max-width: 480px) {
+    .words-long-on-phones > p {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 8;
+        line-clamp: 8;
+        overflow: hidden;
+    }
+
+    .words-long-on-phones > .words-more {
+        display: block;
+    }
+}
+
+.words-more > summary {
+    display: inline;
+    list-style: none;
+    cursor: pointer;
+}
+
+.words-more > summary::-webkit-details-marker {
+    display: none;
+}
+
+.mint-words:has(> .words-more[open]) > p {
+    display: block;
+    -webkit-line-clamp: none;
+    line-clamp: none;
+}
+
+.mint-words > .words-more[open] {
+    display: none;
+}
+
+/* Lightning in and out lead, side by side, their limits as the values. */
+.offers-lightning {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 0;
+}
+
+.offers-cell {
+    padding: 14px 16px;
+}
+
+.offers-cell + .offers-cell {
+    border-left: 0.5px solid var(--border);
+}
+
+.offers-cell dt {
+    color: var(--fg-2);
+    font-size: 13px;
+    line-height: 20px;
+}
+
+.offers-cell dd {
+    margin: 2px 0 0;
+}
+
+.offers-cell.is-off dd {
     color: var(--fg-2);
 }
 
-.kv-ledger dd {
+/* Every other NUT the mint names as a checklist, read down the first
+   column, then the second (--nut-rows is half the list, rounded up). */
+.offers-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(var(--nut-rows, 3), auto);
+    grid-auto-flow: column;
+    /* 32px puts the second column under "Pay out" above. */
+    gap: 6px 32px;
+    margin: 0;
+    padding: 14px 16px;
+    list-style: none;
+}
+
+/* The mark, the number in TX-02, then the spec's title, the number and the
+   title on one baseline; every number is six characters, so the titles line
+   up down each column. */
+.offers-item {
+    display: grid;
+    grid-template-columns: 16px auto minmax(0, 1fr);
+    align-items: baseline;
+    gap: 0 10px;
+}
+
+/* Centred on the first 24px line. */
+.offers-item .icon {
+    align-self: start;
+    margin-top: 4px;
+    color: var(--fg);
+}
+
+.offers-nut {
+    color: var(--fg-2);
+    font-size: 13px;
+}
+
+.offers-item.is-off {
+    color: var(--fg-2);
+}
+
+.offers-item.is-off .icon {
+    color: var(--fg-3);
+}
+
+/* Where it all comes from, at the foot of the claims it covers. */
+.offers-note {
+    padding: 8px 16px;
+    color: var(--fg-2);
+    font-size: 13px;
+    line-height: 20px;
+}
+
+/* Pairs on a card's two columns, read down the first, then the second
+   (--ledger-rows is half the list, rounded up), so the second starts under
+   "Pay out" like the checklist's; a grey label, then the value. */
+.ledger {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(var(--ledger-rows, 1), auto);
+    grid-auto-flow: column;
+    gap: 4px 32px;
+    margin: 0;
+    padding: 14px 16px;
+    font-size: 13px;
+    line-height: 20px;
+}
+
+.ledger > div {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    align-items: center;
+    gap: 0 12px;
+    min-width: 0;
+    min-height: 24px;
+}
+
+.ledger dt {
+    color: var(--fg-2);
     overflow-wrap: anywhere;
 }
 
+/* A long version string ("Nutshell 0.16.5.dev3+g1a2b3c4d…") wraps rather
+   than being clipped by the card. */
+.ledger dd {
+    min-width: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+}
 
+/* Values in ink, like Software; the copy icon stays quiet. */
+.ledger .copy-url {
+    color: var(--fg);
+}
+
+/* Ink and a darker rule, so it reads as a link; a long address is cut short
+   rather than wrapping. Positioned, so the clip also holds its screen-reader
+   text, which would otherwise widen the page. */
+.ledger .text-link {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    color: var(--fg);
+    text-decoration-color: var(--fg-3);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .ledger .text-link:hover {
+        text-decoration-color: var(--fg);
+    }
+}
+
+.offers > * + * {
+    border-top: 0.5px solid var(--border);
+}
+
+@media (max-width: 640px) {
+    .offers-lightning,
+    .offers-list,
+    .ledger {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .offers-cell + .offers-cell {
+        border-left: 0;
+        border-top: 0.5px solid var(--border);
+    }
+
+    .offers-list,
+    .ledger {
+        grid-template-rows: none;
+        grid-auto-flow: row;
+    }
+
+    .offers-cell,
+    .offers-list,
+    .ledger,
+    .offers-note {
+        padding-inline: 12px;
+    }
+}
 
 /* ---------------------------------------------------------------------------
-   Reviews: the overall rating and the audit figures on the left; the
-   write-a-review card and the reviews on the right. Monochrome stars: hue is
-   for state only.
+   Reviews, in one card like the rest of the mint page: the overall rating
+   on the left, the reviews on the right, and the write-a-review row across
+   the card's foot. Monochrome stars: hue is for state only.
 --------------------------------------------------------------------------- */
 
 .reviews {
@@ -616,6 +1405,7 @@ button.text-link {
     grid-template-columns: 280px minmax(0, 1fr);
     gap: 32px 56px;
     align-items: start;
+    padding: 24px;
 }
 
 
@@ -678,7 +1468,6 @@ button.text-link {
     left: 0;
     width: calc(var(--full) * (var(--star) + var(--star-gap)) + var(--frac) * var(--star));
     overflow: hidden;
-    color: var(--fg);
 }
 
 .stars .icon {
@@ -686,6 +1475,54 @@ button.text-link {
     width: var(--star);
     height: var(--star);
 }
+
+/* A filled star cut from the tag's metal (see .brand-tag): bands of steel,
+   the rainbow laid in, and a glint, all masked to the star. Dark steel with
+   a soft glint in light mode, so a 14px star still reads on a white card and
+   stands clear of the grey empty ones; bright chrome on black. Sized by --star; --foil-at (0 to 1) is where along a row
+   the star sits, so a row of them reads as one strip of foil, the colour
+   running across it. */
+.foil-star {
+    --foil-at: 0.4;
+    --foil-metal: linear-gradient(160deg, #5d6573 0%, #3a414e 28%, #6b7381 50%, #2f3541 72%, #535b69 100%);
+    --foil-glint: #ffffff59;
+    --foil-glint-mid: #ffffff14;
+    flex: none;
+    display: block;
+    width: var(--star, 16px);
+    height: var(--star, 16px);
+    background-image:
+        radial-gradient(circle, var(--foil-glint) 0%, var(--foil-glint-mid) 22%, #ffffff00 46%),
+        linear-gradient(118deg,
+            #7a95ff73 0%, #b48cff73 14%, #f08ad873 28%, #ffc4a873 38%,
+            #7fd8ff73 52%, #6fe0c073 66%, #8aa6ff73 80%, #c79bff73 100%),
+        var(--foil-metal);
+    background-size: 200% 200%, 300% 300%, 220% 220%;
+    background-position:
+        25% 15%,
+        calc(var(--foil-at) * 100%) 30%,
+        calc(10% + var(--foil-at) * 80%) 30%;
+    background-blend-mode: screen, color, normal;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 1.25l2.06 4.18 4.61.67-3.34 3.25.79 4.59L8 11.77l-4.12 2.17.79-4.59L1.33 6.1l4.61-.67z'/%3E%3C/svg%3E") center / contain no-repeat;
+            mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 1.25l2.06 4.18 4.61.67-3.34 3.25.79 4.59L8 11.77l-4.12 2.17.79-4.59L1.33 6.1l4.61-.67z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+:root[data-theme='dark'] .foil-star {
+    --foil-metal: linear-gradient(160deg, #e6e9ed 0%, #9aa3af 28%, #ffffff 50%, #8d96a3 72%, #d3d8df 100%);
+    --foil-glint: #ffffffd9;
+    --foil-glint-mid: #ffffff40;
+}
+
+.stars-fill .foil-star:nth-child(1),
+.star-input label:nth-of-type(1) .foil-star { --foil-at: 0; }
+.stars-fill .foil-star:nth-child(2),
+.star-input label:nth-of-type(2) .foil-star { --foil-at: 0.25; }
+.stars-fill .foil-star:nth-child(3),
+.star-input label:nth-of-type(3) .foil-star { --foil-at: 0.5; }
+.stars-fill .foil-star:nth-child(4),
+.star-input label:nth-of-type(4) .foil-star { --foil-at: 0.75; }
+.stars-fill .foil-star:nth-child(5),
+.star-input label:nth-of-type(5) .foil-star { --foil-at: 1; }
 
 .reviews-main {
     min-width: 0;
@@ -733,21 +1570,34 @@ button.text-link {
     display: none;
 }
 
-/* Under the reviews, ruled off above. */
+/* The card's foot, under a rule that runs edge to edge. */
 .review-compose {
-    margin-top: 8px;
-    padding-top: 20px;
+    padding: 14px 24px;
     border-top: 0.5px solid var(--border);
 }
 
-.reviews-more + .review-compose {
-    margin-top: 24px;
+/* White buttons and fields vanish on the white card, so here they take the
+   grey control fill instead, buttons keeping only their lips; fields keep
+   their ring and focus ring. */
+.reviews-card .btn:not(.btn-primary):not(.btn-ghost) {
+    background-color: var(--component);
+    box-shadow: var(--s-lip);
 }
 
-/* With no reviews the row is the whole section: no rule above it. */
+.reviews-card .field-input,
+.reviews-card .field-textarea {
+    background-color: var(--component);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .reviews-card .btn:not(.btn-primary):not(.btn-ghost):hover {
+        background-color: var(--component-hover);
+    }
+}
+
+/* With no reviews the row is the whole card: no rule above it. */
 .review-compose.is-empty {
-    margin-top: 0;
-    padding-top: 0;
+    padding-block: 16px;
     border-top: 0;
 }
 
@@ -763,7 +1613,7 @@ button.text-link {
 }
 
 /* Star picker: radios 1 to 5 in order, each followed by its star. Filled
-   (ink) up to the checked one; while hovering, filled up to the pointer
+   in metal up to the checked one; while a mouse hovers, up to the pointer
    instead. No gaps between stars, so the preview never flickers off. */
 .star-field {
     min-width: 0;
@@ -794,7 +1644,12 @@ button.text-link {
     border-radius: 6px;
     color: var(--border-strong);
     cursor: pointer;
-    transition: color 120ms var(--ease);
+    transition: color 120ms var(--ease), transform 120ms var(--ease-out);
+}
+
+/* A press gives a little, like a button's. */
+.star-input input + label:active {
+    transform: scale(0.94);
 }
 
 .star-input .icon {
@@ -802,31 +1657,123 @@ button.text-link {
     height: 24px;
 }
 
-.star-input input:checked + label,
-.star-input label:has(~ input:checked) {
-    color: var(--fg);
+/* The grey star with the metal one stacked over it, hidden until filled. */
+.star-pick {
+    --star: 24px;
+    display: grid;
 }
 
-.star-input:not(:has(:disabled)):hover label:not(:hover):not(:has(~ label:hover)) {
-    color: var(--border-strong);
+.star-pick > * {
+    grid-area: 1 / 1;
 }
 
-.star-input:not(:has(:disabled)):hover label:hover,
-.star-input:not(:has(:disabled)):hover label:has(~ label:hover) {
-    color: var(--fg);
+.star-input .foil-star {
+    opacity: 0;
+    transition: opacity 120ms var(--ease);
+}
+
+/* Filling is a quick fade, no sweep: arrow keys move the choice, and
+   motion on every key press is noise. */
+.star-input input:checked + label .foil-star,
+.star-input label:has(~ input:checked) .foil-star {
+    opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .star-input:hover label:not(:hover):not(:has(~ label:hover)) .foil-star {
+        opacity: 0;
+    }
+
+    .star-input:hover label:hover .foil-star,
+    .star-input:hover label:has(~ label:hover) .foil-star {
+        opacity: 1;
+    }
 }
 
 .star-input input:focus-visible + label {
     box-shadow: var(--focus-ring);
 }
 
-.star-input input:disabled + label {
-    color: var(--disabled);
-    cursor: not-allowed;
+/* The form's foot: what becomes of the review (or what went wrong) on the
+   left, Post review at the right, under Close. A long message takes the row
+   and the button keeps the right edge below it. */
+.review-submit {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+    margin-top: 16px;
 }
 
-.review-compose-body .field + .btn {
-    margin-top: 16px;
+.review-submit .field-hint {
+    flex: 1 1 16rem;
+}
+
+/* What went wrong reads as an error (review.js marks it). */
+.review-submit .field-hint[data-ok='0'] {
+    color: var(--danger-fg);
+}
+
+.review-submit .btn {
+    margin-left: auto;
+}
+
+/* Signing in or out swaps the key field for the "Signed in as" line (and
+   back); the one that arrives fades in, so the change is seen. */
+.signer,
+.signer-in {
+    transition: opacity 200ms var(--ease-arrive);
+}
+
+@starting-style {
+    .signer,
+    .signer-in {
+        opacity: 0;
+    }
+}
+
+/* Who is signed in on the left, the way out at the right, in line with
+   Close and Post review. On a phone the words wrap and Sign out keeps its
+   place beside them. */
+.signer-in {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.signer-in > span {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.signer-in .btn {
+    flex: none;
+}
+
+/* Sign-in: the extension first when there is one, then the key to paste. */
+.signer-extension {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+}
+
+.signer-or {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    align-self: stretch;
+    margin: 10px 0 12px;
+    color: var(--fg-3);
+    font-size: 12px;
+    line-height: 16px;
+}
+
+.signer-or::before,
+.signer-or::after {
+    content: '';
+    flex: 1;
+    border-top: 0.5px solid var(--border);
 }
 
 .review-list {
@@ -835,13 +1782,27 @@ button.text-link {
     list-style: none;
 }
 
+/* Each review is a line, like a row of a ledger: its stars, the author's
+   key, and the date at the right; the words, when there are any, under the
+   key. The stars' column is the width of five 14px stars, so the keys line
+   up even under a review with no rating. */
 .review {
-    padding: 20px 0;
+    display: grid;
+    grid-template-columns: calc(5 * 14px + 4 * 2px) minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 4px 16px;
+    padding: 12px 0;
 }
 
-/* The first review lines up with "Overall rating" across the gutter. */
+/* The first review lines up with the average across the gutter, and the
+   last one ends on the card's padding. */
 .reviews-main > .review-list > .review:first-child {
     padding-top: 0;
+}
+
+.reviews-main > .review-list > .review:last-child,
+.reviews-more .review:last-child {
+    padding-bottom: 0;
 }
 
 .review + .review,
@@ -850,29 +1811,15 @@ button.text-link {
 }
 
 .review-rating {
+    grid-column: 1;
     display: flex;
-    align-items: center;
-    gap: 6px;
-    font-family: var(--font-mono);
-    font-feature-settings: 'ss02';
-    font-size: 13px;
-    line-height: 20px;
-}
-
-.review-author {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-top: 12px;
-}
-
-.review-avatar {
-    width: 32px;
-    height: 32px;
 }
 
 .review-who {
-    display: block;
+    grid-column: 2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     font-family: var(--font-mono);
     font-feature-settings: 'ss02';
     font-size: 13px;
@@ -880,21 +1827,96 @@ button.text-link {
 }
 
 .review-date {
+    grid-column: 3;
+    color: var(--fg-2);
+    font-size: 13px;
+    line-height: 20px;
+    white-space: nowrap;
+}
+
+/* The words, 65 characters a line at most, with the writer's line breaks
+   kept. */
+.review-text {
+    grid-column: 2 / -1;
+    max-width: 65ch;
+    overflow-wrap: anywhere;
+    white-space: pre-line;
+}
+
+/* A long review shows its first eight lines and a "Read more" under them;
+   opened, the whole text, and the link goes. */
+.review-text.is-long {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 8;
+    line-clamp: 8;
+    overflow: hidden;
+}
+
+.review:has(> .review-read-more[open]) .review-text {
     display: block;
+    -webkit-line-clamp: none;
+    line-clamp: none;
+}
+
+.review-read-more {
+    grid-column: 2 / -1;
+    font-size: 13px;
+    line-height: 20px;
+}
+
+.review-read-more > summary {
+    display: inline;
+    list-style: none;
+    cursor: pointer;
+}
+
+.review-read-more > summary::-webkit-details-marker {
+    display: none;
+}
+
+.review-read-more[open] {
+    display: none;
+}
+
+/* Past the loaded reviews: how many there are in all. */
+.reviews-capped {
+    margin-top: 12px;
     color: var(--fg-2);
     font-size: 13px;
     line-height: 20px;
 }
 
-.review-text {
-    max-width: 75ch;
-    margin-top: 12px;
-    overflow-wrap: anywhere;
-}
-
 
 .reviews-more {
-    margin-top: 8px;
+    margin-top: 20px;
+}
+
+/* Disclosures slide open on a soft deceleration and close a little faster,
+   where the browser can animate to auto height; elsewhere they open at
+   once, as before. */
+.review-compose,
+.reviews-more,
+.feed-error {
+    interpolate-size: allow-keywords;
+}
+
+.review-compose::details-content,
+.reviews-more::details-content,
+.feed-error::details-content {
+    display: flow-root;
+    block-size: 0;
+    overflow: clip;
+    overflow-clip-margin: 4px;
+    transition: block-size 200ms var(--ease-out), content-visibility 200ms var(--ease-out) allow-discrete;
+}
+
+.review-compose[open]::details-content,
+.reviews-more[open]::details-content,
+.feed-error[open]::details-content {
+    block-size: auto;
+    transition-duration: 240ms;
+    transition-timing-function: var(--ease-arrive);
 }
 
 .reviews-more[open] > summary {
@@ -912,9 +1934,37 @@ button.text-link {
 }
 
 @media (max-width: 640px) {
+    .reviews {
+        padding: 16px 12px;
+    }
+
+    .review-compose {
+        padding-inline: 12px;
+    }
+
+    /* The line takes the row and the button drops below it at the right,
+       where Sign out and Post review sit. */
     .review-compose > summary {
         flex-direction: column;
         align-items: flex-start;
+    }
+
+    .review-compose > summary .btn {
+        align-self: flex-end;
+    }
+
+    /* The words take the card's width under the line. */
+    .review-text,
+    .review-read-more {
+        grid-column: 1 / -1;
+    }
+}
+
+/* The smallest phones: the date drops under the key, so the key keeps the
+   ends it was cut to show. */
+@media (max-width: 359px) {
+    .review-date {
+        grid-column: 2;
     }
 }
 
@@ -931,33 +1981,44 @@ button.text-link {
     padding: 0 12px;
     border: 0;
     border-radius: 8px;
-    background: var(--surface-strong);
-    box-shadow: var(--s-default);
+    background-color: var(--surface-strong);
+    background-image: var(--sheen-raised);
+    box-shadow: var(--s-raised);
     color: var(--fg);
     font-size: 13px;
     line-height: 20px;
     font-weight: 500;
     white-space: nowrap;
     user-select: none;
-    transition: color 150ms var(--ease-out), background-color 150ms var(--ease-out), transform 200ms var(--ease-out);
+    transition: color 150ms var(--ease-out), background-color 150ms var(--ease-out), transform 150ms var(--ease-out);
 }
 
-.btn:hover {
-    background: var(--surface-strong-hover);
+@media (hover: hover) and (pointer: fine) {
+    .btn:hover {
+        background-color: var(--surface-strong-hover);
+    }
+}
+
+/* A press gives a little, like a key going down, and springs back. */
+.btn:active:not(:disabled, [aria-disabled='true']) {
+    transform: scale(0.98);
 }
 
 .btn-primary {
-    background: var(--inverted);
-    box-shadow: none;
+    background-color: var(--inverted);
+    background-image: var(--sheen-inverted);
+    box-shadow: var(--s-inverted);
     color: var(--on-inverted);
 }
 
-.btn-primary:hover {
-    background: var(--inverted-hover);
+@media (hover: hover) and (pointer: fine) {
+    .btn-primary:hover {
+        background-color: var(--inverted-hover);
+    }
 }
 
 .btn-primary:active {
-    background: var(--inverted-active);
+    background-color: var(--inverted-active);
 }
 
 .btn-ghost {
@@ -966,7 +2027,15 @@ button.text-link {
     color: var(--fg-2);
 }
 
-.btn-ghost:hover {
+@media (hover: hover) and (pointer: fine) {
+    .btn-ghost:hover {
+        background: var(--component);
+        color: var(--fg);
+    }
+}
+
+/* A press shows on a ghost button too, where a tap leaves no hover. */
+.btn-ghost:active:not([aria-disabled='true']) {
     background: var(--component);
     color: var(--fg);
 }
@@ -980,6 +2049,26 @@ button.text-link {
 .btn-icon {
     width: 32px;
     padding: 0;
+}
+
+/* For a finger the small and icon buttons take a wider ring around them
+   (the button itself looks the same): 44px tall to aim at. */
+@media (pointer: coarse) {
+    .btn-small,
+    .btn-icon {
+        position: relative;
+    }
+
+    .btn-small::before,
+    .btn-icon::before {
+        content: '';
+        position: absolute;
+        inset: -6px;
+    }
+
+    .btn-small::before {
+        inset: -10px -6px;
+    }
 }
 
 .btn-block {
@@ -1053,26 +2142,39 @@ h4.field-label {
     border: 0;
     border-radius: 8px;
     background-color: var(--surface-strong);
-    box-shadow: var(--s-default);
+    box-shadow: var(--s-field);
     color: var(--fg);
     font-size: 13px;
     line-height: 20px;
     outline: none;
-    transition: background-color 150ms var(--ease), box-shadow 150ms var(--ease);
+    /* The fill eases; the focus ring is there at once, as tabbing expects. */
+    transition: background-color 150ms var(--ease);
 }
 
-.field-input:hover,
-.field-textarea:hover,
-.filter-select:hover,
-.search-field:hover {
-    background-color: var(--surface-strong-hover);
+/* iOS zooms the page into any field set under 16px, and doesn't zoom back:
+   on touch screens fields take 16px, on the same 20px line. */
+@media (pointer: coarse) {
+    .field-input,
+    .field-textarea,
+    .filter-select,
+    .search-field {
+        font-size: 16px;
+    }
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .field-input:hover,
+    .field-textarea:hover,
+    .filter-select:hover,
+    .search-field:hover {
+        background-color: var(--surface-strong-hover);
+    }
 }
 
 .field-input:focus-visible,
 .field-textarea:focus-visible,
-.filter-select:focus-visible,
 .search-field:focus-within {
-    box-shadow: var(--focus-ring), var(--s-default);
+    box-shadow: var(--focus-ring), var(--s-field);
 }
 
 .field-input {
@@ -1092,32 +2194,53 @@ h4.field-label {
 
 .has-error {
     background-color: var(--danger-subtle);
+    background-image: none;
     box-shadow: inset 0 0 0 0.5px var(--danger-border);
     color: var(--danger-fg);
 }
 
+/* A select is flat like the fields beside it, its chevron at the right; a
+   press gives a little, like a button's. */
 .filter-select {
+    --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000000' stroke-opacity='.45' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.5 6.5L8 10l3.5-3.5'/%3E%3C/svg%3E");
     height: 32px;
     padding: 0 32px 0 10px;
     appearance: none;
     cursor: pointer;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000000' stroke-opacity='.45' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.5 6.5L8 10l3.5-3.5'/%3E%3C/svg%3E");
+    background-image: var(--chevron);
     background-repeat: no-repeat;
     background-position: right 10px center;
     background-size: 16px;
 }
 
 :root[data-theme='dark'] .filter-select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23ffffff' stroke-opacity='.4' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.5 6.5L8 10l3.5-3.5'/%3E%3C/svg%3E");
+    --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23ffffff' stroke-opacity='.4' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.5 6.5L8 10l3.5-3.5'/%3E%3C/svg%3E");
+}
+
+.filter-select:focus-visible {
+    box-shadow: var(--focus-ring), var(--s-field);
+}
+
+.filter-select {
+    transition: background-color 150ms var(--ease), transform 150ms var(--ease-out);
+}
+
+.filter-select:active:not(:disabled) {
+    transform: scale(0.98);
 }
 
 .filter-select:disabled,
 .field-textarea:disabled,
 .field-input:disabled {
     background-color: var(--disabled);
+    background-image: none;
     box-shadow: none;
     color: var(--fg-disabled);
     cursor: not-allowed;
+}
+
+.filter-select:disabled {
+    background-image: var(--chevron);
 }
 
 .search-field {
@@ -1160,8 +2283,7 @@ h4.field-label {
 }
 
 .badge,
-.cat-pill,
-.tag {
+.cat-pill {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1287,8 +2409,8 @@ button.hallmark {
     max-width: 280px;
     padding: 6px 10px;
     border-radius: 8px;
-    background: #222222;
-    box-shadow: 0 0 0 0.5px #ffffff12 inset;
+    background: linear-gradient(#ffffff0d, #fff0) #222222;
+    box-shadow: inset 0 1px 0 #ffffff12, 0 0 0 0.5px #ffffff12 inset;
     color: #ffffffed;
     font-family: var(--font-sans);
     font-feature-settings: 'ss03';
@@ -1301,13 +2423,25 @@ button.hallmark {
     pointer-events: none;
     opacity: 0;
     transform: translate(-50%, 4px) scale(0.95);
-    transition: opacity 200ms var(--ease), transform 200ms var(--ease);
+    transform-origin: 50% 100%;
+    transition: opacity 120ms var(--ease-out), transform 120ms var(--ease-out);
 }
 
-.hallmark[data-tip]:hover::after,
+/* In on a soft deceleration from the stamp it points at, out faster. A
+   mouse waits a moment first, so passing over doesn't open it; focus is
+   at once. */
 .hallmark[data-tip]:focus::after {
     opacity: 1;
     transform: translate(-50%, 0) scale(1);
+    transition: opacity 150ms var(--ease-arrive), transform 180ms var(--ease-arrive);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .hallmark[data-tip]:hover::after {
+        opacity: 1;
+        transform: translate(-50%, 0) scale(1);
+        transition: opacity 150ms var(--ease-arrive) 300ms, transform 180ms var(--ease-arrive) 300ms;
+    }
 }
 
 .auditor-cell {
@@ -1334,6 +2468,14 @@ button.hallmark {
     height: 40px;
 }
 
+/* On touch screens the toolbar's controls are all 44px tall. */
+@media (pointer: coarse) {
+    .directory-tools .search-field,
+    .sort-field .filter-select {
+        height: 44px;
+    }
+}
+
 .directory-filters {
     display: flex;
     justify-content: space-between;
@@ -1346,6 +2488,47 @@ button.hallmark {
     max-width: 100%;
     overflow-x: auto;
     scrollbar-width: none;
+}
+
+/* The status pill slides to the chosen tab, so a new filter reads as one
+   choice moving along the track rather than two tabs swapping. It is drawn
+   once on the track and anchored to the current tab (after the tabs, so the
+   anchor comes first); without anchor positioning the current tab keeps its
+   own pill. The transparent outline shows in forced colours, where fills and
+   shadows drop out. */
+@supports (anchor-name: --a) {
+    .status-tabs {
+        position: relative;
+    }
+
+    .status-tabs a {
+        position: relative;
+        z-index: 1;
+    }
+
+    .status-tabs a[aria-current='true'] {
+        anchor-name: --status-current;
+        background: none;
+        box-shadow: none;
+    }
+
+    .status-tabs::after {
+        content: '';
+        position: absolute;
+        position-anchor: --status-current;
+        top: anchor(top);
+        left: anchor(left);
+        width: anchor-size(width);
+        height: anchor-size(height);
+        border-radius: 6px;
+        outline: 1px solid transparent;
+        outline-offset: -1px;
+        background-color: var(--surface-strong);
+        background-image: var(--sheen-raised);
+        box-shadow: var(--s-tab);
+        pointer-events: none;
+        transition: left 240ms var(--ease-move), width 240ms var(--ease-move);
+    }
 }
 
 .sort-field {
@@ -1374,6 +2557,23 @@ button.hallmark {
 }
 
 
+/* While a new search, filter, sort or page loads, the list on screen dims,
+   then the new one comes up to full strength in its place. Dimming is quick;
+   the answer settles more slowly. The 15s refresh doesn't dim it. The dim
+   waits 150ms, so an answer that comes at once (most, while typing) never
+   flickers the list. Previous and Next land here (#mints), a little below
+   the window's top. */
+.directory-results {
+    scroll-margin-top: 16px;
+    transition: opacity 260ms var(--ease-out);
+}
+
+.directory-results.is-updating {
+    opacity: 0.6;
+    transition-duration: 160ms;
+    transition-delay: 150ms;
+}
+
 .directory-meta {
     display: flex;
     justify-content: space-between;
@@ -1384,35 +2584,41 @@ button.hallmark {
     line-height: 20px;
 }
 
+/* The list is one card, its rows split by hairlines. */
 .mint-list {
     margin: 0;
     padding: 0;
     list-style: none;
-    border-top: 0.5px solid var(--border);
 }
 
-.mint-list > li {
-    border-bottom: 0.5px solid var(--border);
+.mint-list > li + li {
+    border-top: 0.5px solid var(--border);
 }
 
 /* A mint row: avatar, name over a copyable URL, status. The name's link is
    stretched over the row so the whole row opens the mint; the URL button sits
-   above that link. The hover tint bleeds 12px past the column so the avatar
-   stays on the shared edge. */
+   above that link. Rows run edge to edge in the card, so the hover tint does
+   too, clipped by the card's corners. */
 .mint-row {
     position: relative;
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) 88px 112px;
+    grid-template-columns: auto minmax(0, 1fr) 160px 112px;
     grid-template-areas: "avatar id rating status";
     align-items: center;
     gap: 0 12px;
-    margin-inline: -12px;
-    padding: 10px 12px;
-    border-radius: 8px;
+    padding: 12px 16px;
     transition: background-color 150ms var(--ease);
 }
 
-.mint-row:not(.is-skeleton):hover {
+@media (hover: hover) and (pointer: fine) {
+    .mint-row:not(.is-skeleton):hover {
+        background: var(--component);
+    }
+}
+
+/* A press on the row (not on its copy button) tints it, the tap's answer on
+   a phone, where there's no hover. */
+.mint-row:has(.mint-link:active) {
     background: var(--component);
 }
 
@@ -1420,20 +2626,22 @@ button.hallmark {
     content: '';
     position: absolute;
     inset: 0;
-    border-radius: 8px;
 }
 
 /* The row tint is the hover cue; no underline on the name. */
-.mint-row a.mint-link:hover {
-    text-decoration: none;
+@media (hover: hover) and (pointer: fine) {
+    .mint-row a.mint-link:hover {
+        text-decoration: none;
+    }
 }
 
 .mint-link:focus-visible {
     outline: none;
 }
 
+/* The focus ring's full width, drawn inside so the card doesn't clip it. */
 .mint-link:focus-visible::after {
-    box-shadow: var(--focus-ring);
+    box-shadow: inset 0 0 0 1.5px var(--focus);
 }
 
 .mint-id {
@@ -1465,33 +2673,27 @@ button.hallmark {
     justify-self: end;
 }
 
+/* The stars are only a picture: a tap on them opens the row like anywhere
+   else, rather than landing on them and doing nothing. */
 .mint-rating {
     grid-area: rating;
-    justify-self: end;
+    justify-self: start;
+    pointer-events: none;
 }
 
+/* Five stars, then the count in words. Left-aligned, so the stars line up
+   down the list. */
 .mint-rating-shown {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     font-size: 13px;
     line-height: 20px;
 }
 
-.mint-rating .icon {
-    width: 13px;
-    height: 13px;
-    color: var(--fg);
-}
-
-.mint-rating-value {
-    font-family: var(--font-mono);
-    font-feature-settings: 'ss02';
-    font-variant-numeric: tabular-nums;
-}
-
 .mint-rating-count {
     color: var(--fg-2);
+    white-space: nowrap;
 }
 
 /* The URL as a quiet button: mono text and a copy icon, raised above the
@@ -1515,42 +2717,101 @@ button.hallmark {
     font-size: 13px;
     line-height: 20px;
     cursor: pointer;
-    transition: color 150ms var(--ease), background-color 150ms var(--ease);
+    transform-origin: left center;
+    transition: color 150ms var(--ease), transform 150ms var(--ease-out);
 }
 
-.copy-url:hover {
-    background: var(--component-hover);
-    color: var(--fg);
+/* A press gives a little, like a button's, from the text's edge. */
+.copy-url:active {
+    transform: scale(0.98);
 }
 
+/* For a finger, a taller ring to aim at (40px), so a near miss copies
+   rather than opening the mint through the row's link. */
+@media (pointer: coarse) {
+    .copy-url::before {
+        content: '';
+        position: absolute;
+        inset: -8px -6px;
+    }
+}
+
+/* No fill or colour on hover (the owner's call): the copy icon already says
+   what a click does, and only it steps up. */
 .copy-url:focus-visible {
     outline: none;
     box-shadow: var(--focus-ring);
 }
 
+/* Cut in the middle when it doesn't fit, keeping the last six characters
+   ("legend.lnbits.c…BiQGoC"): two mints on one host differ at the end. */
 .copy-url-text {
+    display: flex;
+    min-width: 0;
+    white-space: nowrap;
+}
+
+.copy-url-head {
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
+}
+
+.copy-url-tail {
+    flex: none;
 }
 
 .copy-url .icon {
     width: 14px;
     height: 14px;
     color: var(--fg-3);
+    transition: color 150ms var(--ease);
 }
 
-.copy-url:hover .icon {
-    color: var(--fg-2);
+@media (hover: hover) and (pointer: fine) {
+    .copy-url:hover .icon {
+        color: var(--fg-2);
+    }
+}
+
+/* The browser refused the clipboard: say so on the button itself. */
+.copy-url.is-failed,
+.copy-url.is-failed .icon {
+    color: var(--danger-fg);
 }
 
 .copy-url.is-copied .icon {
     color: var(--success-fg);
 }
 
-/* Mint avatar: the mint's own icon over its initial on a grey disc. The
-   image gets an opaque ground so a transparent logo hides the letter. */
+/* Once used, the icon changes with a little motion: the check (or cross)
+   grows in from 0.9 on the arrival curve, as the theme switch's icon does,
+   and the copy icon fades back after it. */
+.copy-url.is-used .icon {
+    animation: page-in 200ms var(--ease-out) both;
+}
+
+.copy-url.is-copied .icon,
+.copy-url.is-failed .icon {
+    animation: copy-mark-in 200ms var(--ease-arrive) both;
+}
+
+@keyframes copy-mark-in {
+    from { opacity: 0; transform: scale(0.9); }
+}
+
+/* Mint avatar: the mint's own icon over its initial. With no icon the
+   initial sits on the IMF tag's metal, quieter, in the tag's engraved
+   steel: from the top, a soft glint, the colour laid in at 10%, a shade for
+   dark mode, a pale veil that calms the tag's chrome, then the chrome, all
+   in one element's backgrounds so a long list stays light, and the bevel's
+   lips inset. Each mint's metal is brushed at its own angle (--sheen, set
+   from its name), so a list doesn't repeat one stripe. The image covers all
+   of it, and gets an opaque ground so a transparent logo hides the
+   letter. */
 .mint-avatar {
+    --sheen: 158deg;
+    --avatar-shade: #0000;
     position: relative;
     flex: none;
     display: inline-flex;
@@ -1560,8 +2821,26 @@ button.hallmark {
     height: 36px;
     border-radius: 50%;
     overflow: hidden;
-    background: var(--component);
-    color: var(--fg-2);
+    background:
+        radial-gradient(circle at var(--tag-px) var(--tag-py), #ffffff80 0%, #ffffff26 14%, #ffffff00 38%),
+        linear-gradient(calc(var(--sheen) - 46deg), #ffffff00 38%, #ffffff4d 47%, #ffffff00 56%)
+            calc(100% - var(--tag-px)) 50% / 260% 260% no-repeat,
+        linear-gradient(calc(var(--sheen) - 40deg),
+            #7a95ff1a 0%, #b48cff1a 12%, #f08ad81a 23%, #ffc4a81a 31%, #7fd8ff1a 42%, #6fe0c01a 52%,
+            #8aa6ff1a 63%, #c79bff1a 74%, #ff9fcf1a 84%, #8fe6d41a 93%, #7a95ff1a 100%)
+            calc(100% - var(--tag-bx)) var(--tag-by) / 300% 300%,
+        linear-gradient(var(--avatar-shade) 0 0),
+        linear-gradient(#eef0f3a6 0 0),
+        linear-gradient(var(--sheen),
+            #fbfcfd 0%, #d3d8df 8%, #98a1ad 16%, #e6e9ed 24%, #ffffff 31%, #bcc3cc 40%,
+            #7f8896 49%, #cfd4db 57%, #f7f8fa 65%, #a6aeb9 74%, #eef0f3 82%, #8d96a3 91%, #e4e7eb 100%)
+            var(--tag-bx) var(--tag-by) / 200% 200%;
+    background-blend-mode: screen, screen, color, normal, normal, normal;
+    box-shadow:
+        inset 0 1px 0 #ffffffe6,
+        inset 0 -0.5px 0 #3a425240,
+        inset 0 -1.5px 3px #2a324314;
+    color: #3a4352eb;
     font-size: 13px;
     line-height: 1;
     font-weight: 600;
@@ -1575,6 +2854,14 @@ button.hallmark {
     height: 100%;
     object-fit: cover;
     background: var(--container);
+    transition: opacity 200ms var(--ease-out);
+}
+
+/* Until the icon has arrived the letter shows, not a blank disc, and then
+   the icon fades in over it. Only where scripts run (`.js`), since the
+   attribute that marks it loaded is a script. */
+.js .mint-avatar img:not([data-loaded]) {
+    opacity: 0;
 }
 
 .mint-avatar::after {
@@ -1584,6 +2871,16 @@ button.hallmark {
     border-radius: inherit;
     box-shadow: inset 0 0 0 0.5px var(--border-strong);
     pointer-events: none;
+}
+
+/* On black the chrome a step down, as on the tag, and a little further for
+   the veil it wears. */
+:root[data-theme='dark'] .mint-avatar {
+    --avatar-shade: #00000040;
+}
+
+.mint-avatar.skeleton {
+    box-shadow: none;
 }
 
 .mint-avatar.skeleton::after {
@@ -1606,9 +2903,22 @@ button.hallmark {
     text-align: center;
 }
 
-.directory .empty-state,
 .card-pad .empty-state {
     padding-inline: 0;
+}
+
+/* The directory's own states fill its card, centred: the title, one line,
+   and the action. No icon. */
+.directory .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px 24px;
+    text-align: center;
+}
+
+.directory .empty-state p {
+    max-width: 40ch;
 }
 
 /* ---------------------------------------------------------------------------
@@ -1631,7 +2941,9 @@ button.hallmark {
 .segmented {
     display: inline-flex;
     border-radius: 6px;
-    background: var(--component);
+    background-color: var(--component);
+    background-image: var(--sheen-well);
+    box-shadow: var(--s-track);
 }
 
 .table-wrap {
@@ -1698,9 +3010,11 @@ button.hallmark {
     overflow-wrap: anywhere;
 }
 
-a.mint-name:hover {
-    text-decoration: underline;
-    text-underline-offset: 20%;
+@media (hover: hover) and (pointer: fine) {
+    a.mint-name:hover {
+        text-decoration: underline;
+        text-underline-offset: 20%;
+    }
 }
 
 .mint-url {
@@ -1762,6 +3076,11 @@ a.mint-name:hover {
     line-height: 20px;
 }
 
+/* Read as a phrase: "Succeeded, 4m ago, 1.4 s". */
+.feed-meta > *:not(:last-child)::after {
+    content: ',';
+}
+
 .feed-meta > * {
     white-space: nowrap;
 }
@@ -1815,9 +3134,11 @@ a.mint-name:hover {
     text-overflow: ellipsis;
 }
 
-.hop:hover {
-    text-decoration: underline;
-    text-underline-offset: 20%;
+@media (hover: hover) and (pointer: fine) {
+    .hop:hover {
+        text-decoration: underline;
+        text-underline-offset: 20%;
+    }
 }
 
 .arrow {
@@ -1849,8 +3170,10 @@ a.mint-name:hover {
     display: none;
 }
 
-.feed-error summary:hover {
-    color: var(--fg);
+@media (hover: hover) and (pointer: fine) {
+    .feed-error summary:hover {
+        color: var(--fg);
+    }
 }
 
 .feed-error .chevron {
@@ -1894,8 +3217,9 @@ a.mint-name:hover {
 .step-card {
     padding: 16px;
     border-radius: 12px;
-    background: var(--surface);
-    box-shadow: var(--s-default);
+    background-color: var(--surface);
+    background-image: var(--sheen-panel);
+    box-shadow: var(--s-panel);
 }
 
 .step-num {
@@ -1923,6 +3247,7 @@ a.mint-name:hover {
     color: var(--fg-2);
 }
 
+.empty-state h2,
 .empty-state h3 {
     color: var(--fg);
     font-size: 15px;
@@ -1963,9 +3288,11 @@ a.mint-name:hover {
 --------------------------------------------------------------------------- */
 
 /* Breadcrumb: words and a slash; navigation never gets a back arrow. */
+/* One line: a long mint name is cut short (its own rule below) rather than
+   wrapping and leaving "Directory /" hanging. */
 .breadcrumb {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: baseline;
     gap: 8px;
     margin: 16px 0 4px;
@@ -1979,8 +3306,23 @@ a.mint-name:hover {
     transition: color 150ms var(--ease);
 }
 
-.breadcrumb a:hover {
-    color: var(--fg);
+@media (hover: hover) and (pointer: fine) {
+    .breadcrumb a:hover {
+        color: var(--fg);
+    }
+}
+
+/* For a finger, a 44px ring to aim at; the link looks the same. */
+@media (pointer: coarse) {
+    .breadcrumb a {
+        position: relative;
+    }
+
+    .breadcrumb a::before {
+        content: '';
+        position: absolute;
+        inset: -12px -8px;
+    }
 }
 
 .breadcrumb-sep {
@@ -1996,9 +3338,11 @@ a.mint-name:hover {
 }
 
 /* Mint head: the avatar beside the name and state over the copyable URL. */
+/* The avatar sits at the top of the name, so a name that wraps to three
+   lines on a phone doesn't leave it floating midway. */
 .detail-head {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 16px;
     margin-top: 16px;
 }
@@ -2022,6 +3366,14 @@ a.mint-name:hover {
     align-items: center;
     flex-wrap: wrap;
     gap: 8px 12px;
+    max-width: 100%;
+}
+
+/* A mint names itself, sometimes in one long unbroken word: it wraps
+   rather than pushing the page wider than a phone. */
+.detail-title .page-title {
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .detail-head .badge {
@@ -2068,14 +3420,142 @@ a.mint-name:hover {
     overflow-wrap: anywhere;
 }
 
+/* A long failure's first lines and a "Read more"; opened, the whole message
+   in its place, and the link goes. */
+.incident-more {
+    margin-top: 4px;
+    font-size: 13px;
+    line-height: 20px;
+}
+
+.incident-more > summary {
+    display: inline;
+    list-style: none;
+    cursor: pointer;
+}
+
+.incident-more > summary::-webkit-details-marker {
+    display: none;
+}
+
+.incident-more[open] > summary,
+.incident:has(> .incident-more[open]) > .incident-msg {
+    display: none;
+}
+
 
 /* The figure at the left, the current state across from it. */
 .uptime-head {
+    position: relative;
     display: flex;
     justify-content: space-between;
     align-items: baseline;
     flex-wrap: wrap;
     gap: 4px 12px;
+}
+
+.uptime-figure {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* A question mark beside a figure, and what the figure rests on in a
+   tooltip: on hover after a moment (a mouse), at once on focus (the
+   keyboard) or a tap (`.is-open`, since iOS doesn't focus a tapped
+   button). The tip opens
+   downward over the bars, since the card clips anything above its edge,
+   and is placed against the start of the row, not the mark, so it stays on
+   screen on a phone. Interfere tooltip: always dark, 12/16 medium, 8px
+   radius. */
+.help-tip-button {
+    display: inline-grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--fg-3);
+    cursor: help;
+    transition: color 150ms var(--ease), background-color 150ms var(--ease);
+}
+
+.help-tip-button:focus-visible,
+.help-tip-button:active,
+.help-tip.is-open .help-tip-button {
+    background: var(--component);
+    color: var(--fg);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .help-tip-button:hover {
+        background: var(--component);
+        color: var(--fg);
+    }
+}
+
+/* For a finger, a 36px ring to aim at; the mark looks the same. */
+@media (pointer: coarse) {
+    .help-tip-button {
+        position: relative;
+    }
+
+    .help-tip-button::before {
+        content: '';
+        position: absolute;
+        inset: -6px;
+    }
+}
+
+.help-tip-button .icon {
+    width: 16px;
+    height: 16px;
+}
+
+.help-tip-text {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: -4px;
+    z-index: 50;
+    width: max-content;
+    max-width: min(320px, calc(100% + 8px));
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: linear-gradient(#ffffff0d, #fff0) #222222;
+    box-shadow: inset 0 1px 0 #ffffff12, 0 0 0 0.5px #ffffff12 inset;
+    color: #ffffffed;
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 500;
+    text-wrap: pretty;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(-4px) scale(0.95);
+    transform-origin: top left;
+    transition: opacity 120ms var(--ease-out), transform 120ms var(--ease-out);
+}
+
+.help-tip:focus-within .help-tip-text,
+.help-tip.is-open .help-tip-text {
+    opacity: 1;
+    transform: none;
+    transition: opacity 150ms var(--ease-arrive), transform 180ms var(--ease-arrive);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .help-tip:hover .help-tip-text {
+        opacity: 1;
+        transform: none;
+        transition: opacity 150ms var(--ease-arrive) 300ms, transform 180ms var(--ease-arrive) 300ms;
+    }
+
+    /* Focused or tapped open is at once, even with the pointer over it. */
+    .help-tip:focus-within .help-tip-text,
+    .help-tip.is-open .help-tip-text {
+        transition-delay: 0ms;
+    }
 }
 
 
@@ -2110,11 +3590,17 @@ a.mint-name:hover {
     background: var(--ok-solid);
 }
 
+/* Height says it too, for anyone who can't tell the colours apart: a degraded
+   bar stands a little short and a failed one at half height. */
 .uptime-bar.warn {
+    align-self: end;
+    height: 75%;
     background: var(--warn-solid);
 }
 
 .uptime-bar.err {
+    align-self: end;
+    height: 50%;
     background: var(--err-solid);
 }
 
@@ -2143,19 +3629,6 @@ a.mint-name:hover {
     line-height: 20px;
 }
 
-.uptime-note {
-    max-width: 75ch;
-    margin-top: 12px;
-    color: var(--fg-2);
-    font-size: 13px;
-    line-height: 20px;
-}
-
-.tag-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-}
 
 .donation-list {
     display: flex;
@@ -2262,18 +3735,149 @@ a.mint-name:hover {
    Footer
 --------------------------------------------------------------------------- */
 
-/* One sentence and the donate link. */
+/* The brand's sign-off, the tag's metal used quietly: the name stamped in
+   brushed steel, centred like the legend on a coin, and quiet links to Cashu
+   itself, over the milled edge of a coin along the bottom of the page. The
+   light on the steel follows the pointer across the footer and eases back to
+   rest. */
+@property --foil-x { syntax: "<percentage>"; inherits: true; initial-value: 30%; }
+
+.site-footer {
+    --reed-glint: #ffffff99;
+    --reed-steel: linear-gradient(100deg,
+        #4f5766 0%, #6b7483 14%, #3f4756 30%, #687180 46%, #4f5766 62%, #6b7483 80%, #4f5766 100%);
+    /* Eased in, so the fade has no visible edge: the dark curve below,
+       scaled to 65%. */
+    --reed-fade: linear-gradient(180deg,
+        transparent 0%, #0000000d 30%, #0000002e 55%, #00000064 80%, #000000a6 100%);
+    transition: --foil-x 500ms var(--ease-sweep);
+}
+
+/* On black the reeding is chrome kept low, eased in, with wide bands of
+   light and shade, so it reads as brushed metal catching the light rather
+   than a bright stripe. */
+:root[data-theme='dark'] .site-footer {
+    --reed-glint: #ffffffd9;
+    --reed-steel: linear-gradient(100deg,
+        #7f8896 0%, #e6e9ed 12%, #5d6573 26%, #c9ced6 42%, #6b7483 58%, #f7f8fa 76%, #8d96a3 90%, #7f8896 100%);
+    --reed-fade: linear-gradient(180deg,
+        transparent 0%, #0000000a 30%, #00000024 55%, #0000004d 80%, #00000080 100%);
+}
+
 .site-footer-inner {
+    display: grid;
+    justify-items: center;
+    gap: 20px;
+    padding-top: 8px;
+}
+
+/* The name and the reeding are decoration; the links take the pointer. */
+.foil-mark,
+.footer-reed {
+    pointer-events: none;
+}
+
+/* The milled edge, edge to edge across the window and the last thing on the
+   page: 1px steel lines every 4px with the colour laid in at 30%, fading in
+   toward the bottom; a glint rides it with the pointer. */
+.footer-reed {
+    display: block;
+    height: 64px;
+    margin-top: 48px;
+    background-image:
+        radial-gradient(closest-side, var(--reed-glint), #ffffff00),
+        linear-gradient(100deg,
+            #7a95ff4d 0%, #b48cff4d 18%, #f08ad84d 34%, #ffc4a84d 46%, #7fd8ff4d 60%, #6fe0c04d 76%, #8aa6ff4d 100%),
+        var(--reed-steel);
+    background-repeat: no-repeat, repeat, repeat;
+    background-size: 32% 180%, 240% 100%, 260% 100%;
+    background-position: var(--foil-x) 50%, calc(100% - var(--foil-x)) 0, var(--foil-x) 0;
+    background-blend-mode: screen, color, normal;
+    -webkit-mask:
+        repeating-linear-gradient(90deg, #000 0 1px, transparent 1px 4px),
+        var(--reed-fade);
+    -webkit-mask-composite: source-in;
+            mask:
+        repeating-linear-gradient(90deg, #000 0 1px, transparent 1px 4px),
+        var(--reed-fade);
+            mask-composite: intersect;
+}
+
+/* The name in brushed steel: bands that slide with the light, the rainbow
+   laid in at 30%, and a light lip below as if pressed into the page. In
+   light mode the steel stays dark enough to read (about 4.5:1 at its
+   lightest). */
+.foil-mark {
+    margin-right: -0.3em;
+    color: transparent;
+    font-family: var(--font-mono);
+    font-feature-settings: 'ss02';
+    font-size: 12px;
+    line-height: 16px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    background-image:
+        linear-gradient(100deg,
+            #7a95ff4d 0%, #b48cff4d 20%, #f08ad84d 38%, #7fd8ff4d 58%, #6fe0c04d 76%, #8aa6ff4d 100%),
+        linear-gradient(100deg,
+            #4f5766 0%, #6b7483 14%, #3f4756 30%, #687180 46%, #4f5766 62%, #6b7483 80%, #4f5766 100%);
+    background-size: 240% 100%, 260% 100%;
+    background-position: calc(100% - var(--foil-x)) 0, var(--foil-x) 0;
+    background-blend-mode: color, normal;
+    -webkit-background-clip: text;
+    background-clip: text;
+    filter: drop-shadow(0 1px 0 #ffffffb3);
+}
+
+/* Quiet links under the name, in the page's grey; they darken and take an
+   underline on hover. */
+.foil-links {
     display: flex;
     flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 8px 32px;
-    padding-top: 24px;
-    padding-bottom: 40px;
-    color: var(--fg-2);
+    justify-content: center;
+    gap: 4px 24px;
+    margin-top: -8px;
     font-size: 13px;
     line-height: 20px;
+}
+
+.foil-links a {
+    color: var(--fg-2);
+    text-decoration: underline solid 0.1em;
+    text-decoration-color: transparent;
+    text-underline-offset: 20%;
+    transition: color 150ms var(--ease), text-decoration-color 150ms var(--ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .foil-links a:hover {
+        color: var(--fg);
+        text-decoration-color: var(--border-strong);
+    }
+}
+
+/* For a finger, a 44px ring to aim at; the links look the same. */
+@media (pointer: coarse) {
+    .foil-links a {
+        position: relative;
+    }
+
+    .foil-links a::before {
+        content: '';
+        position: absolute;
+        inset: -12px -8px;
+    }
+}
+
+/* On black the steel turns bright chrome and needs no lip. */
+:root[data-theme='dark'] .foil-mark {
+    background-image:
+        linear-gradient(100deg,
+            #7a95ff4d 0%, #b48cff4d 20%, #f08ad84d 38%, #7fd8ff4d 58%, #6fe0c04d 76%, #8aa6ff4d 100%),
+        linear-gradient(100deg,
+            #c9ced6 0%, #f7f8fa 14%, #9aa3af 30%, #e6e9ed 46%, #aeb5bf 62%, #ffffff 80%, #c9ced6 100%);
+    filter: none;
 }
 
 :root[data-theme='dark'] .when-light,
@@ -2336,25 +3940,74 @@ a.mint-name:hover {
         line-height: 32px;
     }
 
-    /* Phones: the rating sits under the status, both right-aligned. */
+    /* Phones: a smaller tag beside the title, the intro full width under
+       both. Under 100px the name along the bottom is too small to read, so
+       the tag carries IMF alone, as imf-mark does, centred and a little
+       larger. */
+    .page-head.has-tag {
+        grid-template-areas:
+            "title tag"
+            "subtitle subtitle";
+        gap: 12px 16px;
+        margin-top: 16px;
+    }
+
+    .page-head.has-tag .page-title,
+    .page-head.has-tag .brand-tag {
+        align-self: center;
+    }
+
+    .page-head.has-tag .brand-tag {
+        margin-top: 0;
+    }
+
+    .brand-tag.is-hero {
+        --tag-w: 96px;
+    }
+
+    .brand-tag.is-hero .brand-tag-arc {
+        display: none;
+    }
+
+    .brand-tag.is-hero .brand-tag-face {
+        transform: none;
+    }
+
+    .brand-tag.is-hero .brand-tag-struck {
+        font-size: calc(var(--tag-w) * 0.29);
+    }
+
+    /* Phones: the rating is a third line under the URL, on the name's edge,
+       so the stars never squeeze the URL. Unrated rows stay two lines. */
     .mint-row {
         grid-template-columns: auto minmax(0, 1fr) auto;
         grid-template-areas:
             "avatar id status"
-            "avatar id rating";
+            "avatar rating rating";
+    }
+
+    .mint-rating {
+        margin-top: 4px;
+    }
+
+    .mint-rating:empty {
+        display: none;
     }
 
     .status-tabs {
         flex: 1 1 100%;
     }
 
+    /* 8px sides, so all five tabs fit a 360px phone without scrolling. */
     .status-tabs a {
         flex: 1 0 auto;
         justify-content: center;
+        padding-inline: 8px;
     }
 
     .card-pad,
-    .feed-toolbar {
+    .feed-toolbar,
+    .mint-row {
         padding-left: 12px;
         padding-right: 12px;
     }
@@ -2414,26 +4067,91 @@ a.mint-name:hover {
     .hallmark[data-tip]:focus::after {
         transform: none;
     }
+}
 
-    .kv-ledger {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .kv-ledger dt {
-        padding-bottom: 0;
-    }
-
-    .kv-ledger dd {
-        padding-top: 2px;
-        border-top: 0;
+/* The smallest phones (320px): the tabs drop to label size so they still
+   fit. */
+@media (max-width: 359px) {
+    .status-tabs a {
+        padding-inline: 6px;
+        font-size: 12px;
     }
 }
 
+/* Reduced motion: nothing moves, slides, scales or sweeps, but fades and
+   colour changes stay, as gentler cues that something changed: the page and
+   section fades, the list's dim, the tooltips, the copy check. Not html:
+   its scroll-linked ground (see Base) changes colour, it doesn't move. */
 @media (prefers-reduced-motion: reduce) {
-    *,
+    :not(html),
     ::before,
     ::after {
         animation: none !important;
+        transition-property: opacity, color, background-color, border-color, text-decoration-color !important;
+    }
+
+    .is-navigated > * {
+        animation: page-in 180ms var(--ease-out) both !important;
+    }
+
+    .is-navigated .arrives {
+        animation: page-in 150ms var(--ease-out) backwards !important;
+    }
+
+    .copy-url.is-used .icon,
+    .copy-url.is-copied .icon,
+    .copy-url.is-failed .icon {
+        animation: page-in 150ms var(--ease-out) both !important;
+    }
+
+    /* Tooltips fade in where they stand; presses don't give. */
+    .help-tip-text {
+        transform: none !important;
+    }
+
+    .btn:active,
+    .copy-url:active,
+    .filter-select:active,
+    .star-input label:active {
+        transform: none !important;
+    }
+
+    /* The light on the steel stays at rest: the pointer no longer moves it. */
+    .site-footer {
+        --foil-x: 30% !important;
+    }
+
+    .brand-tag.is-hero {
+        --tag-px: 28% !important;
+        --tag-py: 18% !important;
+        --tag-bx: 22% !important;
+        --tag-by: 30% !important;
+        --tag-lx: -0.57 !important;
+        --tag-ly: -0.82 !important;
+    }
+}
+
+/* A stamp's tip stays centred over it (on phones it is a bar along the
+   bottom, with no transform to keep). */
+@media (prefers-reduced-motion: reduce) and (min-width: 761px) {
+    .hallmark[data-tip]::after {
+        transform: translate(-50%, 0) !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) and (max-width: 760px) {
+    .hallmark[data-tip]::after {
+        transform: none !important;
+    }
+}
+
+/* Disclosures open at once. A rule of its own: the one above can't reach
+   ::details-content, and a browser that doesn't know it would drop the
+   whole rule if it were listed there. */
+@media (prefers-reduced-motion: reduce) {
+    .review-compose::details-content,
+    .reviews-more::details-content,
+    .feed-error::details-content {
         transition: none !important;
     }
 }

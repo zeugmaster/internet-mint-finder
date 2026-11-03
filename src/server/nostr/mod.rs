@@ -3,8 +3,8 @@
 //! This instance signs its own observations with `IMF_NOSTR_NSEC` and
 //! publishes them to `IMF_RELAYS` ([`publish`]). Observations of the auditors
 //! listed in `IMF_AUDITORS` are ingested from the same relays so every
-//! instance shows the union. Without a key the server runs exactly as before:
-//! nothing is published and nothing is ingested.
+//! instance shows the union. NIP-87 mint announcements and reviews are always
+//! ingested, since they fill the directory; without a key nothing is published.
 
 pub mod events;
 pub mod ingest;
@@ -124,8 +124,8 @@ impl NostrHandle {
     }
 }
 
-/// Connect to the relays, publish if a key is configured, ingest if peers are
-/// listed. With neither, nothing runs.
+/// Connect to the relays, ingest NIP-87 mints and reviews (and listed peers'
+/// observations), and publish if a key is configured.
 pub async fn start(state: &AppState) -> NostrHandle {
     let (shutdown, shutdown_rx) = watch::channel(false);
     let keys = state.nostr.keys.clone();
@@ -137,13 +137,6 @@ pub async fn start(state: &AppState) -> NostrHandle {
         .copied()
         .filter(|p| Some(*p) != self_pubkey)
         .collect();
-    if keys.is_none() && peers.is_empty() {
-        info!("Neither IMF_NOSTR_NSEC nor IMF_AUDITORS set: Nostr disabled");
-        return NostrHandle {
-            shutdown,
-            client: None,
-        };
-    }
 
     let client = match &keys {
         Some(keys) => Client::new(keys.clone()),
@@ -157,15 +150,16 @@ pub async fn start(state: &AppState) -> NostrHandle {
     client.connect().await;
     let client = Arc::new(client);
 
-    if !peers.is_empty() {
-        info!("Ingesting observations of {} peer auditor(s)", peers.len());
-        tokio::spawn(ingest::run(
-            state.auditor_db.clone(),
-            client.clone(),
-            peers,
-            shutdown_rx.clone(),
-        ));
-    }
+    info!(
+        "Ingesting NIP-87 mints and reviews, and observations of {} peer auditor(s)",
+        peers.len()
+    );
+    tokio::spawn(ingest::run(
+        state.auditor_db.clone(),
+        client.clone(),
+        peers,
+        shutdown_rx.clone(),
+    ));
 
     let Some(keys) = keys else {
         return NostrHandle {
@@ -178,8 +172,10 @@ pub async fn start(state: &AppState) -> NostrHandle {
     let announcement = events::Announcement {
         name: state.app_name.clone(),
         urls: state.nostr.public_urls.clone(),
-        donate: service::build_payment_request(state, None)
-            .ok()
+        donate: cfg
+            .paid_swaps
+            .then(|| service::build_payment_request(state, None).ok())
+            .flatten()
             .map(|pr| pr.to_string()),
         software: format!("imf {}", env!("CARGO_PKG_VERSION")),
         frequency_secs: (cfg.min_swap_delay_secs + cfg.max_swap_delay_secs) / 2,
