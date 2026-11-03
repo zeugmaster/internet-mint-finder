@@ -173,6 +173,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         db.insert_swap(&swap).await?;
     }
     let state = AppState {
+        workers: Default::default(),
+        wallet_guards: Default::default(),
         leptos_options: get_configuration(Some("Cargo.toml"))?.leptos_options,
         wallet_repository: wallets,
         app_name: "Internet Mint Finder".into(),

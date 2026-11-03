@@ -3,8 +3,8 @@
 //! This instance signs its own observations with `IMF_NOSTR_NSEC` and
 //! publishes them to `IMF_RELAYS` ([`publish`]). Observations of the auditors
 //! listed in `IMF_AUDITORS` are ingested from the same relays so every
-//! instance shows the union. Without a key the server runs exactly as before:
-//! nothing is published and nothing is ingested.
+//! instance shows the union. Public directory ingestion also runs without
+//! peer keys or a signing key; only publishing requires a key.
 
 pub mod events;
 pub mod ingest;
@@ -109,25 +109,13 @@ impl NostrConfig {
     }
 }
 
-/// Running Nostr tasks; `stop` ends them and closes the relay connections.
-pub struct NostrHandle {
-    shutdown: watch::Sender<bool>,
-    pub client: Option<Arc<Client>>,
-}
-
-impl NostrHandle {
-    pub async fn stop(&self) {
-        let _ = self.shutdown.send(true);
-        if let Some(client) = &self.client {
-            client.disconnect().await;
-        }
-    }
-}
-
-/// Connect to the relays, publish if a key is configured, ingest if peers are
-/// listed. With neither, nothing runs.
-pub async fn start(state: &AppState) -> NostrHandle {
-    let (shutdown, shutdown_rx) = watch::channel(false);
+/// Register relay workers with the application's lifecycle and return the
+/// client so the application can disconnect after those workers finish.
+pub async fn start(
+    state: &AppState,
+    workers: &mut tokio::task::JoinSet<&'static str>,
+    shutdown: watch::Receiver<bool>,
+) -> Option<Arc<Client>> {
     let keys = state.nostr.keys.clone();
     let self_pubkey = keys.as_ref().map(|k| k.public_key());
     let peers: Vec<PublicKey> = state
@@ -137,12 +125,9 @@ pub async fn start(state: &AppState) -> NostrHandle {
         .copied()
         .filter(|p| Some(*p) != self_pubkey)
         .collect();
-    if keys.is_none() && peers.is_empty() {
-        info!("Neither IMF_NOSTR_NSEC nor IMF_AUDITORS set: Nostr disabled");
-        return NostrHandle {
-            shutdown,
-            client: None,
-        };
+    if state.nostr.relays.is_empty() {
+        info!("No relays configured: Nostr disabled");
+        return None;
     }
 
     let client = match &keys {
@@ -157,21 +142,28 @@ pub async fn start(state: &AppState) -> NostrHandle {
     client.connect().await;
     let client = Arc::new(client);
 
-    if !peers.is_empty() {
-        info!("Ingesting observations of {} peer auditor(s)", peers.len());
-        tokio::spawn(ingest::run(
-            state.auditor_db.clone(),
-            client.clone(),
-            peers,
-            shutdown_rx.clone(),
-        ));
+    state.workers.register(
+        "relay ingestion",
+        std::time::Duration::from_secs(180),
+        false,
+    );
+    {
+        info!(
+            "Ingesting the public directory and {} peer auditor(s)",
+            peers.len()
+        );
+        let db = state.auditor_db.clone();
+        let client = client.clone();
+        let shutdown = shutdown.clone();
+        let progress = state.workers.clone();
+        workers.spawn(async move {
+            ingest::run(db, client, peers, shutdown, progress).await;
+            "relay ingestion"
+        });
     }
 
     let Some(keys) = keys else {
-        return NostrHandle {
-            shutdown,
-            client: Some(client),
-        };
+        return Some(client);
     };
 
     let cfg = &state.auditor_config;
@@ -191,18 +183,30 @@ pub async fn start(state: &AppState) -> NostrHandle {
         keys.public_key().to_bech32().unwrap_or_default(),
         state.nostr.relays.len()
     );
-    tokio::spawn(publish::run(
-        state.auditor_db.clone(),
-        client.clone(),
-        keys,
-        announcement,
-        shutdown_rx,
-    ));
+    let db = state.auditor_db.clone();
+    let publisher_client = client.clone();
+    let archive = state.nostr.relays[0].clone();
+    let progress = state.workers.clone();
+    progress.register(
+        "relay publishing",
+        std::time::Duration::from_secs(600),
+        true,
+    );
+    workers.spawn(async move {
+        publish::run(
+            db,
+            publisher_client,
+            keys,
+            announcement,
+            archive,
+            progress,
+            shutdown,
+        )
+        .await;
+        "relay publishing"
+    });
 
-    NostrHandle {
-        shutdown,
-        client: Some(client),
-    }
+    Some(client)
 }
 
 #[cfg(test)]
@@ -218,7 +222,10 @@ mod tests {
     /// same per-mint questions about A's observations.
     #[tokio::test]
     async fn one_instance_publishes_and_another_ingests_through_a_relay() {
-        let relay = MockRelay::run().await.unwrap();
+        let relay = tokio::time::timeout(Duration::from_secs(5), MockRelay::run())
+            .await
+            .expect("mock relay requires loopback socket permission")
+            .unwrap();
         let url = relay.url().await;
 
         let keys_a = Keys::generate();
@@ -258,7 +265,21 @@ mod tests {
         client_a.add_relay(url.clone()).await.unwrap();
         client_a.connect().await;
         client_a.wait_for_connection(Duration::from_secs(5)).await;
-        publish::flush_outbox(&db_a, &client_a, &keys_a).await;
+        let unavailable_archive = RelayUrl::parse("ws://unavailable.example:7777").unwrap();
+        publish::flush_outbox(
+            &db_a,
+            &client_a,
+            &keys_a,
+            &unavailable_archive,
+            &Default::default(),
+        )
+        .await;
+        assert_eq!(
+            db_a.unpublished_swaps(10).await.unwrap().len(),
+            1,
+            "a different relay's ACK must retain the archive outbox"
+        );
+        publish::flush_outbox(&db_a, &client_a, &keys_a, &url, &Default::default()).await;
         assert!(db_a.unpublished_swaps(10).await.unwrap().is_empty());
         assert!(db_a.unpublished_checks(10).await.unwrap().is_empty());
 

@@ -25,8 +25,8 @@ pub struct AuditorConfig {
     /// `AUDITOR_FEE_TOLERANCE_SATS`
     pub fee_tolerance_sats: u64,
     /// How long a mint is benched (in the main swap loop) after it fails all
-    /// in-round retries, before that loop retries it (seconds). The dedicated
-    /// error-retry loop ignores this and re-audits Error mints far sooner; see
+    /// in-round retries, before that loop retries it (seconds). Optional
+    /// error-retry rounds ignore this and re-audit Error mints sooner; see
     /// `error_retry_interval_secs`. `AUDITOR_ERROR_COOLDOWN_SECS`
     pub error_cooldown_secs: u64,
     /// How many times a swap is attempted with the same receiver invoice before
@@ -34,17 +34,13 @@ pub struct AuditorConfig {
     /// re-prepares; they all settle the same invoice, and an "already paid"
     /// guard makes the retry safe against double payment. `AUDITOR_MAX_SWAP_ATTEMPTS`
     pub max_swap_attempts: u64,
-    /// Maximum number of paid swaps run concurrently within a single round (and
-    /// within an error-retry round). A round of `n` mints then finishes in
-    /// roughly `n / this` network round-trips instead of strictly
-    /// sequentially, so one dead mint's timeouts no longer stall the audit of
-    /// every other pair. Per-mint locks keep overlapping pairs safe.
+    /// Maximum concurrent swaps within an optional error-retry batch. Normal
+    /// rounds select one pair. Per-mint locks keep overlapping pairs safe.
     /// `AUDITOR_MAX_CONCURRENT_SWAPS`
     pub max_concurrent_swaps: u64,
-    /// How often the dedicated error-retry loop re-audits mints currently in the
-    /// Error state (seconds). Much shorter than the main swap cadence so a
-    /// recovered mint returns to OK quickly without raising the load of the
-    /// full audit loop. `AUDITOR_ERROR_RETRY_INTERVAL_SECS`
+    /// Delay between optional error-retry rounds (seconds); 0 disables them.
+    /// The paid worker runs whichever round is due first, without overlapping
+    /// normal and retry rounds. `AUDITOR_ERROR_RETRY_INTERVAL_SECS`
     pub error_retry_interval_secs: u64,
     /// Interval between no-fee NUT-06 availability checks (seconds).
     /// Values below one hour are clamped to one hour to protect rate-limited
@@ -82,7 +78,7 @@ impl Default for AuditorConfig {
             error_cooldown_secs: 30 * 60,
             max_swap_attempts: 3,
             max_concurrent_swaps: 8,
-            // 0 disables the error-retry loop: Python has no second audit path,
+            // 0 disables error-retry rounds: Python has no second audit path,
             // a failed mint is simply re-eligible for the next random swap round.
             error_retry_interval_secs: 0,
             health_check_interval_secs: 60 * 60,
@@ -199,7 +195,7 @@ mod tests {
     fn retry_and_error_loop_defaults_are_sane() {
         let config = AuditorConfig::default();
         assert!(config.max_swap_attempts >= 1);
-        // Python parity: the dedicated error-retry loop is disabled by default
+        // Python parity: optional error-retry rounds are disabled by default
         // (0). A failed mint becomes eligible again on the next random swap round.
         assert_eq!(config.error_retry_interval_secs, 0);
         assert_eq!(config.health_check_interval_secs, 60 * 60);

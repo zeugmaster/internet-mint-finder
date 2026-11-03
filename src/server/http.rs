@@ -83,6 +83,7 @@ pub fn api_router() -> Router<AppState> {
 
 #[derive(Serialize)]
 struct Health {
+    workers: Vec<crate::server::workers::WorkerStatus>,
     status: &'static str,
     mints: u64,
     swaps: u64,
@@ -92,9 +93,7 @@ struct Health {
     last_ingest_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
-/// Liveness for the DNS health check. 503 when the hourly probe loop has
-/// stalled (no local probe within two intervals although mints exist), so a
-/// hung process is dropped from the apex record, not just a dead one.
+/// Readiness for DNS failover: probes, worker progress and completed relay replay.
 async fn health(State(state): State<AppState>) -> Result<(StatusCode, Json<Health>), AuditorError> {
     let mints = state.auditor_db.get_all_mints().await?.len() as u64;
     let swaps = state.auditor_db.get_total_swaps().await?;
@@ -107,7 +106,9 @@ async fn health(State(state): State<AppState>) -> Result<(StatusCode, Json<Healt
     let stalled = mints > 0
         && last_probe_at.is_none_or(|at| chrono::Utc::now() - at > max_age)
         && state.started_at.elapsed() > max_age.to_std().unwrap_or_default();
-    let (code, status) = if stalled {
+    let workers = state.workers.status();
+    let unhealthy = workers.iter().any(|worker| worker.stalled || !worker.ready);
+    let (code, status) = if stalled || unhealthy {
         (StatusCode::SERVICE_UNAVAILABLE, "stalled")
     } else {
         (StatusCode::OK, "ok")
@@ -115,6 +116,7 @@ async fn health(State(state): State<AppState>) -> Result<(StatusCode, Json<Healt
     Ok((
         code,
         Json(Health {
+            workers,
             status,
             mints,
             swaps,
@@ -140,11 +142,23 @@ pub async fn https_redirect(
         .is_some_and(|v| v.eq_ignore_ascii_case("http"));
     if forwarded_http && request.uri().path() != "/api/health" {
         if let Some(host) = request.headers().get("host").and_then(|v| v.to_str().ok()) {
-            let target = format!("https://{host}{}", request.uri());
-            return Redirect::permanent(&target).into_response();
+            if !is_onion_host(host, std::env::var("ONION_HOSTNAME").ok().as_deref()) {
+                let target = format!("https://{host}{}", request.uri());
+                return Redirect::permanent(&target).into_response();
+            }
         }
     }
     next.run(request).await
+}
+
+fn is_onion_host(host: &str, configured: Option<&str>) -> bool {
+    configured
+        .filter(|s| s.ends_with(".onion"))
+        .is_some_and(|onion| {
+            host.split(':')
+                .next()
+                .is_some_and(|host| host.eq_ignore_ascii_case(onion))
+        })
 }
 
 // ---------------------------------------------------------------------------
@@ -161,9 +175,10 @@ async fn get_mints(
 }
 
 async fn get_mint_by_id(
-    Path(id): Path<u64>,
+    Path(id): Path<String>,
     State(state): State<AppState>,
 ) -> Result<Json<MintRead>, AuditorError> {
+    let id = service::mint_local_id(&state, &id).await?;
     service::mint_with_balance(&state, id)
         .await?
         .map(Json)
@@ -182,10 +197,11 @@ async fn get_swaps(
 }
 
 async fn get_swaps_by_mint(
-    Path(mint_id): Path<u64>,
+    Path(mint_id): Path<String>,
     Query(params): Query<PaginationParams>,
     State(state): State<AppState>,
 ) -> Result<Json<Vec<SwapEventRead>>, AuditorError> {
+    let mint_id = service::mint_local_id(&state, &mint_id).await?;
     let swaps = state
         .auditor_db
         .get_swaps_by_mint(mint_id, None, params.skip, params.limit)
@@ -194,30 +210,34 @@ async fn get_swaps_by_mint(
 }
 
 async fn get_mint_metrics(
-    Path(id): Path<u64>,
+    Path(id): Path<String>,
     State(state): State<AppState>,
 ) -> Result<Json<MintMetrics>, AuditorError> {
+    let id = service::mint_local_id(&state, &id).await?;
     Ok(Json(state.auditor_db.get_mint_metrics(id, None).await?))
 }
 
 async fn get_mint_auditors(
-    Path(id): Path<u64>,
+    Path(id): Path<String>,
     State(state): State<AppState>,
 ) -> Result<Json<Vec<AuditorMintView>>, AuditorError> {
+    let id = service::mint_local_id(&state, &id).await?;
     Ok(Json(service::mint_auditor_views(&state, id).await?))
 }
 
 async fn get_mint_announcement(
-    Path(id): Path<u64>,
+    Path(id): Path<String>,
     State(state): State<AppState>,
 ) -> Result<Json<Option<AnnouncementRead>>, AuditorError> {
+    let id = service::mint_local_id(&state, &id).await?;
     Ok(Json(service::mint_announcement(&state, id).await?))
 }
 
 async fn get_mint_reviews(
-    Path(id): Path<u64>,
+    Path(id): Path<String>,
     State(state): State<AppState>,
 ) -> Result<Json<MintReviews>, AuditorError> {
+    let id = service::mint_local_id(&state, &id).await?;
     Ok(Json(service::mint_reviews(&state, id).await?))
 }
 
@@ -228,17 +248,19 @@ async fn get_auditors(
 }
 
 async fn get_mint_uptime(
-    Path(id): Path<u64>,
+    Path(id): Path<String>,
     State(state): State<AppState>,
 ) -> Result<Json<MintUptime>, AuditorError> {
+    let id = service::mint_local_id(&state, &id).await?;
     Ok(Json(state.auditor_db.get_mint_uptime(id).await?))
 }
 
 async fn get_mint_donations(
-    Path(id): Path<u64>,
+    Path(id): Path<String>,
     Query(params): Query<PaginationParams>,
     State(state): State<AppState>,
 ) -> Result<Json<Vec<DonationRead>>, AuditorError> {
+    let id = service::mint_local_id(&state, &id).await?;
     let donations = state
         .auditor_db
         .get_donations_by_mint(id, params.limit)
@@ -359,8 +381,10 @@ fn default_bins() -> usize {
     30
 }
 
-fn filters_from_uri(uri: &Uri) -> Filters {
-    Filters::from_query(uri.query().unwrap_or(""))
+fn filters_from_uri(uri: &Uri) -> Result<Filters, AuditorError> {
+    let filters = Filters::from_query(uri.query().unwrap_or(""));
+    filters.validate()?;
+    Ok(filters)
 }
 
 fn query_value(uri: &Uri, name: &str) -> Option<String> {
@@ -384,7 +408,7 @@ async fn api_kpis(
     State(state): State<AppState>,
     uri: Uri,
 ) -> Result<Json<analytics::Kpis>, AuditorError> {
-    let filters = filters_from_uri(&uri);
+    let filters = filters_from_uri(&uri)?;
     let key = ResponseCache::key(uri.path(), uri.query().unwrap_or(""));
     cached_query(&state, &key, move |c| analytics::kpis(c, &filters)).await
 }
@@ -393,7 +417,7 @@ async fn api_scatter(
     State(state): State<AppState>,
     uri: Uri,
 ) -> Result<Json<Vec<analytics::ScatterPoint>>, AuditorError> {
-    let filters = filters_from_uri(&uri);
+    let filters = filters_from_uri(&uri)?;
     let group_by = query_value(&uri, "group_by").unwrap_or_else(default_group_by);
     let key = ResponseCache::key(uri.path(), uri.query().unwrap_or(""));
     cached_query(&state, &key, move |c| {
@@ -406,7 +430,7 @@ async fn api_top_quality(
     State(state): State<AppState>,
     uri: Uri,
 ) -> Result<Json<Vec<analytics::QualityMint>>, AuditorError> {
-    let filters = filters_from_uri(&uri);
+    let filters = filters_from_uri(&uri)?;
     let group_by = query_value(&uri, "group_by").unwrap_or_else(default_group_by);
     let limit = query_usize(&uri, "limit", default_limit());
     let key = ResponseCache::key(uri.path(), uri.query().unwrap_or(""));
@@ -420,7 +444,7 @@ async fn api_ts_swaps(
     State(state): State<AppState>,
     uri: Uri,
 ) -> Result<Json<Vec<analytics::TimeseriesPoint>>, AuditorError> {
-    let filters = filters_from_uri(&uri);
+    let filters = filters_from_uri(&uri)?;
     let key = ResponseCache::key(uri.path(), uri.query().unwrap_or(""));
     cached_query(&state, &key, move |c| {
         analytics::swaps_errors_timeseries(c, &filters)
@@ -432,7 +456,7 @@ async fn api_ts_latency(
     State(state): State<AppState>,
     uri: Uri,
 ) -> Result<Json<Vec<analytics::LatencyPoint>>, AuditorError> {
-    let filters = filters_from_uri(&uri);
+    let filters = filters_from_uri(&uri)?;
     let key = ResponseCache::key(uri.path(), uri.query().unwrap_or(""));
     cached_query(&state, &key, move |c| {
         analytics::latency_timeseries(c, &filters)
@@ -444,7 +468,7 @@ async fn api_hist_latency(
     State(state): State<AppState>,
     uri: Uri,
 ) -> Result<Json<analytics::Histogram>, AuditorError> {
-    let filters = filters_from_uri(&uri);
+    let filters = filters_from_uri(&uri)?;
     let bins = query_usize(&uri, "bins", default_bins());
     let key = ResponseCache::key(uri.path(), uri.query().unwrap_or(""));
     cached_query(&state, &key, move |c| {
@@ -457,7 +481,7 @@ async fn api_errors(
     State(state): State<AppState>,
     uri: Uri,
 ) -> Result<Json<Vec<analytics::ErrorCount>>, AuditorError> {
-    let filters = filters_from_uri(&uri);
+    let filters = filters_from_uri(&uri)?;
     let limit = query_usize(&uri, "limit", default_limit());
     let key = ResponseCache::key(uri.path(), uri.query().unwrap_or(""));
     cached_query(&state, &key, move |c| {
@@ -480,7 +504,7 @@ async fn api_uptime_grid(
     State(state): State<AppState>,
     uri: Uri,
 ) -> Result<Json<analytics::UptimeGrid>, AuditorError> {
-    let filters = filters_from_uri(&uri);
+    let filters = filters_from_uri(&uri)?;
     let key = ResponseCache::key(uri.path(), uri.query().unwrap_or(""));
     cached_query(&state, &key, move |c| analytics::uptime_grid(c, &filters)).await
 }
@@ -489,7 +513,7 @@ async fn api_failure_stages(
     State(state): State<AppState>,
     uri: Uri,
 ) -> Result<Json<Vec<analytics::FailureStage>>, AuditorError> {
-    let filters = filters_from_uri(&uri);
+    let filters = filters_from_uri(&uri)?;
     let key = ResponseCache::key(uri.path(), uri.query().unwrap_or(""));
     cached_query(&state, &key, move |c| {
         analytics::failure_stages(c, &filters)
@@ -501,7 +525,7 @@ async fn api_blame(
     State(state): State<AppState>,
     uri: Uri,
 ) -> Result<Json<Vec<analytics::BlameMint>>, AuditorError> {
-    let filters = filters_from_uri(&uri);
+    let filters = filters_from_uri(&uri)?;
     let limit = query_usize(&uri, "limit", default_limit());
     let key = ResponseCache::key(uri.path(), uri.query().unwrap_or(""));
     cached_query(&state, &key, move |c| {
@@ -514,7 +538,7 @@ async fn api_errors_category(
     State(state): State<AppState>,
     uri: Uri,
 ) -> Result<Json<Vec<analytics::CategoryCount>>, AuditorError> {
-    let filters = filters_from_uri(&uri);
+    let filters = filters_from_uri(&uri)?;
     let key = ResponseCache::key(uri.path(), uri.query().unwrap_or(""));
     cached_query(&state, &key, move |c| {
         analytics::errors_by_category(c, &filters)
@@ -530,7 +554,7 @@ async fn api_tvl(
     State(state): State<AppState>,
     uri: Uri,
 ) -> Result<Json<analytics::TvlSeries>, AuditorError> {
-    let filters = filters_from_uri(&uri);
+    let filters = filters_from_uri(&uri)?;
     let key = ResponseCache::key(uri.path(), uri.query().unwrap_or(""));
     cached_query(&state, &key, move |c| analytics::tvl_series(c, &filters)).await
 }
@@ -539,7 +563,7 @@ async fn api_flow(
     State(state): State<AppState>,
     uri: Uri,
 ) -> Result<Json<analytics::FlowData>, AuditorError> {
-    let filters = filters_from_uri(&uri);
+    let filters = filters_from_uri(&uri)?;
     let key = ResponseCache::key(uri.path(), uri.query().unwrap_or(""));
     cached_query(&state, &key, move |c| analytics::flow_data(c, &filters)).await
 }
@@ -548,7 +572,7 @@ async fn api_fees(
     State(state): State<AppState>,
     uri: Uri,
 ) -> Result<Json<Vec<analytics::FeeRoute>>, AuditorError> {
-    let filters = filters_from_uri(&uri);
+    let filters = filters_from_uri(&uri)?;
     let limit = query_usize(&uri, "limit", default_limit());
     let key = ResponseCache::key(uri.path(), uri.query().unwrap_or(""));
     cached_query(&state, &key, move |c| {
@@ -561,7 +585,7 @@ async fn api_donations_ts(
     State(state): State<AppState>,
     uri: Uri,
 ) -> Result<Json<Vec<analytics::DonationPoint>>, AuditorError> {
-    let filters = filters_from_uri(&uri);
+    let filters = filters_from_uri(&uri)?;
     let key = ResponseCache::key(uri.path(), uri.query().unwrap_or(""));
     cached_query(&state, &key, move |c| {
         analytics::donations_timeseries(c, &filters)
@@ -638,5 +662,98 @@ mod dashboard_tests {
         assert!(html.contains("<span>Mint &lt;Finder&gt; &amp; Co</span>"));
         assert!(html.contains("<title>Analytics — Mint &lt;Finder&gt; &amp; Co</title>"));
         assert!(!html.contains("{{APP_NAME}}"));
+    }
+}
+
+#[cfg(test)]
+mod robustness_tests {
+    use super::*;
+    use crate::server::state::test_state;
+
+    #[tokio::test]
+    async fn malformed_public_queries_do_not_poison_the_database() {
+        let state = test_state().await;
+        for query in ["start=123456789%E2%98%83", "end=not-a-date"] {
+            let uri = format!("/api/timeseries/swaps?{query}").parse().unwrap();
+            assert!(matches!(
+                api_ts_swaps(State(state.clone()), uri).await,
+                Err(AuditorError::InvalidInput(_))
+            ));
+        }
+        for bins in [0, 201, usize::MAX] {
+            let uri = format!("/api/histogram/latency?bins={bins}")
+                .parse()
+                .unwrap();
+            assert!(matches!(
+                api_hist_latency(State(state.clone()), uri).await,
+                Err(AuditorError::InvalidInput(_))
+            ));
+        }
+        assert_eq!(
+            api_kpis(State(state), "/api/kpis".parse().unwrap())
+                .await
+                .unwrap()
+                .0
+                .total_swaps,
+            0
+        );
+    }
+
+    #[test]
+    fn only_the_configured_onion_host_bypasses_https_redirect() {
+        assert!(is_onion_host("test.onion:80", Some("test.onion")));
+        assert!(!is_onion_host("other.onion", Some("test.onion")));
+        assert!(!is_onion_host(
+            "test.onion.evil.example",
+            Some("test.onion")
+        ));
+        assert!(!is_onion_host("test.onion", None));
+    }
+
+    #[tokio::test]
+    async fn health_tracks_worker_readiness_without_requiring_paid_swaps() {
+        let state = test_state().await;
+        state
+            .workers
+            .register("paid auditing", std::time::Duration::from_secs(60), true);
+        assert_eq!(
+            health(State(state.clone())).await.unwrap().0,
+            StatusCode::OK
+        );
+        state
+            .workers
+            .register("relay ingestion", std::time::Duration::from_secs(60), false);
+        assert_eq!(
+            health(State(state.clone())).await.unwrap().0,
+            StatusCode::SERVICE_UNAVAILABLE
+        );
+        state.workers.ready("relay ingestion", true);
+        assert_eq!(health(State(state)).await.unwrap().0, StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn mint_links_survive_different_replica_insertion_orders() {
+        let a = test_state().await;
+        let b = test_state().await;
+        let url = "https://same.example";
+        let first = a.auditor_db.ensure_mint_for_url(url).await.unwrap();
+        b.auditor_db
+            .ensure_mint_for_url("https://different.example")
+            .await
+            .unwrap();
+        let second = b.auditor_db.ensure_mint_for_url(url).await.unwrap();
+        assert_ne!(first.id, second.id);
+        let key = crate::types::mint_key(url);
+        for state in [a, b] {
+            let result = get_mint_by_id(Path(key.clone()), State(state.clone()))
+                .await
+                .unwrap()
+                .0;
+            assert_eq!(result.url, url);
+            assert_eq!(result.id, key);
+            assert!(get_mint_by_id(Path("1".into()), State(state))
+                .await
+                .is_err());
+        }
     }
 }

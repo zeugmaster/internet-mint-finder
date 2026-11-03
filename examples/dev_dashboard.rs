@@ -24,6 +24,8 @@ async fn main() {
     let wallet_repository = open_wallet_repository().await.unwrap();
 
     let state = AppState {
+        workers: Default::default(),
+        wallet_guards: Default::default(),
         leptos_options,
         wallet_repository,
         app_name: "Cashu Mint Auditor".to_string(),

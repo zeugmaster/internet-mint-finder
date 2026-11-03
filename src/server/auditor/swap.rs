@@ -9,10 +9,11 @@
 
 use super::config::AuditorConfig;
 use super::guard::MintGuards;
-use super::{balance_for, swap_support_for_round, SwapSupport, SwapSupportCache};
+use super::{swap_support_for_round, SwapSupport, SwapSupportCache};
 use crate::server::classify;
 use crate::server::error::{AuditorError, WalletStateKind};
 use crate::server::net::{self, NetConfig};
+use crate::server::state::local_balance;
 use crate::server::storage::{AuditorDatabase, Mint, SwapEvent};
 use crate::types::MintState;
 use cdk::nuts::nut00::ProofsMethods;
@@ -44,7 +45,6 @@ pub(super) enum SwapStage {
     FeeCheck,
     PreparePayment,
     PayInvoice,
-    RedeemEcash,
 }
 
 impl SwapStage {
@@ -57,7 +57,6 @@ impl SwapStage {
             SwapStage::FeeCheck => "checking the fee",
             SwapStage::PreparePayment => "preparing the payment",
             SwapStage::PayInvoice => "paying the invoice",
-            SwapStage::RedeemEcash => "redeeming ecash",
         }
     }
 }
@@ -80,12 +79,7 @@ pub(super) struct SwapSelection {
 // Swap round
 // ---------------------------------------------------------------------------
 
-/// Mints this instance holds ecash for. Rows that exist only because a peer or a
-/// NIP-87 announcement mentioned the mint have no local wallet and never swap.
-fn funded(mints: Vec<Mint>) -> Vec<Mint> {
-    mints.into_iter().filter(|m| m.sum_donations > 0).collect()
-}
-
+#[allow(clippy::too_many_arguments)]
 pub(super) async fn run_round(
     wallet_repository: &Arc<cdk::wallet::WalletRepository>,
     auditor_db: &Arc<AuditorDatabase>,
@@ -93,44 +87,60 @@ pub(super) async fn run_round(
     net: &NetConfig,
     guards: &MintGuards,
     support_cache: &SwapSupportCache,
+    retry_errors: bool,
+    shutdown: &tokio::sync::watch::Receiver<bool>,
 ) -> Result<(), AuditorError> {
-    let mints = funded(auditor_db.get_all_mints().await?);
-
+    let pending = auditor_db.pending_payments().await?;
+    let mints = auditor_db
+        .get_audited_mints()
+        .await?
+        .into_iter()
+        .filter(|m| {
+            !pending
+                .iter()
+                .any(|p| !p.from_url.is_empty() && (p.from_url == m.url || p.to_url == m.url))
+        })
+        .collect::<Vec<_>>();
     if mints.len() < 2 {
-        info!("Not enough mints for swap, need at least 2");
         return Ok(());
     }
-
-    let mints_with_balance =
-        build_mints_with_balance(wallet_repository, net, support_cache, mints).await;
-
-    // Python parity: each round audits exactly ONE swap, with the receiver and
-    // sender picked at random from the eligible mints (mirrors `choose_to_mint`
-    // / `choose_from_mint_and_amount` in cashu-auditor/src/auditor.py). The
-    // round-robin "audit every pair" scheme was intentionally dropped so the
-    // Rust engine matches the reference's throughput and selection semantics.
-    let Some(selection) = choose_swap(&mints_with_balance, config) else {
+    let mints = build_mints_with_balance(wallet_repository, net, support_cache, mints).await;
+    let selections = select_round(&mints, config, retry_errors);
+    if selections.is_empty() {
         info!(
+            retry_errors,
             "No suitable mint pair found for paid swap; checked: {}",
-            mint_selection_summary(&mints_with_balance)
+            mint_selection_summary(&mints)
         );
-        return Ok(());
-    };
-
-    info!(
-        "Auditing paid swap {} -> {} ({} sat)",
-        selection.from.mint.url, selection.to.mint.url, selection.amount
-    );
-
-    run_one_swap(
+    }
+    run_selections_concurrently(
         wallet_repository,
         auditor_db,
         config,
         net,
         guards,
-        &selection,
+        selections,
+        shutdown,
     )
-    .await
+    .await;
+    Ok(())
+}
+
+fn select_round(
+    mints: &[MintWithBalance],
+    config: &AuditorConfig,
+    retry_errors: bool,
+) -> Vec<SwapSelection> {
+    if retry_errors {
+        mints
+            .iter()
+            .enumerate()
+            .filter(|(_, mint)| mint.mint.state == MintState::Error)
+            .filter_map(|(index, _)| pick_error_retry_pair(mints, index, config))
+            .collect()
+    } else {
+        choose_swap(mints, config).into_iter().collect()
+    }
 }
 
 /// Pick one random receiver, then one compatible sender and an amount within
@@ -181,6 +191,7 @@ async fn run_selections_concurrently(
     net: &NetConfig,
     guards: &MintGuards,
     selections: Vec<SwapSelection>,
+    shutdown: &tokio::sync::watch::Receiver<bool>,
 ) {
     let permits = Arc::new(Semaphore::new(config.max_concurrent_swaps.max(1) as usize));
     let mut set: JoinSet<()> = JoinSet::new();
@@ -191,6 +202,7 @@ async fn run_selections_concurrently(
         let net = net.clone();
         let guards = guards.clone();
         let permits = permits.clone();
+        let shutdown = shutdown.clone();
         set.spawn(async move {
             // Semaphore is never closed, so acquire cannot fail.
             let _permit = permits
@@ -204,6 +216,7 @@ async fn run_selections_concurrently(
                 &net,
                 &guards,
                 &selection,
+                &shutdown,
             )
             .await
             {
@@ -214,75 +227,17 @@ async fn run_selections_concurrently(
             }
         });
     }
-    while set.join_next().await.is_some() {}
-}
-
-/// Re-audit every mint currently in the Error state, far more often than the
-/// main swap loop. For each Error mint it runs one swap pairing it with the best
-/// available partner, **ignoring the bench cooldown** — that is the point: we
-/// want to retry benched mints so one that has recovered flips back to OK within
-/// a short interval instead of waiting for the slow main cadence. A successful
-/// swap marks the mint OK via the usual melt/mint success path.
-pub(super) async fn run_error_retry_round(
-    wallet_repository: &Arc<cdk::wallet::WalletRepository>,
-    auditor_db: &Arc<AuditorDatabase>,
-    config: &AuditorConfig,
-    net: &NetConfig,
-    guards: &MintGuards,
-    support_cache: &SwapSupportCache,
-) -> Result<(), AuditorError> {
-    let mints = funded(auditor_db.get_all_mints().await?);
-    if mints.len() < 2 {
-        return Ok(());
-    }
-
-    let mints_with_balance =
-        build_mints_with_balance(wallet_repository, net, support_cache, mints).await;
-    if !mints_with_balance
-        .iter()
-        .any(|m| m.mint.state == MintState::Error)
-    {
-        return Ok(());
-    }
-
-    let mut selections = Vec::new();
-    for i in 0..mints_with_balance.len() {
-        if mints_with_balance[i].mint.state != MintState::Error {
-            continue;
+    let mut task_error = None;
+    while let Some(result) = set.join_next().await {
+        if let Err(error) = result {
+            error!(%error, "Paid swap task failed; draining the batch");
+            task_error = Some(error);
         }
-        let Some(selection) = pick_error_retry_pair(&mints_with_balance, i, config) else {
-            info!(
-                "Error-retry: no viable partner to re-audit {}",
-                mints_with_balance[i].mint.url
-            );
-            continue;
-        };
-        info!(
-            "Error-retry: re-auditing {} via {} -> {} ({} sat)",
-            mints_with_balance[i].mint.url,
-            selection.from.mint.url,
-            selection.to.mint.url,
-            selection.amount
-        );
-        selections.push(selection);
     }
-
-    if selections.is_empty() {
-        return Ok(());
+    // Propagate a panic only after other active payments have finished.
+    if let Some(error) = task_error {
+        std::panic::resume_unwind(error.into_panic());
     }
-
-    // Distinct Error mints may pick overlapping partners; the per-mint locks in
-    // `run_one_swap` serialise those while disjoint pairs retry in parallel.
-    run_selections_concurrently(
-        wallet_repository,
-        auditor_db,
-        config,
-        net,
-        guards,
-        selections,
-    )
-    .await;
-    Ok(())
 }
 
 /// Choose a swap that re-audits `target` (an Error mint). Tries the target as
@@ -327,10 +282,7 @@ fn pick_error_retry_pair(
     Some(SwapSelection { from, to, amount })
 }
 
-/// Run one sender -> receiver paid swap and record the outcome: a success row,
-/// or an attributed, stage-tagged failure row. Returns `Err` only for hard
-/// local errors (bad mint URL, wallet open failure); audit failures that have
-/// already been recorded return `Ok`.
+/// Holds both mint locks through execution and accounting.
 async fn run_one_swap(
     wallet_repository: &Arc<cdk::wallet::WalletRepository>,
     auditor_db: &Arc<AuditorDatabase>,
@@ -338,16 +290,61 @@ async fn run_one_swap(
     net: &NetConfig,
     guards: &MintGuards,
     selection: &SwapSelection,
+    shutdown: &tokio::sync::watch::Receiver<bool>,
 ) -> Result<(), AuditorError> {
-    let from_mint = selection.from.mint.clone();
-    let to_mint = selection.to.mint.clone();
-    let amount = selection.amount;
+    let _swap_guard = guards
+        .lock_pair(&selection.from.mint.url, &selection.to.mint.url)
+        .await;
+    // Queued pairs must not start payments after shutdown was requested.
+    if *shutdown.borrow() {
+        return Ok(());
+    }
+    // Queued retry pairs may have been selected before an earlier payment became unresolved.
+    if auditor_db.pending_payments().await?.iter().any(|p| {
+        !p.from_url.is_empty()
+            && [&p.from_url, &p.to_url]
+                .iter()
+                .any(|url| **url == selection.from.mint.url || **url == selection.to.mint.url)
+    }) {
+        return Ok(());
+    }
+    let mut payment_id = None;
+    let outcome = execute_swap(
+        wallet_repository,
+        auditor_db,
+        config,
+        net,
+        selection,
+        &mut payment_id,
+    )
+    .await?;
+    if let SwapOutcome::Success(event) = &outcome {
+        return auditor_db
+            .complete_payment(event, payment_id)
+            .await
+            .map(|_| ());
+    }
+    persist_outcome(auditor_db, config, outcome).await
+}
 
-    // Serialise every proof-mutating step on either mint for the whole swap:
-    // concurrent swaps touching the same wallet would race proof selection.
-    // Held until this function returns. Acquired in URL order so overlapping
-    // pairs can never deadlock.
-    let _swap_guard = guards.lock_pair(&from_mint.url, &to_mint.url).await;
+enum SwapOutcome {
+    Skipped,
+    Success(SwapEvent),
+    Failure { event: SwapEvent, bench: bool },
+}
+
+/// Payment execution returns an outcome; only the caller writes audit accounting.
+async fn execute_swap(
+    wallet_repository: &Arc<cdk::wallet::WalletRepository>,
+    auditor_db: &AuditorDatabase,
+    config: &AuditorConfig,
+    net: &NetConfig,
+    selection: &SwapSelection,
+    payment_id: &mut Option<String>,
+) -> Result<SwapOutcome, AuditorError> {
+    let from_mint = &selection.from.mint;
+    let to_mint = &selection.to.mint;
+    let amount = selection.amount;
 
     let to_wallet = wallet_repository
         .get_wallet(
@@ -365,7 +362,7 @@ async fn run_one_swap(
         .await?;
 
     if let Err(e) =
-        ensure_live_receive_headroom(&to_wallet, &to_mint, amount, config.receive_overshoot_sats)
+        ensure_live_receive_headroom(&to_wallet, to_mint, amount, config.receive_overshoot_sats)
             .await
     {
         // The receiver is at/near its donation cap: the auditor's own balance
@@ -374,7 +371,7 @@ async fn run_one_swap(
         // between the round's snapshot and this live check (other swaps in the
         // round or an external wallet operation).
         info!("Skipping swap into {}: {}", to_mint.url, e);
-        return Ok(());
+        return Ok(SwapOutcome::Skipped);
     }
 
     // Stage: connect to both mints (NUT-06). This is where a killed mint is
@@ -386,20 +383,14 @@ async fn run_one_swap(
     )
     .await
     {
-        record_failure(
-            auditor_db,
-            &from_mint,
-            &to_mint,
-            amount,
+        return Ok(failed_swap(
+            selection,
             0,
             0.0,
             SwapStage::Connect,
-            &to_mint,
+            to_mint,
             &e,
-        )
-        .await;
-        bench_mint(auditor_db, to_mint.id, config).await;
-        return Ok(());
+        ));
     }
     if let Err(e) = net::with_timeout(
         &format!("mint info {}", from_mint.url),
@@ -408,20 +399,14 @@ async fn run_one_swap(
     )
     .await
     {
-        record_failure(
-            auditor_db,
-            &from_mint,
-            &to_mint,
-            amount,
+        return Ok(failed_swap(
+            selection,
             0,
             0.0,
             SwapStage::Connect,
-            &from_mint,
+            from_mint,
             &e,
-        )
-        .await;
-        bench_mint(auditor_db, from_mint.id, config).await;
-        return Ok(());
+        ));
     }
 
     info!(
@@ -449,38 +434,26 @@ async fn run_one_swap(
                 selection.to.swap_support.receive_min_amount,
                 selection.to.swap_support.receive_max_amount,
             );
-            record_failure(
-                auditor_db,
-                &from_mint,
-                &to_mint,
-                amount,
+            return Ok(failed_swap(
+                selection,
                 0,
                 0.0,
                 SwapStage::RequestInvoice,
-                &to_mint,
+                to_mint,
                 &e,
-            )
-            .await;
-            bench_mint(auditor_db, to_mint.id, config).await;
-            return Ok(());
+            ));
         }
     };
 
     if let Err(e) = ensure_optional_quote_amount(&to_mint.url, mint_quote.amount, amount) {
-        record_failure(
-            auditor_db,
-            &from_mint,
-            &to_mint,
-            amount,
+        return Ok(failed_swap(
+            selection,
             0,
             0.0,
             SwapStage::PaymentAmount,
-            &to_mint,
+            to_mint,
             &e,
-        )
-        .await;
-        bench_mint(auditor_db, to_mint.id, config).await;
-        return Ok(());
+        ));
     }
 
     info!(
@@ -504,49 +477,33 @@ async fn run_one_swap(
                 selection.from.swap_support.spend_min_amount,
                 selection.from.swap_support.spend_max_amount,
             );
-            record_failure(
-                auditor_db,
-                &from_mint,
-                &to_mint,
-                amount,
+            return Ok(failed_swap(
+                selection,
                 0,
                 0.0,
                 SwapStage::QuoteMelt,
-                &from_mint,
+                from_mint,
                 &e,
-            )
-            .await;
-            bench_mint(auditor_db, from_mint.id, config).await;
-            return Ok(());
+            ));
         }
     };
 
     let invoice_amount_sats: u64 = melt_quote.amount.into();
     let fee_reserve_sats: u64 = melt_quote.fee_reserve.into();
     if let Err(e) = ensure_exact_payment_amount(&to_mint.url, invoice_amount_sats, amount) {
-        record_failure(
-            auditor_db,
-            &from_mint,
-            &to_mint,
-            amount,
-            fee_reserve_sats,
+        return Ok(failed_swap(
+            selection,
+            0,
             0.0,
             SwapStage::PaymentAmount,
-            &to_mint,
+            to_mint,
             &e,
-        )
-        .await;
-        bench_mint(auditor_db, to_mint.id, config).await;
-        return Ok(());
+        ));
     }
 
     let total_amount_sats = invoice_amount_sats.saturating_add(fee_reserve_sats);
     let amount_difference = total_amount_sats.saturating_sub(amount);
-    let balance_before_melt: u64 = from_wallet
-        .total_balance()
-        .await
-        .map(u64::from)
-        .unwrap_or(0);
+    let balance_before_melt = u64::from(from_wallet.total_balance().await?);
 
     info!(
         "Melt quote details: from_mint={}, quote_id={}, invoice_amount={} sat, fee_reserve={} sat, total_required={} sat, quoted_delta={} sat, balance_before_melt={} sat",
@@ -569,20 +526,11 @@ async fn run_one_swap(
             amount
         );
         let err = AuditorError::Internal(msg);
-        record_failure(
-            auditor_db,
-            &from_mint,
-            &to_mint,
-            amount,
-            fee_reserve_sats,
-            0.0,
-            SwapStage::FeeCheck,
-            &from_mint,
-            &err,
-        )
-        .await;
-        bench_mint(auditor_db, from_mint.id, config).await;
-        return Ok(());
+        let mut outcome = failed_swap(selection, 0, 0.0, SwapStage::FeeCheck, from_mint, &err);
+        if let SwapOutcome::Failure { event, .. } = &mut outcome {
+            event.fee_reserve = Some(fee_reserve_sats);
+        }
+        return Ok(outcome);
     }
 
     // Re-check the target balance after quote/fee discovery and before
@@ -590,16 +538,29 @@ async fn run_one_swap(
     // must run before that point so a stale selection cannot create either a
     // payment or stranded reservations.
     if let Err(e) =
-        ensure_live_receive_headroom(&to_wallet, &to_mint, amount, config.receive_overshoot_sats)
+        ensure_live_receive_headroom(&to_wallet, to_mint, amount, config.receive_overshoot_sats)
             .await
     {
         // Cap reached since the quote was issued: skip silently (not a mint
         // fault). The unpaid mint/melt quotes simply expire; no funds moved.
         info!("Skipping swap into {} after quote: {}", to_mint.url, e);
-        return Ok(());
+        return Ok(SwapOutcome::Skipped);
     }
 
     let start_time = Instant::now();
+
+    let operation = crate::server::recovery::PendingPayment {
+        id: uuid::Uuid::new_v4().to_string(),
+        from_url: from_mint.url.clone(),
+        to_url: to_mint.url.clone(),
+        mint_quote: mint_quote.id.clone(),
+        melt_quote: melt_quote.id.clone(),
+        amount,
+        fee_reserve: fee_reserve_sats,
+        created_at: Utc::now(),
+    };
+    *payment_id = Some(operation.id.clone());
+    auditor_db.begin_payment(operation).await?;
 
     // Stage: pay the invoice by melting on the sender, retrying the value-moving
     // melt up to `max_swap_attempts` times before the mint drops to Error. Every
@@ -609,7 +570,7 @@ async fn run_one_swap(
     // melt that succeeded at the mint but errored on our side is never paid a
     // second time.
     let attempts = config.max_swap_attempts.max(1);
-    let mut fee_paid: Option<u64> = None;
+    let mut fee_paid: Option<Option<u64>> = None;
     let mut last_failure: Option<(SwapStage, AuditorError)> = None;
 
     for attempt in 1..=attempts {
@@ -620,7 +581,9 @@ async fn run_one_swap(
                         "Invoice {} on {} already paid by a previous attempt; not re-melting",
                         mint_quote.id, to_mint.url
                     );
-                    fee_paid = Some(0);
+                    fee_paid = Some(
+                        crate::server::recovery::paid_fee(&from_wallet, &melt_quote.id).await?,
+                    );
                     break;
                 }
                 Ok(false) => {}
@@ -654,7 +617,7 @@ async fn run_one_swap(
                     "Melt successful on attempt {}/{}: time: {}ms, amount: {} sat, fee: {} sat",
                     attempt, attempts, time_taken as u64, amount, paid
                 );
-                fee_paid = Some(paid);
+                fee_paid = Some(Some(paid));
                 break;
             }
             Err((stage, e)) => {
@@ -665,7 +628,9 @@ async fn run_one_swap(
                         "Melt from {} errored but invoice {} is paid; treating as success",
                         from_mint.url, mint_quote.id
                     );
-                    fee_paid = Some(0);
+                    fee_paid = Some(
+                        crate::server::recovery::paid_fee(&from_wallet, &melt_quote.id).await?,
+                    );
                     break;
                 }
                 warn!(
@@ -685,31 +650,8 @@ async fn run_one_swap(
     let fee_paid = match fee_paid {
         Some(fee) => fee,
         None => {
-            // Out of attempts (or we stopped early): record the last failure at
-            // the stage it occurred and drop the sender to Error so the
-            // error-retry loop re-audits it soon. Wallet-state faults
-            // (already-spent / insufficient funds) are ours, not the mint's, so
-            // they are recorded but never benched.
-            let (stage, e) = last_failure.unwrap_or((
-                SwapStage::PayInvoice,
-                AuditorError::Internal("melt failed".to_string()),
-            ));
-            record_failure(
-                auditor_db,
-                &from_mint,
-                &to_mint,
-                amount,
-                fee_reserve_sats,
-                0.0,
-                stage,
-                &from_mint,
-                &e,
-            )
-            .await;
-            if !is_wallet_state_error(&e) {
-                bench_mint(auditor_db, from_mint.id, config).await;
-            }
-            return Ok(());
+            warn!(?last_failure, quote = %mint_quote.id, "Payment unresolved; durable recovery will check it without re-paying");
+            return Ok(SwapOutcome::Skipped);
         }
     };
 
@@ -727,34 +669,20 @@ async fn run_one_swap(
     )
     .await
     {
-        record_failure(
-            auditor_db,
-            &from_mint,
-            &to_mint,
-            amount,
-            fee_paid,
-            time_taken,
-            SwapStage::RedeemEcash,
-            &to_mint,
-            &e,
-        )
-        .await;
-        bench_mint(auditor_db, to_mint.id, config).await;
-        return Ok(());
+        warn!(%e, quote = %mint_quote.id, "Paid quote awaits durable redemption recovery");
+        return Ok(SwapOutcome::Skipped);
     }
 
-    let mut event = SwapEvent::success(&from_mint, &to_mint, amount, fee_paid, time_taken);
-    event.fee_reserve = Some(fee_reserve_sats);
-    auditor_db.record_swap_success(&event).await.map_err(|e| {
-        error!(from = %from_mint.url, to = %to_mint.url, amount, fee_paid, %e,
-               "Swap settled but audit accounting could not be persisted");
-        e
-    })?;
-    info!(
-        "Swap from {} to {} of {} sat successful",
-        from_mint.url, to_mint.url, amount
+    let mut event = SwapEvent::success(
+        from_mint,
+        to_mint,
+        amount,
+        fee_paid.unwrap_or(0),
+        time_taken,
     );
-    Ok(())
+    event.fee_known = fee_paid.is_some();
+    event.fee_reserve = Some(fee_reserve_sats);
+    Ok(SwapOutcome::Success(event))
 }
 
 /// Whether the receiving mint's invoice (mint quote) has already been paid —
@@ -810,7 +738,7 @@ async fn attempt_pay_invoice(
             // recover_incomplete_sagas cleans up both orphaned reservations (no
             // matching saga) and incomplete sagas, so the next attempt can
             // reserve the quote again.
-            match from_wallet.recover_incomplete_sagas().await {
+            match net::with_timeout("recover sender", net.request_timeout.saturating_mul(3), from_wallet.recover_incomplete_sagas()).await {
                 Ok(report) => info!(
                     "Post-prepare-failure recovery for {}: recovered={}, compensated={}, skipped={}, failed={}",
                     from_mint_url, report.recovered, report.compensated, report.skipped, report.failed
@@ -874,7 +802,7 @@ async fn attempt_pay_invoice(
             log_wallet_debug_state(from_wallet, from_mint_url, "after_melt_failure").await;
             error!("Error melting from {}: {}", from_mint_url, e);
 
-            match from_wallet.recover_incomplete_sagas().await {
+            match net::with_timeout("recover sender", net.request_timeout.saturating_mul(3), from_wallet.recover_incomplete_sagas()).await {
                 Ok(report) => info!(
                     "Post-failure recovery for {}: recovered={}, compensated={}, skipped={}, failed={}",
                     from_mint_url, report.recovered, report.compensated, report.skipped, report.failed
@@ -918,7 +846,7 @@ async fn build_mints_with_balance(
     mints: Vec<Mint>,
 ) -> Vec<MintWithBalance> {
     let permits = Arc::new(Semaphore::new(net.max_concurrent_probes.max(1)));
-    let mut set: JoinSet<(usize, MintWithBalance)> = JoinSet::new();
+    let mut set: JoinSet<Result<(usize, MintWithBalance), AuditorError>> = JoinSet::new();
     for (idx, mint) in mints.into_iter().enumerate() {
         let wallet_repository = wallet_repository.clone();
         let net = net.clone();
@@ -929,24 +857,26 @@ async fn build_mints_with_balance(
                 .acquire_owned()
                 .await
                 .expect("probe semaphore closed");
-            let balance = balance_for(&wallet_repository, &mint.url).await;
+            let balance = local_balance(&wallet_repository, &mint.url).await?;
             let swap_support =
                 swap_support_for_round(&wallet_repository, &net, &support_cache, &mint.url).await;
-            (
+            Ok((
                 idx,
                 MintWithBalance {
                     mint,
                     balance,
                     swap_support,
                 },
-            )
+            ))
         });
     }
 
     let mut indexed: Vec<(usize, MintWithBalance)> = Vec::new();
     while let Some(joined) = set.join_next().await {
-        if let Ok(pair) = joined {
-            indexed.push(pair);
+        match joined {
+            Ok(Ok(pair)) => indexed.push(pair),
+            Ok(Err(error)) => warn!(%error, "Skipping mint with unavailable balance"),
+            Err(error) => std::panic::resume_unwind(error.into_panic()),
         }
     }
     indexed.sort_by_key(|(idx, _)| *idx);
@@ -1427,25 +1357,6 @@ fn amount_window(
     (max_amount >= min_amount).then_some((min_amount, max_amount))
 }
 
-/// Directed pairs for one round under a rotating step `k in [1, n-1]` derived
-/// from `round`: `(i, (i + k) % n)` for every mint `i`. Because `k != 0` and
-/// `k < n`, each index appears exactly once as a sender and once as a receiver
-/// (no self-swaps), so one round audits every mint in both roles. `k` is
-/// `(j - i) mod n`, unique per directed pair, so walking `round` over `n-1`
-/// consecutive values covers all `n*(n-1)` directed pairs exactly once; the
-/// schedule then repeats with period `n-1`. Empty for `n < 2`.
-///
-/// Test-only: the round-robin scheme was replaced by Python-style single random
-/// swap selection (`choose_swap`); retained to document/verify the old algorithm.
-#[cfg(test)]
-fn round_pairs(n: usize, round: u64) -> Vec<(usize, usize)> {
-    if n < 2 {
-        return Vec::new();
-    }
-    let step = (round % (n as u64 - 1)) as usize + 1;
-    (0..n).map(|i| (i, (i + step) % n)).collect()
-}
-
 // ---------------------------------------------------------------------------
 // Diagnostics
 // ---------------------------------------------------------------------------
@@ -1501,32 +1412,53 @@ fn proof_summary(proofs: Option<Proofs>) -> String {
 // Persistence helpers
 // ---------------------------------------------------------------------------
 
-/// Bench a mint for the configured cooldown so the main swap loop retries it
-/// later rather than excluding it forever. The dedicated error-retry loop
-/// re-audits Error mints far sooner regardless of this cooldown. Uses an atomic
-/// UPDATE so concurrent writes can't clobber.
-async fn bench_mint(db: &Arc<AuditorDatabase>, mint_id: u64, config: &AuditorConfig) {
-    let retry_at = Utc::now() + ChronoDuration::seconds(config.error_cooldown_secs as i64);
-    if let Err(error) = db.record_mint_failure(mint_id, retry_at).await {
-        error!(mint_id, %error, "Could not persist mint cooldown after failed swap");
+async fn persist_outcome(
+    db: &Arc<AuditorDatabase>,
+    config: &AuditorConfig,
+    outcome: SwapOutcome,
+) -> Result<(), AuditorError> {
+    match outcome {
+        SwapOutcome::Skipped => Ok(()),
+        SwapOutcome::Success(event) => {
+            db.record_swap_success(&event).await.map_err(|error| {
+                error!(from = %event.from_url, to = %event.to_url, amount = event.amount,
+                    fee = event.fee, %error, "Swap settled but audit accounting could not be persisted");
+                error
+            })?;
+            info!(from = %event.from_url, to = %event.to_url, amount = event.amount, "Swap successful");
+            Ok(())
+        }
+        SwapOutcome::Failure { event, bench } => {
+            let recorded = db.insert_swap(&event).await;
+            if let Err(error) = &recorded {
+                error!(%error, "Could not record swap failure");
+            }
+            // Still bench a failed mint when writing the observation fails.
+            if bench {
+                let retry_at =
+                    Utc::now() + ChronoDuration::seconds(config.error_cooldown_secs as i64);
+                db.record_mint_failure(
+                    event.failed_mint_id.expect("failure attribution"),
+                    retry_at,
+                )
+                .await?;
+            }
+            recorded.map(|_| ())
+        }
     }
 }
 
-/// Record a failed swap, attributed to the mint that actually failed and
-/// tagged with the stage and a coarse error category. This is the single
-/// choke point that makes every failure visible and correctly blamed.
-#[allow(clippy::too_many_arguments)]
-async fn record_failure(
-    db: &Arc<AuditorDatabase>,
-    from_mint: &Mint,
-    to_mint: &Mint,
-    amount: u64,
+fn failed_swap(
+    selection: &SwapSelection,
     fee: u64,
     time_taken: f64,
     stage: SwapStage,
     failed_mint: &Mint,
     err: &AuditorError,
-) {
+) -> SwapOutcome {
+    let from_mint = &selection.from.mint;
+    let to_mint = &selection.to.mint;
+    let amount = selection.amount;
     let raw = err.to_string();
     let detail = format!("{} — {}", stage.label(), classify::enrich_raw(&raw));
     // Use the same wallet-fault decision as benching, including wrapped CDK
@@ -1554,6 +1486,7 @@ async fn record_failure(
         to_url: to_mint.url.clone(),
         amount,
         fee,
+        fee_known: true,
         created_at: Utc::now(),
         time_taken,
         state: MintState::Error,
@@ -1566,11 +1499,9 @@ async fn record_failure(
         event_id: None,
     };
 
-    if let Err(e) = db.insert_swap(&event).await {
-        error!(
-            "Could not record swap failure for {}: {}",
-            failed_mint.url, e
-        );
+    SwapOutcome::Failure {
+        event,
+        bench: !is_wallet_state_error(err),
     }
 }
 
@@ -1701,45 +1632,6 @@ mod tests {
         }
     }
 
-    // Test-only convenience wrappers mirroring the previous public helpers.
-    fn choose_to_mint(mints: &[MintWithBalance], now: DateTime<Utc>) -> Option<MintWithBalance> {
-        let candidates: Vec<&MintWithBalance> = mints
-            .iter()
-            .filter(|m| is_available_for_paid_swap(m, now))
-            .filter(|m| m.swap_support.can_receive)
-            .filter(|m| m.balance < m.mint.sum_donations)
-            .collect();
-        if candidates.is_empty() {
-            return None;
-        }
-        let mut rng = rand::thread_rng();
-        Some(candidates[rng.gen_range(0..candidates.len())].clone())
-    }
-
-    fn choose_from_mint_and_amount<'a>(
-        mints: &'a [MintWithBalance],
-        to_mint: &MintWithBalance,
-        config: &AuditorConfig,
-    ) -> Option<(&'a MintWithBalance, u64)> {
-        let now = Utc::now();
-        let mut suitable = Vec::new();
-        for m in mints.iter().filter(|m| m.mint.url != to_mint.mint.url) {
-            if !m.swap_support.can_spend {
-                continue;
-            }
-            let Some((min_amount, max_amount)) = compatible_amount_window(m, to_mint, now, config)
-            else {
-                continue;
-            };
-            suitable.push((m, min_amount, max_amount));
-        }
-        let (selected, min_amount, max_amount) = suitable
-            .iter()
-            .max_by_key(|(m, _, max)| (m.balance, *max))?;
-        let amount = rand::thread_rng().gen_range(*min_amount..=*max_amount);
-        Some((*selected, amount))
-    }
-
     #[test]
     fn wallet_state_errors_are_not_blamed_on_the_mint() {
         // Typed path: a cdk `TokenAlreadySpent` / `InsufficientFunds` converts to
@@ -1814,18 +1706,26 @@ mod tests {
             AuditorError::Wallet("database error: quote already in use".into()),
         ];
         for error in errors {
-            record_failure(
+            let selection = SwapSelection {
+                from: MintWithBalance {
+                    mint: from.clone(),
+                    balance: 500,
+                    swap_support: SwapSupport::default(),
+                },
+                to: MintWithBalance {
+                    mint: to.clone(),
+                    balance: 0,
+                    swap_support: SwapSupport::default(),
+                },
+                amount: 10,
+            };
+            persist_outcome(
                 &db,
-                &from,
-                &to,
-                10,
-                0,
-                0.0,
-                SwapStage::PayInvoice,
-                &from,
-                &error,
+                &AuditorConfig::default(),
+                failed_swap(&selection, 0, 0.0, SwapStage::PayInvoice, &from, &error),
             )
-            .await;
+            .await
+            .unwrap();
             // Check the stored value, before read-time classification can fix it.
             let category: String = db
                 .run(|conn| {
@@ -1838,7 +1738,10 @@ mod tests {
                 .await
                 .unwrap();
             assert_eq!(category, "internal", "{error}");
-            db.record_mint_health_ok(from.id).await.unwrap();
+            assert_eq!(
+                db.get_mint_by_id(from.id).await.unwrap().unwrap().n_errors,
+                0
+            );
             assert_eq!(
                 db.get_mint_by_id(from.id).await.unwrap().unwrap().state,
                 MintState::Ok,
@@ -1939,167 +1842,29 @@ mod tests {
     }
 
     #[test]
-    fn to_mint_prefers_below_target() {
-        let now = Utc::now();
-        let mints = vec![
-            mint("https://full.example.com", MintState::Ok, 1000, 500),
-            mint("https://hungry.example.com", MintState::Ok, 100, 500),
-        ];
-        for _ in 0..20 {
-            let chosen = choose_to_mint(&mints, now).unwrap();
-            assert_eq!(chosen.mint.url, "https://hungry.example.com");
-        }
-    }
-
-    #[test]
-    fn to_mint_rejects_all_receivers_at_donation_cap() {
-        let now = Utc::now();
-        let mints = vec![
-            mint("https://full.example.com", MintState::Ok, 500, 500),
-            mint("https://over.example.com", MintState::Ok, 600, 500),
-        ];
-        assert!(choose_to_mint(&mints, now).is_none());
-    }
-
-    #[test]
-    fn benched_mint_is_skipped_until_cooldown_expires() {
-        let now = Utc::now();
-        let mut benched = mint("https://bad.example.com", MintState::Error, 0, 500);
-        benched.mint.next_update = Some(now + ChronoDuration::minutes(10));
-        let ok = mint("https://good.example.com", MintState::Ok, 100, 500);
-
-        let mints = vec![benched.clone(), ok];
-        for _ in 0..20 {
-            let chosen = choose_to_mint(&mints, now).unwrap();
-            assert_eq!(chosen.mint.url, "https://good.example.com");
-        }
-
-        let later = now + ChronoDuration::minutes(11);
-        let only_benched = vec![benched];
-        let chosen = choose_to_mint(&only_benched, later).unwrap();
-        assert_eq!(chosen.mint.url, "https://bad.example.com");
-    }
-
-    #[test]
-    fn error_mint_without_cooldown_is_retried() {
-        let now = Utc::now();
-        let benched = mint("https://bad.example.com", MintState::Error, 0, 500);
-        assert!(choose_to_mint(&[benched], now).is_some());
-    }
-
-    #[test]
-    fn to_mint_requires_receive_support() {
-        let now = Utc::now();
-        let unsupported = mint_with_support(
-            "https://unsupported.example.com",
-            MintState::Ok,
-            0,
-            500,
-            SwapSupport {
-                can_receive: false,
-                can_spend: true,
-                ..SwapSupport::default()
-            },
-        );
-        let supported = mint("https://supported.example.com", MintState::Ok, 100, 500);
-        let chosen = choose_to_mint(&[unsupported, supported.clone()], now).unwrap();
-        assert_eq!(chosen.mint.url, supported.mint.url);
-    }
-
-    #[test]
-    fn from_mint_needs_balance_and_buffer() {
+    fn choose_swap_requires_both_capabilities_and_a_balance_buffer() {
         let config = AuditorConfig::default();
-        let to = mint("https://to.example.com", MintState::Ok, 0, 500);
-        // balance 5 -> 0.8 * 5 = 4 sat, below the 5 sat minimum, so no buffer.
-        let poor = mint("https://poor.example.com", MintState::Ok, 5, 500);
-        assert!(choose_from_mint_and_amount(&[poor, to.clone()], &to, &config).is_none());
-
-        let rich = mint("https://rich.example.com", MintState::Ok, 100_000, 500);
-        let candidates = [rich, to.clone()];
-        let (chosen, amount) = choose_from_mint_and_amount(&candidates, &to, &config).unwrap();
-        assert_eq!(chosen.mint.url, "https://rich.example.com");
-        assert!(amount >= config.min_amount && amount <= config.max_amount);
+        let to = mint("https://to.example", MintState::Ok, 0, 500);
+        let mut from = mint("https://from.example", MintState::Ok, 5, 0);
+        assert!(choose_swap(&[to.clone(), from.clone()], &config).is_none());
+        from.balance = 100;
+        assert!(choose_swap(&[to.clone(), from.clone()], &config).is_some());
+        from.swap_support.can_spend = false;
+        assert!(choose_swap(&[to.clone(), from.clone()], &config).is_none());
+        from.swap_support.can_spend = true;
+        let mut unsupported = to.clone();
+        unsupported.swap_support.can_receive = false;
+        assert!(choose_swap(&[unsupported, from], &config).is_none());
+        assert!(choose_swap(&[to], &config).is_none());
+        assert!(choose_swap(&[], &config).is_none());
     }
 
     #[test]
-    fn from_mint_skips_active_error_cooldown() {
-        let config = AuditorConfig::default();
-        let now = Utc::now();
-        let to = mint("https://to.example.com", MintState::Ok, 0, 500);
-        let mut benched = mint(
-            "https://benched.example.com",
-            MintState::Error,
-            100_000,
-            500,
-        );
-        benched.mint.next_update = Some(now + ChronoDuration::minutes(10));
-        assert!(choose_from_mint_and_amount(&[benched, to.clone()], &to, &config).is_none());
-    }
-
-    #[test]
-    fn from_mint_requires_spend_support_and_amount_window() {
-        let config = AuditorConfig::default();
-        let to = mint_with_support(
-            "https://to.example.com",
-            MintState::Ok,
-            0,
-            500,
-            SwapSupport {
-                can_receive: true,
-                can_spend: true,
-                receive_min_amount: Some(50),
-                receive_max_amount: Some(70),
-                ..SwapSupport::default()
-            },
-        );
-        let no_melt = mint_with_support(
-            "https://no-melt.example.com",
-            MintState::Ok,
-            100_000,
-            500,
-            SwapSupport {
-                can_receive: true,
-                can_spend: false,
-                ..SwapSupport::default()
-            },
-        );
-        let incompatible_range = mint_with_support(
-            "https://range.example.com",
-            MintState::Ok,
-            100_000,
-            500,
-            SwapSupport {
-                can_receive: true,
-                can_spend: true,
-                spend_max_amount: Some(40),
-                ..SwapSupport::default()
-            },
-        );
-        let good = mint_with_support(
-            "https://good.example.com",
-            MintState::Ok,
-            100_000,
-            500,
-            SwapSupport {
-                can_receive: true,
-                can_spend: true,
-                spend_min_amount: Some(60),
-                spend_max_amount: Some(65),
-                ..SwapSupport::default()
-            },
-        );
-
-        let candidates = [no_melt, incompatible_range, good.clone(), to.clone()];
-        let (chosen, amount) = choose_from_mint_and_amount(&candidates, &to, &config).unwrap();
-        assert_eq!(chosen.mint.url, good.mint.url);
-        assert!((60..=65).contains(&amount));
-    }
-
-    #[test]
-    fn from_mint_never_equals_to_mint() {
-        let config = AuditorConfig::default();
-        let to = mint("https://to.example.com", MintState::Ok, 100_000, 500);
-        assert!(choose_from_mint_and_amount(std::slice::from_ref(&to), &to, &config).is_none());
+    fn choose_swap_retries_an_error_mint_without_a_cooldown() {
+        let from = mint("https://from.example", MintState::Ok, 100, 0);
+        let to = mint("https://to.example", MintState::Error, 0, 500);
+        let selection = choose_swap(&[from, to], &AuditorConfig::default()).unwrap();
+        assert_eq!(selection.to.mint.url, "https://to.example");
     }
 
     #[test]
@@ -2206,18 +1971,34 @@ mod tests {
             0.into(),
         ))
         .with_amount_context(23, Some(100), Some(1_000_000));
-        record_failure(
+        let selection = SwapSelection {
+            from: MintWithBalance {
+                mint: from.clone(),
+                balance: 500,
+                swap_support: SwapSupport::default(),
+            },
+            to: MintWithBalance {
+                mint: to.clone(),
+                balance: 0,
+                swap_support: SwapSupport::default(),
+            },
+            amount: 23,
+        };
+        persist_outcome(
             &db,
-            &from,
-            &to,
-            23,
-            0,
-            0.0,
-            SwapStage::RequestInvoice,
-            &to,
-            &error,
+            &AuditorConfig::default(),
+            failed_swap(&selection, 0, 0.0, SwapStage::RequestInvoice, &to, &error),
         )
-        .await;
+        .await
+        .unwrap();
+        let failed = db.get_mint_by_id(to.id).await.unwrap().unwrap();
+        assert_eq!(failed.state, MintState::Error);
+        assert_eq!(failed.n_errors, 1);
+        assert!(failed.next_update.unwrap() > Utc::now());
+        assert_eq!(
+            db.get_mint_by_id(from.id).await.unwrap().unwrap().n_errors,
+            0
+        );
         let event = db.get_swaps(0, 1).await.unwrap().remove(0);
         assert_eq!(event.failed_mint_id, Some(to.id));
         assert_eq!(event.category.as_deref(), Some("config"));
@@ -2227,6 +2008,146 @@ mod tests {
         assert!(detail.contains("advertised minimum: 100 sat"));
         assert!(detail.contains("advertised maximum: 1000000 sat"));
         assert!(!detail.contains("between `0`"));
+    }
+
+    #[test]
+    fn shared_round_selection_keeps_normal_cooldowns_and_optional_error_retries() {
+        let config = AuditorConfig::default();
+        let from = mint("https://from.example", MintState::Ok, 500, 0);
+        let mut to = mint("https://to.example", MintState::Error, 0, 500);
+        to.mint.next_update = Some(Utc::now() + ChronoDuration::minutes(30));
+        let mut mints = [from, to];
+        assert!(select_round(&mints, &config, false).is_empty());
+        let retries = select_round(&mints, &config, true);
+        assert_eq!(retries.len(), 1);
+        assert_eq!(retries[0].to.mint.url, mints[1].mint.url);
+        mints[1].mint.next_update = None;
+        mints[1].mint.state = MintState::Ok;
+        assert_eq!(select_round(&mints, &config, false).len(), 1);
+        assert!(select_round(&mints, &config, true).is_empty());
+    }
+
+    #[tokio::test]
+    async fn outcome_persistence_keeps_success_accounting_atomic_and_skips_empty_work() {
+        let db = Arc::new(AuditorDatabase::open_in_memory().unwrap());
+        let from = db
+            .record_donation("https://from.example", 500, "token")
+            .await
+            .unwrap();
+        let to = db
+            .record_donation("https://to.example", 500, "token")
+            .await
+            .unwrap();
+        let config = AuditorConfig::default();
+        persist_outcome(&db, &config, SwapOutcome::Skipped)
+            .await
+            .unwrap();
+        assert!(db.get_swaps(0, 10).await.unwrap().is_empty());
+        let mut event = SwapEvent::success(&from, &to, 10, 1, 20.0);
+        event.fee_reserve = Some(2);
+        persist_outcome(&db, &config, SwapOutcome::Success(event.clone()))
+            .await
+            .unwrap();
+        let stored = db.get_swaps(0, 10).await.unwrap();
+        assert_eq!(stored.len(), 1);
+        assert_eq!(stored[0].fee_reserve, Some(2));
+        assert_eq!(
+            db.get_mint_by_id(from.id).await.unwrap().unwrap().n_melts,
+            1
+        );
+        assert_eq!(db.get_mint_by_id(to.id).await.unwrap().unwrap().n_mints, 1);
+        event.to_id = u64::MAX;
+        assert!(persist_outcome(&db, &config, SwapOutcome::Success(event))
+            .await
+            .is_err());
+        assert_eq!(db.get_swaps(0, 10).await.unwrap().len(), 1);
+        assert_eq!(
+            db.get_mint_by_id(from.id).await.unwrap().unwrap().n_melts,
+            1
+        );
+    }
+
+    #[tokio::test]
+    async fn queued_pair_with_an_unresolved_payment_does_not_access_wallets() {
+        let state = crate::server::state::test_state().await;
+        let selection = SwapSelection {
+            from: mint("https://from.example", MintState::Ok, 500, 0),
+            to: mint("https://to.example", MintState::Ok, 0, 500),
+            amount: 10,
+        };
+        state
+            .auditor_db
+            .begin_payment(crate::server::recovery::PendingPayment {
+                id: "earlier".into(),
+                from_url: selection.from.mint.url.clone(),
+                to_url: "https://other.example".into(),
+                mint_quote: "quote".into(),
+                melt_quote: "melt".into(),
+                amount: 10,
+                fee_reserve: 1,
+                created_at: Utc::now(),
+            })
+            .await
+            .unwrap();
+        let (_stop, shutdown) = tokio::sync::watch::channel(false);
+        run_one_swap(
+            &state.wallet_repository,
+            &state.auditor_db,
+            &AuditorConfig::default(),
+            &NetConfig::default(),
+            &state.wallet_guards,
+            &selection,
+            &shutdown,
+        )
+        .await
+        .unwrap();
+        assert!(state.wallet_repository.get_wallets().await.is_empty());
+        assert!(state.auditor_db.get_swaps(0, 10).await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn shutdown_skips_queued_swaps_before_accessing_wallets() {
+        let db = Arc::new(AuditorDatabase::open_in_memory().unwrap());
+        let repository = Arc::new(
+            cdk::wallet::WalletRepositoryBuilder::new()
+                .localstore(Arc::new(
+                    cdk_sqlite::WalletSqliteDatabase::new(":memory:")
+                        .await
+                        .unwrap(),
+                ))
+                .seed([0; 64])
+                .build()
+                .await
+                .unwrap(),
+        );
+        let selection = SwapSelection {
+            from: mint("https://from.example", MintState::Ok, 500, 0),
+            to: mint("https://to.example", MintState::Ok, 0, 500),
+            amount: 10,
+        };
+        let guards = MintGuards::default();
+        let held = guards
+            .lock_pair(&selection.from.mint.url, &selection.to.mint.url)
+            .await;
+        let (stop, shutdown) = tokio::sync::watch::channel(false);
+        let task_db = db.clone();
+        let task = tokio::spawn(async move {
+            run_one_swap(
+                &repository,
+                &task_db,
+                &AuditorConfig::default(),
+                &NetConfig::default(),
+                &guards,
+                &selection,
+                &shutdown,
+            )
+            .await
+        });
+        tokio::task::yield_now().await;
+        stop.send(true).unwrap();
+        drop(held);
+        task.await.unwrap().unwrap();
+        assert!(db.get_swaps(0, 10).await.unwrap().is_empty());
     }
 
     #[test]
@@ -2399,44 +2320,6 @@ mod tests {
             compatible_amount_window(&from, &to, now, &loose).expect("overshoot opens a window");
         assert!(min_amount >= loose.min_amount);
         assert!(max_amount >= min_amount);
-    }
-
-    #[test]
-    fn rotating_step_audits_each_mint_and_covers_all_pairs() {
-        let n = 5usize;
-
-        // Each round audits every mint once as sender and once as receiver, with
-        // no self-swaps.
-        for round in 0..(n as u64 - 1) {
-            let pairs = round_pairs(n, round);
-            assert_eq!(pairs.len(), n);
-            let mut senders: Vec<usize> = pairs.iter().map(|(f, _)| *f).collect();
-            let mut receivers: Vec<usize> = pairs.iter().map(|(_, t)| *t).collect();
-            senders.sort_unstable();
-            receivers.sort_unstable();
-            assert_eq!(senders, (0..n).collect::<Vec<_>>());
-            assert_eq!(receivers, (0..n).collect::<Vec<_>>());
-            assert!(pairs.iter().all(|(f, t)| f != t));
-        }
-
-        // Over n-1 rounds every directed pair appears exactly once.
-        let mut seen = std::collections::HashSet::new();
-        for round in 0..(n as u64 - 1) {
-            for pair in round_pairs(n, round) {
-                assert!(
-                    seen.insert(pair),
-                    "directed pair {pair:?} repeated within a sweep"
-                );
-            }
-        }
-        assert_eq!(seen.len(), n * (n - 1));
-
-        // The schedule repeats with period n-1.
-        assert_eq!(round_pairs(n, 0), round_pairs(n, n as u64 - 1));
-
-        // Fewer than two mints yields no swaps.
-        assert!(round_pairs(1, 0).is_empty());
-        assert!(round_pairs(0, 7).is_empty());
     }
 
     #[test]

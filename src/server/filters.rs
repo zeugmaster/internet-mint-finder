@@ -46,6 +46,19 @@ pub struct Filters {
 }
 
 impl Filters {
+    pub fn validate(&self) -> Result<(), crate::server::error::AuditorError> {
+        for value in [&self.start, &self.end].into_iter().flatten() {
+            if chrono::NaiveDate::parse_from_str(value, "%Y-%m-%d").is_err()
+                && chrono::DateTime::parse_from_rfc3339(value).is_err()
+            {
+                return Err(crate::server::error::AuditorError::InvalidInput(
+                    "dates must be YYYY-MM-DD or RFC3339 timestamps".into(),
+                ));
+            }
+        }
+        Ok(())
+    }
+
     /// Parse dashboard query parameters.
     ///
     /// Axum's stock `Query` extractor uses `serde_urlencoded`, which does not
@@ -195,6 +208,19 @@ impl Filters {
     /// restrict `mint_url`. Returns `("", vec![])` when unfiltered.
     pub fn where_checks(&self) -> (String, Vec<String>) {
         self.where_dated("created_at", "mint_url", true)
+    }
+
+    /// Donation receipts belong to this instance; peers never share wallets.
+    pub fn where_donations(&self) -> (String, Vec<String>) {
+        let (mut clause, params) = self.where_dated("created_at", "mint_url", false);
+        if !self.auditor.is_empty() && !self.auditor.iter().any(|a| a == "local") {
+            clause.push_str(if clause.is_empty() {
+                "WHERE 0"
+            } else {
+                " AND 0"
+            });
+        }
+        (clause, params)
     }
 
     /// Produce a `(sql_fragment, params)` pair scoped to the `mint_snapshots`

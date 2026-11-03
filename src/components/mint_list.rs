@@ -65,7 +65,12 @@ pub fn MintList() -> impl IntoView {
             let navigate = navigate.clone();
             if let Ok(handle) = set_timeout_with_handle(
                 move || {
-                    let url = view_url(&value, state_filter.get_untracked(), sort.get_untracked(), 0);
+                    let url = view_url(
+                        &value,
+                        state_filter.get_untracked(),
+                        sort.get_untracked(),
+                        0,
+                    );
                     navigate(&url, quiet());
                 },
                 std::time::Duration::from_millis(250),
@@ -103,7 +108,10 @@ pub fn MintList() -> impl IntoView {
         match (updated_at.get(), stale) {
             (Some(at), false) => format!("Updated {}", relative_time(at)),
             (Some(at), true) => {
-                format!("Couldn't refresh. Showing results from {}, retrying.", relative_time(at))
+                format!(
+                    "Couldn't refresh. Showing results from {}, retrying.",
+                    relative_time(at)
+                )
             }
             (None, _) => String::new(),
         }
@@ -114,7 +122,12 @@ pub fn MintList() -> impl IntoView {
         move |ev| {
             let sort = sort_from_slug(&event_target_value(&ev));
             navigate(
-                &view_url(&applied_search.get_untracked(), state_filter.get_untracked(), sort, 0),
+                &view_url(
+                    &applied_search.get_untracked(),
+                    state_filter.get_untracked(),
+                    sort,
+                    0,
+                ),
                 quiet(),
             );
         }

@@ -87,7 +87,11 @@ fn ReviewItem(review: ReviewRead) -> impl IntoView {
     } else {
         short_pubkey(&review.npub)
     };
-    let full = if review.npub.is_empty() { review.pubkey.clone() } else { review.npub.clone() };
+    let full = if review.npub.is_empty() {
+        review.pubkey.clone()
+    } else {
+        review.npub.clone()
+    };
     view! {
         <li class="review">
             {review.rating.map(|n| view! {
@@ -139,7 +143,7 @@ fn ReviewCompose(context: ReviewContext, #[prop(optional)] empty: bool) -> impl 
                         <input id="review-nsec" type="password" class="field-input" placeholder="nsec1…" autocomplete="off" spellcheck="false"/>
                         <button type="button" id="review-signin" class="btn">"Sign in"</button>
                     </div>
-                    <p class="field-hint">"It stays in this browser and is only used to sign reviews. With a Nostr extension like Alby or nos2x, you can skip this."</p>
+                    <p class="field-hint">"Use a Nostr extension like Alby or nos2x to keep your key out of this site. A pasted key stays only until this page is reloaded."</p>
                 </div>
                 <p class="field-hint" data-signer="in" hidden=true>
                     "Signed in as " <span id="review-npub" class="mono"></span> " · "

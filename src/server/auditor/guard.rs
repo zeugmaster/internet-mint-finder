@@ -17,13 +17,13 @@ use tokio::sync::{Mutex as AsyncMutex, OwnedMutexGuard};
 /// Registry of per-mint locks, keyed by mint URL. Cheap to clone (shares the
 /// underlying map) so concurrent swaps share the same registry.
 #[derive(Clone, Default)]
-pub(super) struct MintGuards {
+pub struct MintGuards {
     locks: Arc<Mutex<HashMap<String, Arc<AsyncMutex<()>>>>>,
 }
 
 /// Held for the duration of a swap; dropping it releases both mints. Bind it to
 /// a named variable (`let _g = ...`) — binding to `_` would drop it instantly.
-pub(super) struct PairGuard {
+pub struct PairGuard {
     _first: OwnedMutexGuard<()>,
     _second: Option<OwnedMutexGuard<()>>,
 }
@@ -35,7 +35,7 @@ impl MintGuards {
     }
 
     /// Exclusive access to one mint's wallet.
-    pub(super) async fn lock_one(&self, url: &str) -> OwnedMutexGuard<()> {
+    pub async fn lock_one(&self, url: &str) -> OwnedMutexGuard<()> {
         self.handle(url).lock_owned().await
     }
 
@@ -43,7 +43,7 @@ impl MintGuards {
     /// global lock ordering stays total and concurrent pairs never deadlock.
     /// A swap with two equal URLs is rejected upstream; if the URLs ever do
     /// coincide we still take the single lock exactly once.
-    pub(super) async fn lock_pair(&self, a: &str, b: &str) -> PairGuard {
+    pub async fn lock_pair(&self, a: &str, b: &str) -> PairGuard {
         if a == b {
             return PairGuard {
                 _first: self.lock_one(a).await,

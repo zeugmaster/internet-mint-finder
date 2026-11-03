@@ -8,9 +8,9 @@
 <meta name="theme-color" content="#f6f6f6" media="(prefers-color-scheme: light)" />
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
 <script>(function(){var d=document.documentElement;d.dataset.theme=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.addEventListener('click',function(e){if(!e.target.closest('[data-theme-toggle]'))return;var next=d.dataset.theme==='dark'?'light':'dark';d.dataset.theme=next;localStorage.setItem('theme',next);});})();</script>
-<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css"/>
+<script src="/vendor/plotly-2.35.2.min.js"></script>
+<script src="/vendor/choices-10.2.0.min.js"></script>
+<link rel="stylesheet" href="/vendor/choices-10.2.0.min.css"/>
 <style>
   /* ===================================================================
      Fonts — Inter for the interface, TX-02 for figures; served from /fonts
@@ -718,7 +718,7 @@
         <div id="donations" class="plot" style="height:260px;"></div>
       </div>
       <div class="card chart">
-        <div class="head"><span class="ttl">Highest fees by route</span><span class="meta">fee as a share of the amount</span></div>
+        <div class="head"><span class="ttl">Highest fees by route</span><span class="meta">known fees as a share of the amount</span></div>
         <div style="padding:4px;">
           <table id="fees">
             <thead><tr><th>Route</th><th class="num">Payments</th><th class="num">Sent</th><th class="num">Fee</th><th class="num">Fee %</th></tr></thead>
@@ -1019,7 +1019,7 @@ async function renderKPIs() {
     $("kd-sats").textContent = "In successful payments";
     $("kd-succ").innerHTML = `<span class="delta flat">${compact(k.total_swaps)} payments</span>`;
     $("kd-p95").innerHTML  = `<span class="delta flat">${compact(k.total_errors)} errors</span>`;
-    $("kd-fees").textContent = "Lightning routing fees";
+    $("kd-fees").textContent = k.unknown_fee_payments ? `${k.unknown_fee_payments} payments with unknown fees` : "Lightning routing fees";
     $("kd-tvl").innerHTML  = "";
     $("kd-don").textContent = "Received to date";
 
@@ -1220,7 +1220,7 @@ async function renderFlow() {
         value: f.links.map(l => l.value),
         customdata: f.links.map(l => l.fee),
         color: withAlpha(C.muted, 0.2),
-        hovertemplate: "%{source.label} → %{target.label}<br>%{value} sats net · fee %{customdata}<extra></extra>",
+        hovertemplate: "%{source.label} → %{target.label}<br>%{value} sats net · known fees %{customdata}<extra></extra>",
       },
       // Plain node labels: no halo/text-shadow.
       textfont: { color: C.ink, family: FONT, size: 13, shadow: "none" },
@@ -1296,6 +1296,9 @@ async function renderDonations() {
     meta.textContent = `${s.events} donation${s.events === 1 ? "" : "s"} · ${compact(s.total)} sats`;
   } catch (e) { console.error(e); emptyState(el, "Couldn't load this chart"); meta.textContent = ""; }
 }
+function escapeHTML(value) {
+  return String(value).replace(/[&<>"']/g, c => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[c]));
+}
 async function renderFees() {
   const tbody = document.querySelector("#fees tbody");
   try {
@@ -1303,7 +1306,7 @@ async function renderFees() {
     if (!rows.length) { tbody.innerHTML = `<tr><td colspan="5"><div class="empty">No payments in this range</div></td></tr>`; return; }
     tbody.innerHTML = rows.map(r => `
       <tr>
-        <td class="trunc" title="${r.from} → ${r.to}">${r.from} <span class="sep"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h9.5M8.5 4l4 4-4 4"/></svg></span> ${r.to}</td>
+        <td class="trunc" title="${escapeHTML(r.from)} → ${escapeHTML(r.to)}">${escapeHTML(r.from)} <span class="sep"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h9.5M8.5 4l4 4-4 4"/></svg></span> ${escapeHTML(r.to)}</td>
         <td class="num">${fmt.format(r.swaps)}</td>
         <td class="num">${compact(r.total_amount)}</td>
         <td class="num">${compact(r.total_fee)}</td>
@@ -1341,7 +1344,7 @@ async function renderMintTable() {
     rows.sort((a, b) => name(a).localeCompare(name(b)));
     tbody.innerHTML = rows.map(r => `
       <tr>
-        <td class="trunc" title="${r.mint}">${name(r)}</td>
+        <td class="trunc" title="${escapeHTML(r.mint)}">${escapeHTML(name(r))}</td>
         <td class="num">${fmt.format(r.attempts)}</td>
         <td class="num">${(r.error_rate*100).toFixed(1)}%</td>
         <td class="num">${Math.round(r.avg_latency_ms)}</td>

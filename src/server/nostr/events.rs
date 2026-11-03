@@ -54,10 +54,13 @@ pub fn swap_builder(swap: &SwapEvent) -> EventBuilder {
         tag("from", swap.from_url.clone()),
         tag("to", swap.to_url.clone()),
         tag("amount", swap.amount.to_string()),
-        tag("fee", swap.fee.to_string()),
+        tag("fee_known", swap.fee_known.to_string()),
         tag("state", state_to_str(&swap.state)),
         tag("latency_ms", swap.time_taken.to_string()),
     ];
+    if swap.fee_known {
+        tags.push(tag("fee", swap.fee.to_string()));
+    }
     if let Some(reserve) = swap.fee_reserve {
         tags.push(tag("fee_reserve", reserve.to_string()));
     }
@@ -147,13 +150,17 @@ pub fn decode_observation(event: &Event) -> Option<Observation> {
     let kind = value(event, "t")?;
 
     if kind == "swap" {
-        let swap = SwapEvent {
+        let mut swap = SwapEvent {
             id: 0,
             from_id: 0,
             to_id: 0,
             from_url: value(event, "from")?.to_string(),
             to_url: value(event, "to")?.to_string(),
             amount: value(event, "amount")?.parse().ok()?,
+            fee_known: value(event, "fee_known") != Some("false")
+                && value(event, "fee")
+                    .and_then(|s| s.parse::<u64>().ok())
+                    .is_some(),
             fee: value(event, "fee")
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(0),
@@ -168,6 +175,12 @@ pub fn decode_observation(event: &Event) -> Option<Observation> {
             auditor_pubkey,
             event_id,
         };
+        // Older peers published an unpaid reserve as a fee on rejected quotes.
+        if swap.state == MintState::Error && swap.stage.as_deref() == Some("checking the fee") {
+            swap.fee_reserve = swap.fee_reserve.or(Some(swap.fee));
+            swap.fee = 0;
+            swap.fee_known = true;
+        }
         return Some(Observation::Swap {
             swap,
             failed_url: value(event, "failed").map(str::to_string),
@@ -271,6 +284,7 @@ pub fn decode_announcement(event: &Event) -> Option<Announcement> {
             .tags
             .filter(TagKind::from("url"))
             .filter_map(Tag::content)
+            .filter(|u| crate::server::mint_transport::parse_url(u).is_ok())
             .map(str::to_string)
             .collect(),
         donate: value(event, "donate").map(str::to_string),
@@ -404,6 +418,7 @@ mod tests {
             to_url: "https://b.example".into(),
             amount: 42,
             fee: 1,
+            fee_known: true,
             created_at: at(1_700_000_000),
             time_taken: 1234.5,
             state: MintState::Error,
@@ -415,6 +430,38 @@ mod tests {
             auditor_pubkey: String::new(),
             event_id: None,
         }
+    }
+
+    #[test]
+    fn missing_fees_stay_unknown_and_legacy_rejected_reserves_are_not_paid() {
+        let keys = Keys::generate();
+        let mut swap = sample_swap();
+        swap.fee = 0;
+        swap.fee_known = false;
+        let event = swap_builder(&swap).sign_with_keys(&keys).unwrap();
+        let Some(Observation::Swap { swap: decoded, .. }) = decode_observation(&event) else {
+            panic!("missing swap")
+        };
+        assert!(!decoded.fee_known);
+        assert!(value(&event, "fee").is_none());
+        let legacy = EventBuilder::new(Kind::from_u16(KIND_OBSERVATION), "")
+            .tags([
+                tag("t", "swap"),
+                tag("from", "https://a.example"),
+                tag("to", "https://b.example"),
+                tag("amount", "50"),
+                tag("fee", "30"),
+                tag("state", "ERROR"),
+                tag("stage", "checking the fee"),
+            ])
+            .sign_with_keys(&keys)
+            .unwrap();
+        let Some(Observation::Swap { swap: decoded, .. }) = decode_observation(&legacy) else {
+            panic!("missing swap")
+        };
+        assert_eq!(decoded.fee, 0);
+        assert_eq!(decoded.fee_reserve, Some(30));
+        assert!(decoded.fee_known);
     }
 
     #[test]

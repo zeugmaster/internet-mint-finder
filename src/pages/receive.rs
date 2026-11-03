@@ -299,7 +299,8 @@ fn TokenPanel() -> impl IntoView {
                 }
                 Err(_) => {
                     result_ok.set(false);
-                    result_msg.set("Donation failed. Check your connection and try again.".to_string());
+                    result_msg
+                        .set("Donation failed. Check your connection and try again.".to_string());
                 }
             }
         }

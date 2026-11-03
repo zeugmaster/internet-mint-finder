@@ -22,6 +22,21 @@ use tracing::{info, warn};
 // ---------------------------------------------------------------------------
 
 const SCHEMA_SQL: &str = r#"
+CREATE TABLE IF NOT EXISTS donation_receipts (
+    receipt TEXT PRIMARY KEY, mint_url TEXT NOT NULL, via TEXT NOT NULL,
+    amount INTEGER, created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS pending_payments (
+    id TEXT PRIMARY KEY, from_url TEXT NOT NULL, to_url TEXT NOT NULL,
+    mint_quote TEXT NOT NULL, melt_quote TEXT NOT NULL, amount INTEGER NOT NULL,
+    fee_reserve INTEGER NOT NULL, created_at TEXT NOT NULL, swap_id INTEGER
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ix_payment_quote ON pending_payments(to_url,mint_quote);
+CREATE TABLE IF NOT EXISTS ingest_progress (
+    feed TEXT PRIMARY KEY, completed_until INTEGER NOT NULL DEFAULT 0,
+    backfill_until INTEGER, backfill_start INTEGER
+);
+
 CREATE TABLE IF NOT EXISTS schema_version (
     version INTEGER PRIMARY KEY
 );
@@ -170,7 +185,8 @@ CREATE TABLE IF NOT EXISTS auditors (
 // v7: auditors table (kind 10172 announcements of peer auditors).
 // v8: NIP-87 mint_announcements (38172) and reviews (38000), keyed like the
 // addressable events they mirror: (author pubkey, d = mint pubkey).
-const SCHEMA_VERSION: i64 = 8;
+// v9: durable payment/donation receipts, replay cursors and explicit fee certainty.
+const SCHEMA_VERSION: i64 = 9;
 
 // ---------------------------------------------------------------------------
 // Domain structs
@@ -207,7 +223,7 @@ impl Mint {
 impl From<Mint> for MintRead {
     fn from(m: Mint) -> Self {
         MintRead {
-            id: m.id,
+            id: crate::types::mint_key(&m.url),
             url: m.url,
             info: m.info,
             name: m.name,
@@ -242,6 +258,8 @@ pub struct SwapEvent {
     pub to_url: String,
     pub amount: u64,
     pub fee: u64,
+    #[serde(default = "crate::types::known_fee")]
+    pub fee_known: bool,
     pub created_at: DateTime<Utc>,
     pub time_taken: f64,
     pub state: MintState,
@@ -351,6 +369,7 @@ impl SwapEvent {
             to_url: to.url.clone(),
             amount,
             fee,
+            fee_known: true,
             created_at: Utc::now(),
             time_taken,
             state: MintState::Ok,
@@ -380,17 +399,24 @@ impl From<SwapEvent> for SwapEventRead {
     fn from(s: SwapEvent) -> Self {
         SwapEventRead {
             id: s.id,
-            from_id: s.from_id,
-            to_id: s.to_id,
+            from_id: crate::types::mint_key(&s.from_url),
+            to_id: crate::types::mint_key(&s.to_url),
+            failed_mint_id: s.failed_mint_id.map(|id| {
+                crate::types::mint_key(if id == s.from_id {
+                    &s.from_url
+                } else {
+                    &s.to_url
+                })
+            }),
             from_url: s.from_url,
             to_url: s.to_url,
             amount: s.amount,
             fee: s.fee,
+            fee_known: s.fee_known,
             created_at: s.created_at,
             time_taken: s.time_taken,
             state: s.state,
             error: s.error,
-            failed_mint_id: s.failed_mint_id,
             stage: s.stage,
             category: s.category,
             auditor: (!s.auditor_pubkey.is_empty()).then_some(s.auditor_pubkey),
@@ -428,8 +454,8 @@ fn insert_swap_row(conn: &Connection, swap: &SwapEvent) -> Result<u64, AuditorEr
     conn.execute(
         "INSERT INTO swaps (from_id, to_id, from_url, to_url, amount, fee, state, error,
                             failed_mint_id, stage, category, time_taken, created_at,
-                            fee_reserve, auditor_pubkey, event_id)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)",
+                            fee_reserve, auditor_pubkey, event_id, fee_known)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)",
         params![
             swap.from_id as i64,
             swap.to_id as i64,
@@ -447,6 +473,7 @@ fn insert_swap_row(conn: &Connection, swap: &SwapEvent) -> Result<u64, AuditorEr
             swap.fee_reserve.map(|v| v as i64),
             swap.auditor_pubkey,
             swap.event_id,
+            swap.fee_known,
         ],
     )?;
     Ok(conn.last_insert_rowid() as u64)
@@ -472,7 +499,7 @@ const MINT_COLUMNS: &str = "id, url, name, info, sum_donations, state, n_errors,
 
 const SWAP_COLUMNS: &str = "id, from_id, to_id, from_url, to_url, amount, fee, state, error,
                             failed_mint_id, stage, category, time_taken, created_at,
-                            fee_reserve, auditor_pubkey, event_id";
+                            fee_reserve, auditor_pubkey, event_id, fee_known";
 
 const MINT_CHECK_COLUMNS: &str = "id, mint_id, mint_url, kind, state, error, category, latency_ms,
                                   created_at, auditor_pubkey, event_id, detail";
@@ -514,6 +541,15 @@ fn add_missing_columns(conn: &Connection) -> Result<(), AuditorError> {
         }
     }
 
+    if !column_exists(conn, "swaps", "fee_known")? {
+        conn.execute(
+            "ALTER TABLE swaps ADD COLUMN fee_known INTEGER NOT NULL DEFAULT 1",
+            [],
+        )?;
+        conn.execute("UPDATE swaps SET fee_reserve=COALESCE(fee_reserve,fee), fee=0 WHERE state='ERROR' AND stage='checking the fee'", [])?;
+        conn.execute("UPDATE swaps SET fee_known=0 WHERE (state='ERROR' AND stage IN ('preparing the payment','paying the invoice')) OR (state='OK' AND fee=0)", [])?;
+    }
+
     conn.execute_batch(
         "CREATE INDEX IF NOT EXISTS ix_swaps_failed_mint ON swaps(failed_mint_id);
          CREATE UNIQUE INDEX IF NOT EXISTS ix_swaps_event_id ON swaps(event_id);
@@ -552,20 +588,22 @@ impl AuditorDatabase {
         conn.busy_timeout(std::time::Duration::from_secs(5))?;
         conn.execute_batch(
             "PRAGMA journal_mode=WAL;
-             PRAGMA synchronous=NORMAL;
+             PRAGMA synchronous=FULL;
              PRAGMA foreign_keys=ON;
              PRAGMA cache_size=-20000;",
         )
         .map_err(|e| AuditorError::Database(format!("failed to set pragmas: {e}")))?;
 
-        conn.execute_batch(SCHEMA_SQL)
+        let migration = conn.unchecked_transaction()?;
+        migration
+            .execute_batch(SCHEMA_SQL)
             .map_err(|e| AuditorError::Database(format!("failed to create schema: {e}")))?;
 
         // Additive column migrations for databases created before v4. Each is a
         // no-op when the column already exists.
-        add_missing_columns(&conn)?;
+        add_missing_columns(&migration)?;
 
-        let version: Option<i64> = conn
+        let version: Option<i64> = migration
             .query_row("SELECT version FROM schema_version LIMIT 1", [], |row| {
                 row.get(0)
             })
@@ -573,7 +611,7 @@ impl AuditorDatabase {
 
         match version {
             None => {
-                conn.execute(
+                migration.execute(
                     "INSERT INTO schema_version(version) VALUES (?1)",
                     params![SCHEMA_VERSION],
                 )?;
@@ -582,7 +620,7 @@ impl AuditorDatabase {
             Some(v) if v < SCHEMA_VERSION => {
                 // Migrations so far are purely additive; SCHEMA_SQL above has
                 // already created any missing tables/indexes.
-                conn.execute(
+                migration.execute(
                     "UPDATE schema_version SET version = ?1",
                     params![SCHEMA_VERSION],
                 )?;
@@ -597,6 +635,8 @@ impl AuditorDatabase {
             }
             _ => {}
         }
+
+        migration.commit()?;
 
         Ok(Self {
             conn: Arc::new(Mutex::new(conn)),
@@ -696,6 +736,17 @@ impl AuditorDatabase {
             Ok(mints)
         })
         .await
+    }
+
+    /// Active mints funded on this instance. Directory-only entries have no local wallet.
+    pub async fn get_audited_mints(&self) -> Result<Vec<Mint>, AuditorError> {
+        self.run(|conn| {
+            let mut stmt = conn.prepare(&format!(
+                "SELECT {MINT_COLUMNS} FROM mints WHERE deleted_at IS NULL AND sum_donations > 0 ORDER BY id"
+            ))?;
+            let mints = stmt.query_map([], row_to_mint)?.collect::<Result<Vec<_>, _>>()?;
+            Ok(mints)
+        }).await
     }
 
     /// Includes disabled entries: an empty active list is not an empty registry.
@@ -866,36 +917,6 @@ impl AuditorDatabase {
         .await
     }
 
-    /// Record a successful outgoing swap (melt) and mark the mint healthy.
-    pub async fn record_mint_melt_ok(&self, mint_id: u64) -> Result<(), AuditorError> {
-        self.run(move |conn| {
-            let now = dt_to_str(&Utc::now());
-            conn.execute(
-                "UPDATE mints
-                 SET n_melts = n_melts + 1, state = 'OK', next_update = ?2, updated_at = ?2
-                 WHERE id = ?1",
-                params![mint_id as i64, now],
-            )?;
-            Ok(())
-        })
-        .await
-    }
-
-    /// Record a successful incoming swap (mint) and mark the mint healthy.
-    pub async fn record_mint_mint_ok(&self, mint_id: u64) -> Result<(), AuditorError> {
-        self.run(move |conn| {
-            let now = dt_to_str(&Utc::now());
-            conn.execute(
-                "UPDATE mints
-                 SET n_mints = n_mints + 1, state = 'OK', next_update = ?2, updated_at = ?2
-                 WHERE id = ?1",
-                params![mint_id as i64, now],
-            )?;
-            Ok(())
-        })
-        .await
-    }
-
     /// Record a no-fee health probe result for uptime charts and diagnostics.
     // Mirrors a health-check row; keeping named arguments avoids a second storage DTO.
     #[allow(clippy::too_many_arguments)]
@@ -1017,14 +1038,14 @@ impl AuditorDatabase {
             conn.execute(
                 "WITH latest_payment AS (
                      SELECT state FROM swaps
-                     WHERE (state = 'OK' AND (from_id = ?1 OR to_id = ?1))
+                     WHERE auditor_pubkey = '' AND ((state = 'OK' AND (from_id = ?1 OR to_id = ?1))
                         OR (state = 'ERROR' AND failed_mint_id = ?1
                             AND COALESCE(category, '') <> 'internal'
                             AND LOWER(COALESCE(error, '')) NOT LIKE '%insufficient funds%'
                             AND LOWER(COALESCE(error, '')) NOT LIKE '%already spent%'
                             AND LOWER(COALESCE(error, '')) NOT LIKE '%token not verified%'
-                            AND LOWER(COALESCE(error, '')) NOT LIKE '%quote already in use%')
-                     ORDER BY id DESC LIMIT 1
+                            AND LOWER(COALESCE(error, '')) NOT LIKE '%quote already in use%'))
+                     ORDER BY created_at DESC, id DESC LIMIT 1
                  ), payment_status AS (
                      SELECT COALESCE((SELECT state FROM latest_payment), '') = 'ERROR' AS failed
                  )
@@ -1041,31 +1062,6 @@ impl AuditorDatabase {
         .await
     }
 
-    /// Atomically add a donation to an existing mint. Returns the mint id, or
-    /// `None` if no mint with this URL is tracked yet (caller inserts then).
-    pub async fn add_donation(&self, url: &str, amount: u64) -> Result<Option<u64>, AuditorError> {
-        let url = url.to_string();
-        self.run(move |conn| {
-            // A fresh donation revives a soft-deleted mint: donating from a mint
-            // is the canonical way to put it (back) under audit.
-            let changed = conn.execute(
-                "UPDATE mints
-                 SET sum_donations = sum_donations + ?2, updated_at = ?3, deleted_at = NULL
-                 WHERE url = ?1",
-                params![url, amount as i64, dt_to_str(&Utc::now())],
-            )?;
-            if changed == 0 {
-                return Ok(None);
-            }
-            let id: i64 =
-                conn.query_row("SELECT id FROM mints WHERE url = ?1", params![url], |row| {
-                    row.get(0)
-                })?;
-            Ok(Some(id as u64))
-        })
-        .await
-    }
-
     // ----- Donations -------------------------------------------------------------
 
     /// Register/revive the mint, increment its target and record the event in
@@ -1076,6 +1072,17 @@ impl AuditorDatabase {
         amount: u64,
         via: &str,
     ) -> Result<Mint, AuditorError> {
+        self.record_donation_receipt(mint_url, amount, via, None)
+            .await
+    }
+
+    pub async fn record_donation_receipt(
+        &self,
+        mint_url: &str,
+        amount: u64,
+        via: &str,
+        receipt: Option<String>,
+    ) -> Result<Mint, AuditorError> {
         let amount = i64::try_from(amount)
             .ok()
             .filter(|amount| *amount > 0)
@@ -1084,6 +1091,20 @@ impl AuditorDatabase {
         let via = via.to_string();
         self.run(move |conn| {
             let tx = conn.unchecked_transaction()?;
+            if let Some(key) = &receipt {
+                let recorded: Option<i64> = tx.query_row(
+                    "SELECT amount FROM donation_receipts WHERE receipt = ?1 AND mint_url = ?2",
+                    params![key, mint_url],
+                    |r| r.get(0),
+                )?;
+                if recorded.is_some() {
+                    return Ok(tx.query_row(
+                        &format!("SELECT {MINT_COLUMNS} FROM mints WHERE url = ?1"),
+                        [&mint_url],
+                        row_to_mint,
+                    )?);
+                }
+            }
             let now = dt_to_str(&Utc::now());
             tx.execute(
                 "INSERT INTO mints (url, sum_donations, updated_at, next_update)
@@ -1112,6 +1133,12 @@ impl AuditorDatabase {
                  VALUES (?1, ?2, ?3, ?4, ?5)",
                 params![mint.id as i64, mint_url, amount, via, now],
             )?;
+            if let Some(key) = receipt {
+                tx.execute(
+                    "UPDATE donation_receipts SET amount = ?2 WHERE receipt = ?1",
+                    params![key, amount],
+                )?;
+            }
             tx.commit()?;
             Ok(mint)
         })
@@ -1131,33 +1158,6 @@ impl AuditorDatabase {
                 params![id as i64, name, info],
             )?;
             Ok(())
-        })
-        .await
-    }
-
-    /// Record a donation event. Returns the new row id.
-    pub async fn insert_donation(
-        &self,
-        mint_id: u64,
-        mint_url: &str,
-        amount: u64,
-        via: &str,
-    ) -> Result<u64, AuditorError> {
-        let mint_url = mint_url.to_string();
-        let via = via.to_string();
-        self.run(move |conn| {
-            conn.execute(
-                "INSERT INTO donations (mint_id, mint_url, amount, via, created_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5)",
-                params![
-                    mint_id as i64,
-                    mint_url,
-                    amount as i64,
-                    via,
-                    dt_to_str(&Utc::now())
-                ],
-            )?;
-            Ok(conn.last_insert_rowid() as u64)
         })
         .await
     }
@@ -1237,7 +1237,7 @@ impl AuditorDatabase {
                     conn.query_row(
                         "SELECT COUNT(*),
                                 COALESCE(SUM(CASE WHEN state = 'OK' THEN 1 ELSE 0 END), 0),
-                                COALESCE(AVG(CASE WHEN state = 'OK' THEN time_taken END), 0.0)
+                                COALESCE(AVG(CASE WHEN state = 'OK' AND time_taken > 0 THEN time_taken END), 0.0)
                          FROM swaps
                          WHERE (from_id = ?1 OR to_id = ?1)
                            AND (?2 IS NULL OR auditor_pubkey = ?2)
@@ -1605,17 +1605,38 @@ impl AuditorDatabase {
     /// Commit a settled swap and both mint counters as one accounting event.
     /// Wallet settlement has already happened; callers must surface any failure.
     pub async fn record_swap_success(&self, swap: &SwapEvent) -> Result<u64, AuditorError> {
-        if swap.state != MintState::Ok || swap.from_id == swap.to_id {
+        self.complete_payment(swap, None).await
+    }
+
+    pub async fn complete_payment(
+        &self,
+        swap: &SwapEvent,
+        payment_id: Option<String>,
+    ) -> Result<u64, AuditorError> {
+        if swap.from_id == swap.to_id {
             return Err(AuditorError::InvalidInput(
-                "expected a successful swap between distinct mints".into(),
+                "expected a swap between distinct mints".into(),
             ));
         }
         let swap = swap.clone();
         self.run(move |conn| {
             let tx = conn.unchecked_transaction()?;
+            if let Some(key) = &payment_id {
+                let prior: Option<u64> = tx.query_row(
+                    "SELECT swap_id FROM pending_payments WHERE id = ?1",
+                    [key],
+                    |r| r.get(0),
+                )?;
+                if let Some(id) = prior {
+                    return Ok(id);
+                }
+            }
             let id = insert_swap_row(&tx, &swap)?;
             let now = dt_to_str(&swap.created_at);
-            for (counter, mint_id) in [("n_melts", swap.from_id), ("n_mints", swap.to_id)] {
+            for (counter, mint_id) in [("n_melts", swap.from_id), ("n_mints", swap.to_id)]
+                .into_iter()
+                .filter(|_| swap.state == MintState::Ok)
+            {
                 let changed = tx.execute(
                     &format!(
                         "UPDATE mints SET {counter} = {counter} + 1, state = 'OK',
@@ -1628,6 +1649,12 @@ impl AuditorDatabase {
                         "mint {mint_id} missing while recording settled swap"
                     )));
                 }
+            }
+            if let Some(key) = payment_id {
+                tx.execute(
+                    "UPDATE pending_payments SET swap_id = ?2 WHERE id = ?1",
+                    params![key, id],
+                )?;
             }
             tx.commit()?;
             Ok(id)
@@ -1764,7 +1791,8 @@ impl AuditorDatabase {
                     software = excluded.software, frequency = excluded.frequency,
                     contact = excluded.contact,
                     announced_at = MAX(COALESCE(auditors.announced_at, ''), excluded.announced_at),
-                    last_seen = MAX(auditors.last_seen, excluded.last_seen)",
+                    last_seen = MAX(auditors.last_seen, excluded.last_seen)
+                 WHERE excluded.announced_at > COALESCE(auditors.announced_at, '')",
                 params![
                     a.pubkey,
                     a.name,
@@ -2128,7 +2156,7 @@ impl AuditorDatabase {
     pub async fn get_average_swap_time(&self) -> Result<f64, AuditorError> {
         self.run(|conn| {
             let avg: f64 = conn.query_row(
-                "SELECT COALESCE(AVG(time_taken), 0.0) FROM swaps WHERE state = 'OK'",
+                "SELECT COALESCE(AVG(NULLIF(time_taken,0)), 0.0) FROM swaps WHERE state = 'OK'",
                 [],
                 |row| row.get(0),
             )?;
@@ -2141,7 +2169,7 @@ impl AuditorDatabase {
         self.run(|conn| {
             let cutoff = dt_to_str(&(Utc::now() - chrono::Duration::hours(24)));
             let avg: f64 = conn.query_row(
-                "SELECT COALESCE(AVG(time_taken), 0.0) FROM swaps WHERE state = 'OK' AND created_at >= ?1",
+                "SELECT COALESCE(AVG(NULLIF(time_taken,0)), 0.0) FROM swaps WHERE state = 'OK' AND created_at >= ?1",
                 params![cutoff],
                 |row| row.get(0),
             )?;
@@ -2197,6 +2225,7 @@ fn row_to_swap(row: &rusqlite::Row<'_>) -> rusqlite::Result<SwapEvent> {
         to_url: row.get(4)?,
         amount: row.get::<_, i64>(5)? as u64,
         fee: row.get::<_, i64>(6)? as u64,
+        fee_known: row.get(17)?,
         state: str_to_state(&row.get::<_, String>(7)?),
         error,
         failed_mint_id: row.get::<_, Option<i64>>(9)?.map(|id| id as u64),
@@ -2276,6 +2305,7 @@ mod tests {
             to_url: to.url.clone(),
             amount,
             fee: 1,
+            fee_known: true,
             created_at: Utc::now(),
             time_taken: 1200.0,
             state,
@@ -2487,7 +2517,14 @@ mod tests {
             .record_donation("https://mint.example", 10, "token")
             .await
             .unwrap();
-        db.record_mint_melt_ok(mint.id).await.unwrap();
+        let peer = db
+            .ensure_mint_for_url("https://peer.example")
+            .await
+            .unwrap();
+        db.record_swap_success(&sample_swap(&mint, &peer, 5, MintState::Ok))
+            .await
+            .unwrap();
+        db.soft_delete_mint_by_url(&peer.url).await.unwrap();
         db.soft_delete_mint_by_url(&mint.url).await.unwrap();
         assert!(db.get_all_mints().await.unwrap().is_empty());
         assert!(db.has_mint_history().await.unwrap());
@@ -2561,15 +2598,34 @@ mod tests {
             db.upsert_review(&r).await.unwrap();
         }
         let names = |mints: Vec<Mint>| -> Vec<String> {
-            mints.into_iter().map(|m| m.url.replace("https://", "").replace(".example", "")).collect()
+            mints
+                .into_iter()
+                .map(|m| m.url.replace("https://", "").replace(".example", ""))
+                .collect()
         };
-        let high = db.search_mints(String::new(), None, MintSort::RatingHigh, 0).await.unwrap().0;
+        let high = db
+            .search_mints(String::new(), None, MintSort::RatingHigh, 0)
+            .await
+            .unwrap()
+            .0;
         assert_eq!(names(high), ["high", "keyed", "low", "none"]);
-        let low = db.search_mints(String::new(), None, MintSort::RatingLow, 0).await.unwrap().0;
+        let low = db
+            .search_mints(String::new(), None, MintSort::RatingLow, 0)
+            .await
+            .unwrap()
+            .0;
         assert_eq!(names(low), ["low", "keyed", "high", "none"]);
-        let most = db.search_mints(String::new(), None, MintSort::MostReviews, 0).await.unwrap().0;
+        let most = db
+            .search_mints(String::new(), None, MintSort::MostReviews, 0)
+            .await
+            .unwrap()
+            .0;
         assert_eq!(names(most), ["low", "high", "keyed", "none"]);
-        let by_name = db.search_mints(String::new(), None, MintSort::Name, 0).await.unwrap().0;
+        let by_name = db
+            .search_mints(String::new(), None, MintSort::Name, 0)
+            .await
+            .unwrap()
+            .0;
         assert_eq!(names(by_name), ["high", "keyed", "low", "none"]);
     }
 
@@ -2763,10 +2819,18 @@ mod tests {
         db.record_mint_failure(mint.id, Utc::now() + chrono::Duration::minutes(30))
             .await
             .unwrap();
-        let donated = db.add_donation("https://a.example.com", 500).await.unwrap();
-        assert_eq!(donated, Some(mint.id));
-        db.record_mint_melt_ok(mint.id).await.unwrap();
-        db.record_mint_mint_ok(mint.id).await.unwrap();
+        let donated = db.record_donation(&mint.url, 500, "token").await.unwrap();
+        assert_eq!(donated.id, mint.id);
+        let peer = db
+            .ensure_mint_for_url("https://peer.example")
+            .await
+            .unwrap();
+        db.record_swap_success(&sample_swap(&mint, &peer, 5, MintState::Ok))
+            .await
+            .unwrap();
+        db.record_swap_success(&sample_swap(&peer, &mint, 5, MintState::Ok))
+            .await
+            .unwrap();
 
         let stored = db.get_mint_by_id(mint.id).await.unwrap().unwrap();
         assert_eq!(stored.n_errors, 1);
@@ -2774,13 +2838,6 @@ mod tests {
         assert_eq!(stored.n_mints, 1);
         assert_eq!(stored.sum_donations, 1500); // 1000 initial + 500
         assert_eq!(stored.state, MintState::Ok);
-
-        // Unknown mint: no row updated, caller inserts instead.
-        let missing = db
-            .add_donation("https://nope.example.com", 10)
-            .await
-            .unwrap();
-        assert_eq!(missing, None);
     }
 
     #[tokio::test]
@@ -2809,11 +2866,33 @@ mod tests {
             .unwrap());
 
         // A fresh donation revives the mint and keeps its prior balance.
-        let revived = db.add_donation("https://a.example.com", 250).await.unwrap();
-        assert_eq!(revived, Some(mint.id));
+        let revived = db.record_donation(&mint.url, 250, "token").await.unwrap();
+        assert_eq!(revived.id, mint.id);
         let stored = db.get_mint_by_id(mint.id).await.unwrap().unwrap();
         assert!(stored.deleted_at.is_none());
         assert_eq!(stored.sum_donations, 1250); // 1000 initial + 250
+    }
+
+    #[tokio::test]
+    async fn audited_mints_exclude_directory_entries_and_disabled_wallets() {
+        let db = AuditorDatabase::open_in_memory().unwrap();
+        db.ensure_mint_for_url("https://directory.example")
+            .await
+            .unwrap();
+        let funded = db
+            .record_donation("https://funded.example", 10, "token")
+            .await
+            .unwrap();
+        db.record_donation("https://disabled.example", 10, "token")
+            .await
+            .unwrap();
+        db.soft_delete_mint_by_url("https://disabled.example")
+            .await
+            .unwrap();
+        let audited = db.get_audited_mints().await.unwrap();
+        assert_eq!(audited.len(), 1);
+        assert_eq!(audited[0].id, funded.id);
+        assert_eq!(db.get_all_mints().await.unwrap().len(), 2);
     }
 
     #[tokio::test]
@@ -2824,14 +2903,10 @@ mod tests {
 
         assert_eq!(db.get_latest_donation_id().await.unwrap(), 0);
 
-        let d1 = db
-            .insert_donation(mint.id, &mint.url, 100, "token")
-            .await
-            .unwrap();
-        let d2 = db
-            .insert_donation(mint.id, &mint.url, 50, "nut18")
-            .await
-            .unwrap();
+        db.record_donation(&mint.url, 100, "token").await.unwrap();
+        let d1 = db.get_latest_donation_id().await.unwrap();
+        db.record_donation(&mint.url, 50, "nut18").await.unwrap();
+        let d2 = db.get_latest_donation_id().await.unwrap();
         assert!(d2 > d1);
         assert_eq!(db.get_latest_donation_id().await.unwrap(), d2);
 
@@ -3247,5 +3322,114 @@ mod tests {
             .unwrap();
         // Same second + same mint -> INSERT OR IGNORE dedupes.
         assert_eq!(count, 1);
+    }
+}
+
+#[cfg(test)]
+mod robustness_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn peer_replay_and_old_local_rows_cannot_change_local_payment_health() {
+        let db = AuditorDatabase::open_in_memory().unwrap();
+        let a = db.ensure_mint_for_url("https://a.example").await.unwrap();
+        let b = db.ensure_mint_for_url("https://b.example").await.unwrap();
+        let mut failure = SwapEvent::success(&a, &b, 10, 0, 100.0);
+        failure.state = MintState::Error;
+        failure.failed_mint_id = Some(a.id);
+        failure.category = Some("mint".into());
+        db.insert_swap(&failure).await.unwrap();
+        let mut replay = SwapEvent::success(&a, &b, 10, 0, 100.0);
+        replay.auditor_pubkey = "peer".into();
+        db.insert_swap(&replay).await.unwrap();
+        replay.auditor_pubkey.clear();
+        replay.created_at -= chrono::Duration::days(1);
+        db.insert_swap(&replay).await.unwrap();
+        db.record_mint_health_ok(a.id).await.unwrap();
+        assert_eq!(
+            db.get_mint_by_id(a.id).await.unwrap().unwrap().state,
+            MintState::Error
+        );
+        db.record_swap_success(&SwapEvent::success(&a, &b, 10, 0, 100.0))
+            .await
+            .unwrap();
+        let mut peer_failure = failure;
+        peer_failure.auditor_pubkey = "peer".into();
+        db.insert_swap(&peer_failure).await.unwrap();
+        db.record_mint_health_ok(a.id).await.unwrap();
+        assert_eq!(
+            db.get_mint_by_id(a.id).await.unwrap().unwrap().state,
+            MintState::Ok
+        );
+    }
+
+    #[tokio::test]
+    async fn older_announcement_cannot_overwrite_newer_peer_metadata() {
+        let db = AuditorDatabase::open_in_memory().unwrap();
+        let now = Utc::now();
+        let mut peer = Auditor {
+            pubkey: "peer".into(),
+            name: "new".into(),
+            urls: vec!["https://new.example".into()],
+            donate: None,
+            software: "new".into(),
+            frequency_secs: 600,
+            contact: None,
+            announced_at: Some(now),
+            last_seen: now,
+        };
+        db.upsert_auditor(&peer).await.unwrap();
+        peer.name = "old".into();
+        peer.urls = vec!["https://old.example".into()];
+        peer.announced_at = Some(now - chrono::Duration::days(1));
+        peer.last_seen = now - chrono::Duration::days(1);
+        db.upsert_auditor(&peer).await.unwrap();
+        let stored = db.get_auditors().await.unwrap();
+        assert_eq!(stored[0].name, "new");
+        assert_eq!(stored[0].urls, vec!["https://new.example"]);
+    }
+}
+
+#[cfg(test)]
+mod migration_regressions {
+    use super::*;
+    #[tokio::test]
+    async fn upgrades_legacy_fee_records_without_losing_history() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(SCHEMA_SQL).unwrap();
+        conn.execute_batch("INSERT INTO schema_version VALUES(8);
+            INSERT INTO swaps(state,stage,fee,created_at) VALUES('ERROR','checking the fee',31,'2026-01-01');
+            INSERT INTO swaps(state,stage,fee,created_at) VALUES('OK',NULL,0,'2026-01-02');
+            INSERT INTO swaps(state,stage,fee,created_at) VALUES('OK',NULL,2,'2026-01-03');").unwrap();
+        let db = AuditorDatabase::init(conn).unwrap();
+        db.run(|c| {
+            let mut statement =
+                c.prepare("SELECT fee,fee_reserve,fee_known FROM swaps ORDER BY id")?;
+            let rows = statement
+                .query_map([], |r| {
+                    Ok((
+                        r.get::<_, i64>(0)?,
+                        r.get::<_, Option<i64>>(1)?,
+                        r.get::<_, bool>(2)?,
+                    ))
+                })?
+                .collect::<Result<Vec<_>, _>>()?;
+            assert_eq!(
+                rows,
+                vec![(0, Some(31), true), (0, None, false), (2, None, true)]
+            );
+            assert_eq!(
+                c.query_row("SELECT version FROM schema_version", [], |r| r
+                    .get::<_, i64>(0))?,
+                9
+            );
+            assert_eq!(
+                c.query_row("PRAGMA synchronous", [], |r| r.get::<_, i64>(0))?,
+                2
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
     }
 }

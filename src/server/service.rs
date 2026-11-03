@@ -5,7 +5,7 @@
 //! functions stay thin and never drift apart.
 
 use crate::server::error::AuditorError;
-use crate::server::state::AppState;
+use crate::server::state::{local_balance, AppState};
 use crate::server::storage::{Donation, Mint};
 use crate::types::{
     AnnouncementRead, AuditorMintView, AuditorRead, DonationPoll, DonationRead, MintRead,
@@ -96,16 +96,40 @@ async fn receive_for_mint(
     token_str: &str,
     via: &str,
 ) -> Result<ReceiveOutcome, AuditorError> {
+    let _guard = state.wallet_guards.lock_one(mint_url).await;
     let wallet = state.wallet_for_mint(mint_url).await?;
+    let net = crate::server::net::NetConfig::from_env();
+    let token =
+        Token::from_str(token_str).map_err(|e| AuditorError::InvalidInput(e.to_string()))?;
+    let proofs = crate::server::net::with_timeout(
+        "read donation",
+        net.request_timeout,
+        state.wallet_repository.get_token_data(&token),
+    )
+    .await?
+    .proofs;
+    let receipt = cdk::wallet::types::TransactionId::from_proofs(proofs)
+        .map_err(|e| AuditorError::InvalidInput(e.to_string()))?
+        .to_string();
+    let receipt = crate::server::recovery::receipt_key(mint_url, &receipt);
+    let prior = state
+        .auditor_db
+        .begin_donation(receipt.clone(), mint_url.into(), via.into())
+        .await?;
 
     // CDK returns the amount actually received, after fees. A balance delta
     // also includes concurrent swaps and donations and can even underflow.
-    let received_amount = u64::from(
-        wallet
-            .receive(token_str, ReceiveOptions::default())
-            .await
-            .map_err(|e| AuditorError::Wallet(format!("failed to receive token: {e}")))?,
-    );
+    let received_amount = match prior {
+        Some(amount) => amount,
+        None => u64::from(
+            crate::server::net::with_timeout(
+                "receive donation",
+                net.request_timeout.saturating_mul(3),
+                wallet.receive(token_str, ReceiveOptions::default()),
+            )
+            .await?,
+        ),
+    };
 
     // Reject empty receives (already-spent / zero-value tokens) before they can
     // register a junk mint with no working capital.
@@ -119,7 +143,7 @@ async fn receive_for_mint(
     // a successful receive and its accounting.
     let mut mint = state
         .auditor_db
-        .record_donation(mint_url, received_amount, via)
+        .record_donation_receipt(mint_url, received_amount, via, Some(receipt))
         .await?;
     state.cache.clear();
     // Receiving already populated CDK's local mint info. Reuse it without
@@ -169,11 +193,12 @@ fn rewrite_token_mint_url(mut token: Token, mint_url: &str) -> Result<Token, Aud
 /// CDK wallet balance. Reads never create wallets or contact external mints.
 /// An unavailable balance is explicitly marked rather than presented as zero.
 pub async fn with_balance(state: &AppState, mint: Mint) -> MintRead {
+    let id = mint.id;
     let pubkey = mint.pubkey();
     let mut read = MintRead::from(mint);
     // Peer-only and announced mints have no local wallet to ask.
     if read.sum_donations > 0 {
-        match local_balance(state, &read.url).await {
+        match local_balance(&state.wallet_repository, &read.url).await {
             Ok(balance) => {
                 read.balance = balance;
                 read.balance_available = true;
@@ -183,7 +208,7 @@ pub async fn with_balance(state: &AppState, mint: Mint) -> MintRead {
     }
     match state
         .auditor_db
-        .directory_stats(read.id, &read.url, pubkey)
+        .directory_stats(id, &read.url, pubkey)
         .await
     {
         Ok(stats) => {
@@ -307,15 +332,6 @@ pub async fn mint_reviews(state: &AppState, mint_id: u64) -> Result<MintReviews,
     })
 }
 
-async fn local_balance(state: &AppState, url: &str) -> Result<u64, AuditorError> {
-    let mint_url = cdk::mint_url::MintUrl::from_str(url)
-        .map_err(|e| AuditorError::Internal(format!("invalid stored mint URL: {e}")))?;
-    let wallet = state
-        .wallet_repository
-        .get_wallet(&mint_url, &CurrencyUnit::Sat)
-        .await?;
-    Ok(wallet.total_balance().await?.into())
-}
 /// List mints with live balances. Balances are resolved concurrently so one
 /// slow wallet can't serialize the whole page load; input order is preserved.
 pub async fn mints_with_balance(
@@ -366,9 +382,9 @@ pub async fn compute_stats(state: &AppState) -> Result<MintStats, AuditorError> 
 
     // Sum live balances concurrently across all mint wallets.
     let mut set: tokio::task::JoinSet<Result<u64, AuditorError>> = tokio::task::JoinSet::new();
-    for mint in db.get_all_mints().await? {
+    for mint in db.get_audited_mints().await? {
         let state = state.clone();
-        set.spawn(async move { local_balance(&state, &mint.url).await });
+        set.spawn(async move { local_balance(&state.wallet_repository, &mint.url).await });
     }
     let mut total_balance = 0u64;
     while let Some(joined) = set.join_next().await {
@@ -439,7 +455,7 @@ impl From<Donation> for DonationRead {
     fn from(d: Donation) -> Self {
         DonationRead {
             id: d.id,
-            mint_id: d.mint_id,
+            mint_id: crate::types::mint_key(&d.mint_url),
             mint_url: d.mint_url,
             amount: d.amount,
             via: d.via,
@@ -471,41 +487,6 @@ pub async fn poll_donations(
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::{rewrite_token_mint_url, validate_donation_token};
-    use cdk::nuts::nut00::Token;
-    use std::str::FromStr;
-
-    #[test]
-    fn invalid_units_and_empty_tokens_are_rejected_before_wallet_access() {
-        let mint = "https://mint.example".parse().unwrap();
-        let usd = Token::new(mint, vec![], None, cdk::nuts::CurrencyUnit::Usd);
-        assert!(validate_donation_token(&usd)
-            .unwrap_err()
-            .to_string()
-            .contains("only sat"));
-        let mint = "https://mint.example".parse().unwrap();
-        let empty = Token::new(mint, vec![], None, cdk::nuts::CurrencyUnit::Sat);
-        assert!(validate_donation_token(&empty).is_err());
-    }
-
-    #[test]
-    fn rewrites_v4_token_mint_url_for_local_aliases() {
-        let token = Token::from_str(
-            "cashuBpGF0gaJhaUgArSaMTR9YJmFwgaNhYQFhc3hAOWE2ZGJiODQ3YmQyMzJiYTc2ZGIwZGYxOTcyMTZiMjlkM2I4Y2MxNDU1M2NkMjc4MjdmYzFjYzk0MmZlZGI0ZWFjWCEDhhhUP_trhpXfStS6vN6So0qWvc2X3O4NfM-Y1HISZ5JhZGlUaGFuayB5b3VhbXVodHRwOi8vbG9jYWxob3N0OjMzMzhhdWNzYXQ=",
-        )
-        .unwrap();
-
-        let rewritten = rewrite_token_mint_url(token, "http://mint-three:8085").unwrap();
-
-        assert_eq!(
-            rewritten.mint_url().unwrap().to_string(),
-            "http://mint-three:8085"
-        );
-    }
-}
-
 /// This instance first, then every peer announced or seen on Nostr.
 pub async fn list_auditors(state: &AppState) -> Result<Vec<AuditorRead>, AuditorError> {
     let self_hex = state.nostr.self_pubkey_hex().unwrap_or_default();
@@ -532,7 +513,11 @@ pub async fn list_auditors(state: &AppState) -> Result<Vec<AuditorRead>, Auditor
             npub: npub_of(&a.pubkey),
             pubkey: a.pubkey,
             name: a.name,
-            urls: a.urls,
+            urls: a
+                .urls
+                .into_iter()
+                .filter(|u| crate::server::mint_transport::parse_url(u).is_ok())
+                .collect(),
             donate: a.donate,
             software: a.software,
             frequency_secs: a.frequency_secs,
@@ -604,5 +589,68 @@ fn peer_state(metrics: &crate::types::MintMetrics) -> MintState {
         (Some(ok), Some(err)) if err > ok => MintState::Error,
         (None, Some(_)) => MintState::Error,
         _ => MintState::Ok,
+    }
+}
+
+/// Resolve a portable public identifier to this instance's private row number.
+pub async fn mint_local_id(state: &AppState, key: &str) -> Result<u64, AuditorError> {
+    use base64::Engine;
+    if key.len() > 4096 {
+        return Err(AuditorError::InvalidInput(
+            "mint identifier is too long".into(),
+        ));
+    }
+    let raw = base64::engine::general_purpose::URL_SAFE_NO_PAD
+        .decode(key)
+        .ok()
+        .and_then(|bytes| String::from_utf8(bytes).ok())
+        .ok_or_else(|| {
+            AuditorError::InvalidInput(
+                "use the stable mint identifier returned by the directory".into(),
+            )
+        })?;
+    crate::server::mint_transport::parse_url(&raw)
+        .map_err(|e| AuditorError::InvalidInput(e.to_string()))?;
+    let url = crate::server::mint_url::normalize_mint_url(&raw);
+    state
+        .auditor_db
+        .get_mint_by_url(&url)
+        .await?
+        .map(|m| m.id)
+        .ok_or_else(|| AuditorError::NotFound(format!("mint {url}")))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{rewrite_token_mint_url, validate_donation_token};
+    use cdk::nuts::nut00::Token;
+    use std::str::FromStr;
+
+    #[test]
+    fn invalid_units_and_empty_tokens_are_rejected_before_wallet_access() {
+        let mint = "https://mint.example".parse().unwrap();
+        let usd = Token::new(mint, vec![], None, cdk::nuts::CurrencyUnit::Usd);
+        assert!(validate_donation_token(&usd)
+            .unwrap_err()
+            .to_string()
+            .contains("only sat"));
+        let mint = "https://mint.example".parse().unwrap();
+        let empty = Token::new(mint, vec![], None, cdk::nuts::CurrencyUnit::Sat);
+        assert!(validate_donation_token(&empty).is_err());
+    }
+
+    #[test]
+    fn rewrites_v4_token_mint_url_for_local_aliases() {
+        let token = Token::from_str(
+            "cashuBpGF0gaJhaUgArSaMTR9YJmFwgaNhYQFhc3hAOWE2ZGJiODQ3YmQyMzJiYTc2ZGIwZGYxOTcyMTZiMjlkM2I4Y2MxNDU1M2NkMjc4MjdmYzFjYzk0MmZlZGI0ZWFjWCEDhhhUP_trhpXfStS6vN6So0qWvc2X3O4NfM-Y1HISZ5JhZGlUaGFuayB5b3VhbXVodHRwOi8vbG9jYWxob3N0OjMzMzhhdWNzYXQ=",
+        )
+        .unwrap();
+
+        let rewritten = rewrite_token_mint_url(token, "http://mint-three:8085").unwrap();
+
+        assert_eq!(
+            rewritten.mint_url().unwrap().to_string(),
+            "http://mint-three:8085"
+        );
     }
 }

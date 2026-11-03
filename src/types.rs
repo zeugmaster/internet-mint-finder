@@ -59,7 +59,8 @@ pub struct ChargeRequest {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MintRead {
-    pub id: u64,
+    /// Stable across instances: URL-safe base64 of the canonical mint URL.
+    pub id: String,
     pub url: String,
     pub info: Option<String>,
     pub name: String,
@@ -140,19 +141,21 @@ pub struct MintReviews {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SwapEventRead {
     pub id: u64,
-    pub from_id: u64,
-    pub to_id: u64,
+    pub from_id: String,
+    pub to_id: String,
     pub from_url: String,
     pub to_url: String,
     pub amount: u64,
     pub fee: u64,
+    #[serde(default = "crate::types::known_fee")]
+    pub fee_known: bool,
     pub created_at: DateTime<Utc>,
     pub time_taken: f64,
     pub state: MintState,
     pub error: Option<String>,
     /// Which mint actually caused a failure (`None` for successes / legacy rows).
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub failed_mint_id: Option<u64>,
+    pub failed_mint_id: Option<String>,
     /// The swap stage at which a failure occurred (e.g. "paying invoice").
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stage: Option<String>,
@@ -304,7 +307,7 @@ impl Default for MintUptime {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DonationRead {
     pub id: u64,
-    pub mint_id: u64,
+    pub mint_id: String,
     pub mint_url: String,
     pub amount: u64,
     pub via: String,
@@ -316,4 +319,15 @@ pub struct DonationRead {
 pub struct DonationPoll {
     pub latest_id: u64,
     pub donations: Vec<DonationRead>,
+}
+
+/// Older serialized observations have no explicit fee-availability marker.
+pub fn known_fee() -> bool {
+    true
+}
+
+/// Public mint identifiers do not depend on local insertion order.
+pub fn mint_key(url: &str) -> String {
+    use base64::Engine;
+    base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(url)
 }

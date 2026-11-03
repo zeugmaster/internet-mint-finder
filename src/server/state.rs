@@ -11,6 +11,7 @@ use tracing::{info, warn};
 
 use super::auditor::AuditorConfig;
 use super::cache::ResponseCache;
+use super::error::AuditorError;
 use super::mint_url::normalize_mint_url;
 use super::nostr::NostrConfig;
 use super::storage::{AuditorDatabase, Mint};
@@ -18,6 +19,8 @@ use crate::types::MintState;
 
 #[derive(Clone)]
 pub struct AppState {
+    pub workers: Arc<super::workers::Workers>,
+    pub wallet_guards: super::auditor::guard::MintGuards,
     pub leptos_options: LeptosOptions,
     pub wallet_repository: Arc<WalletRepository>,
     pub app_name: String,
@@ -35,28 +38,9 @@ pub struct AppState {
 }
 
 impl AppState {
-    /// Get the wallet for a mint, creating it on first use. Saga recovery
-    /// runs only when a wallet is first added, not on every lookup.
+    /// Get a wallet with the guarded mint transport; recovery runs in its own worker.
     pub async fn wallet_for_mint(&self, mint_url: &str) -> Result<Wallet, cdk::Error> {
-        let mint = cdk::mint_url::MintUrl::from_str(mint_url)?;
-        if let Ok(wallet) = self
-            .wallet_repository
-            .get_wallet(&mint, &CurrencyUnit::Sat)
-            .await
-        {
-            return Ok(wallet);
-        }
-
-        self.wallet_repository.add_wallet(mint.clone()).await?;
-
-        let wallet = self
-            .wallet_repository
-            .get_wallet(&mint, &CurrencyUnit::Sat)
-            .await?;
-
-        Self::recover_wallet_sagas(&wallet, mint_url).await;
-
-        Ok(wallet)
+        super::mint_transport::wallet(&self.wallet_repository, mint_url).await
     }
 
     pub async fn new(leptos_options: LeptosOptions) -> Result<Self, Box<dyn std::error::Error>> {
@@ -95,6 +79,8 @@ impl AppState {
         }
 
         let state = Self {
+            workers: Default::default(),
+            wallet_guards: Default::default(),
             leptos_options,
             wallet_repository,
             app_name,
@@ -108,7 +94,6 @@ impl AppState {
         };
 
         state.recover_empty_auditor_db_from_wallets().await;
-        state.recover_known_wallets().await;
 
         Ok(state)
     }
@@ -164,7 +149,12 @@ impl AppState {
                 continue;
             }
 
-            let mint_info = wallet.load_mint_info().await.ok();
+            let mint_info = wallet
+                .localstore
+                .get_mint(wallet.mint_url.clone())
+                .await
+                .ok()
+                .flatten();
             let now = Utc::now();
             let mint = Mint {
                 id: 0,
@@ -207,48 +197,14 @@ impl AppState {
             );
         }
     }
+}
 
-    /// Recover incomplete wallet sagas for every known mint once at startup.
-    async fn recover_known_wallets(&self) {
-        let mints = match self.auditor_db.get_all_mints().await {
-            Ok(mints) => mints,
-            Err(e) => {
-                warn!("Could not list mints for startup saga recovery: {}", e);
-                return;
-            }
-        };
-
-        for mint in mints {
-            match self.wallet_for_mint(&mint.url).await {
-                Ok(wallet) => Self::recover_wallet_sagas(&wallet, &mint.url).await,
-                Err(e) => warn!("Could not open wallet for {}: {}", mint.url, e),
-            }
-        }
-    }
-
-    async fn recover_wallet_sagas(wallet: &Wallet, mint_url: &str) {
-        match wallet.recover_incomplete_sagas().await {
-            Ok(report) => {
-                if report.recovered > 0
-                    || report.compensated > 0
-                    || report.skipped > 0
-                    || report.failed > 0
-                {
-                    info!(
-                        "Recovered wallet sagas for {}: recovered={}, compensated={}, skipped={}, failed={}",
-                        mint_url,
-                        report.recovered,
-                        report.compensated,
-                        report.skipped,
-                        report.failed
-                    );
-                }
-            }
-            Err(e) => {
-                warn!("Failed to recover wallet sagas for {}: {}", mint_url, e);
-            }
-        }
-    }
+/// Read a local wallet balance without creating wallets or contacting a mint.
+pub async fn local_balance(repository: &WalletRepository, url: &str) -> Result<u64, AuditorError> {
+    let mint_url = cdk::mint_url::MintUrl::from_str(url)
+        .map_err(|e| AuditorError::Internal(format!("invalid stored mint URL: {e}")))?;
+    let wallet = repository.get_wallet(&mint_url, &CurrencyUnit::Sat).await?;
+    Ok(wallet.total_balance().await?.into())
 }
 
 /// The application data directory (`~/.<app-name>`), derived from `APP_NAME`.
@@ -294,13 +250,21 @@ pub async fn open_wallet_repository() -> Result<Arc<WalletRepository>, Box<dyn s
         WalletSqliteDatabase::new(wallet_db_path.to_str().ok_or("Invalid path")?).await?;
     let wallet_db = Arc::new(wallet_db);
 
-    Ok(Arc::new(
-        WalletRepositoryBuilder::new()
-            .localstore(wallet_db)
-            .seed(seed)
-            .build()
-            .await?,
-    ))
+    let repository = WalletRepositoryBuilder::new()
+        .localstore(wallet_db)
+        .seed(seed)
+        .build()
+        .await?;
+    for wallet in repository.get_wallets().await {
+        repository
+            .set_mint_config(
+                wallet.mint_url.clone(),
+                wallet.unit.clone(),
+                super::mint_transport::wallet_config(wallet.mint_url.clone()),
+            )
+            .await?;
+    }
+    Ok(Arc::new(repository))
 }
 
 fn normalize_base_url(raw: Option<String>) -> Result<Option<String>, Box<dyn std::error::Error>> {
@@ -344,6 +308,35 @@ fn parse_mint_url_aliases() -> Vec<(String, String)> {
 impl FromRef<AppState> for LeptosOptions {
     fn from_ref(state: &AppState) -> Self {
         state.leptos_options.clone()
+    }
+}
+
+#[cfg(test)]
+pub(crate) async fn test_state() -> AppState {
+    AppState {
+        workers: Default::default(),
+        wallet_guards: Default::default(),
+        leptos_options: leptos::prelude::get_configuration(Some("Cargo.toml"))
+            .unwrap()
+            .leptos_options,
+        wallet_repository: Arc::new(
+            WalletRepositoryBuilder::new()
+                .localstore(Arc::new(
+                    WalletSqliteDatabase::new(":memory:").await.unwrap(),
+                ))
+                .seed([0; 64])
+                .build()
+                .await
+                .unwrap(),
+        ),
+        app_name: "test".into(),
+        auditor_db: Arc::new(AuditorDatabase::open_in_memory().unwrap()),
+        auditor_config: Default::default(),
+        cache: Arc::new(Default::default()),
+        base_url: None,
+        mint_url_aliases: Arc::new(vec![]),
+        nostr: Arc::new(Default::default()),
+        started_at: std::time::Instant::now(),
     }
 }
 

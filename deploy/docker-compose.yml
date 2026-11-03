@@ -8,6 +8,7 @@ services:
       dockerfile: Dockerfile
     image: imf:latest
     restart: unless-stopped
+    stop_grace_period: 45s
     env_file: .env
     environment:
       SITE_ADDR: "0.0.0.0:3000"

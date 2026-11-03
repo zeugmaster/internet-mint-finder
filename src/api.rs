@@ -105,12 +105,13 @@ pub async fn get_mints(params: PaginationParams) -> Result<Vec<MintRead>, Server
 }
 
 #[server(name = GetMintById)]
-pub async fn get_mint_by_id(id: u64) -> Result<Option<MintRead>, ServerFnError> {
+pub async fn get_mint_by_id(id: String) -> Result<Option<MintRead>, ServerFnError> {
     #[cfg(feature = "ssr")]
     {
         use crate::server::service;
 
         let state = app_state()?;
+        let id = crate::server::service::mint_local_id(&state, &id).await?;
         Ok(service::mint_with_balance(&state, id).await?)
     }
     #[cfg(not(feature = "ssr"))]
@@ -141,13 +142,14 @@ pub async fn get_swaps(params: PaginationParams) -> Result<Vec<SwapEventRead>, S
 
 #[server(name = GetSwapsByMint)]
 pub async fn get_swaps_by_mint(
-    mint_id: u64,
+    mint_id: String,
     received: Option<bool>,
     params: PaginationParams,
 ) -> Result<Vec<SwapEventRead>, ServerFnError> {
     #[cfg(feature = "ssr")]
     {
         let state = app_state()?;
+        let mint_id = crate::server::service::mint_local_id(&state, &mint_id).await?;
         let swaps = state
             .auditor_db
             .get_swaps_by_mint(mint_id, received, params.skip, params.limit)
@@ -208,10 +210,11 @@ pub async fn get_payment_request(
 
 /// Aggregate audit metrics for one mint.
 #[server(name = GetMintMetrics)]
-pub async fn get_mint_metrics(id: u64) -> Result<MintMetrics, ServerFnError> {
+pub async fn get_mint_metrics(id: String) -> Result<MintMetrics, ServerFnError> {
     #[cfg(feature = "ssr")]
     {
         let state = app_state()?;
+        let id = crate::server::service::mint_local_id(&state, &id).await?;
         state
             .auditor_db
             .get_mint_metrics(id, None)
@@ -227,10 +230,11 @@ pub async fn get_mint_metrics(id: u64) -> Result<MintMetrics, ServerFnError> {
 
 /// Observed audit uptime for one mint.
 #[server(name = GetMintUptime)]
-pub async fn get_mint_uptime(id: u64) -> Result<MintUptime, ServerFnError> {
+pub async fn get_mint_uptime(id: String) -> Result<MintUptime, ServerFnError> {
     #[cfg(feature = "ssr")]
     {
         let state = app_state()?;
+        let id = crate::server::service::mint_local_id(&state, &id).await?;
         state
             .auditor_db
             .get_mint_uptime(id)
@@ -246,10 +250,14 @@ pub async fn get_mint_uptime(id: u64) -> Result<MintUptime, ServerFnError> {
 
 /// Recent donations for one mint.
 #[server(name = GetMintDonations)]
-pub async fn get_mint_donations(id: u64, limit: u64) -> Result<Vec<DonationRead>, ServerFnError> {
+pub async fn get_mint_donations(
+    id: String,
+    limit: u64,
+) -> Result<Vec<DonationRead>, ServerFnError> {
     #[cfg(feature = "ssr")]
     {
         let state = app_state()?;
+        let id = crate::server::service::mint_local_id(&state, &id).await?;
         let donations = state
             .auditor_db
             .get_donations_by_mint(id, limit)
@@ -300,10 +308,11 @@ pub async fn get_auditors() -> Result<Vec<AuditorRead>, ServerFnError> {
 
 /// Per-auditor metrics for one mint.
 #[server(name = GetMintAuditorViews)]
-pub async fn get_mint_auditor_views(id: u64) -> Result<Vec<AuditorMintView>, ServerFnError> {
+pub async fn get_mint_auditor_views(id: String) -> Result<Vec<AuditorMintView>, ServerFnError> {
     #[cfg(feature = "ssr")]
     {
         let state = app_state()?;
+        let id = crate::server::service::mint_local_id(&state, &id).await?;
         crate::server::service::mint_auditor_views(&state, id)
             .await
             .map_err(|e| ServerFnError::new(e.to_string()))
@@ -317,10 +326,11 @@ pub async fn get_mint_auditor_views(id: u64) -> Result<Vec<AuditorMintView>, Ser
 
 /// The mint's NIP-87 announcement, if any.
 #[server(name = GetMintAnnouncement)]
-pub async fn get_mint_announcement(id: u64) -> Result<Option<AnnouncementRead>, ServerFnError> {
+pub async fn get_mint_announcement(id: String) -> Result<Option<AnnouncementRead>, ServerFnError> {
     #[cfg(feature = "ssr")]
     {
         let state = app_state()?;
+        let id = crate::server::service::mint_local_id(&state, &id).await?;
         crate::server::service::mint_announcement(&state, id)
             .await
             .map_err(|e| ServerFnError::new(e.to_string()))
@@ -334,10 +344,11 @@ pub async fn get_mint_announcement(id: u64) -> Result<Option<AnnouncementRead>, 
 
 /// NIP-87 reviews of a mint plus the context for signing a new one.
 #[server(name = GetMintReviews)]
-pub async fn get_mint_reviews(id: u64) -> Result<MintReviews, ServerFnError> {
+pub async fn get_mint_reviews(id: String) -> Result<MintReviews, ServerFnError> {
     #[cfg(feature = "ssr")]
     {
         let state = app_state()?;
+        let id = crate::server::service::mint_local_id(&state, &id).await?;
         crate::server::service::mint_reviews(&state, id)
             .await
             .map_err(|e| ServerFnError::new(e.to_string()))

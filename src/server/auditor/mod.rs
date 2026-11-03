@@ -10,7 +10,7 @@
 //! * [`snapshot`] — periodic balance snapshots for the time-series charts.
 
 mod config;
-mod guard;
+pub mod guard;
 mod health;
 mod snapshot;
 mod swap;
@@ -29,7 +29,8 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::{watch, RwLock};
-use tokio::time::{sleep, Duration, MissedTickBehavior};
+use tokio::task::JoinSet;
+use tokio::time::{sleep, sleep_until, Duration, Instant, MissedTickBehavior};
 use tracing::{info, warn};
 
 // ---------------------------------------------------------------------------
@@ -52,24 +53,9 @@ pub(super) struct SwapSupport {
 
 pub(super) type SwapSupportCache = Arc<RwLock<HashMap<String, SwapSupport>>>;
 
-/// Live (local) wallet balance for a mint. Reads the local store only — no
-/// network — so it needs no timeout. Returns 0 if the wallet can't be opened.
-pub(super) async fn balance_for(wallet_repository: &Arc<WalletRepository>, url: &str) -> u64 {
-    let Ok(mint_url) = cdk::mint_url::MintUrl::from_str(url) else {
-        return 0;
-    };
-    match wallet_repository
-        .get_wallet(&mint_url, &CurrencyUnit::Sat)
-        .await
-    {
-        Ok(wallet) => wallet.total_balance().await.map(u64::from).unwrap_or(0),
-        Err(_) => 0,
-    }
-}
-
 /// Fetch a mint's NUT-06 info under a deadline.
 pub(super) async fn probe_mint_info(
-    wallet_repository: &Arc<WalletRepository>,
+    _wallet_repository: &Arc<WalletRepository>,
     net: &NetConfig,
     url: &str,
 ) -> Result<MintInfo, AuditorError> {
@@ -78,7 +64,7 @@ pub(super) async fn probe_mint_info(
     net::with_timeout(
         &format!("mint info {url}"),
         net.probe_timeout,
-        wallet_repository.fetch_mint_info(&mint_url),
+        crate::server::mint_transport::connector(mint_url).get_mint_info(),
     )
     .await
 }
@@ -154,7 +140,6 @@ pub struct Auditor {
     auditor_db: Arc<AuditorDatabase>,
     config: AuditorConfig,
     net: NetConfig,
-    shutdown: watch::Sender<bool>,
 }
 
 impl Auditor {
@@ -163,30 +148,41 @@ impl Auditor {
         auditor_db: Arc<AuditorDatabase>,
         config: AuditorConfig,
     ) -> Self {
-        let (shutdown, _) = watch::channel(false);
         Self {
             wallet_repository,
             auditor_db,
             config,
             net: NetConfig::from_env(),
-            shutdown,
         }
     }
 
-    /// Spawn the swap, hourly health, and snapshot loops. Idempotent: calling twice
-    /// only spawns once (subsequent calls warn).
-    pub async fn start(&self) {
-        if self.shutdown.receiver_count() > 0 {
-            warn!("Auditor already running");
-            return;
-        }
-
+    /// Register the engine's workers with the application's shared lifecycle.
+    pub async fn start(
+        self,
+        workers: &mut JoinSet<&'static str>,
+        shutdown: watch::Receiver<bool>,
+        guards: MintGuards,
+        progress: Arc<crate::server::workers::Workers>,
+    ) {
         info!(config = ?self.config, net = ?self.net, "Starting auditor");
 
-        // Per-mint locks shared by paid swaps and the optional error-retry loop,
-        // so two attempts can never race the same mint's proof store while
-        // disjoint mints still run in parallel.
-        let guards = MintGuards::default();
+        progress.register(
+            "health probes",
+            Duration::from_secs(self.config.health_check_interval_secs.saturating_mul(2)),
+            true,
+        );
+        progress.register(
+            "paid audits",
+            Duration::from_secs(self.config.max_swap_delay_secs.saturating_add(1800)),
+            true,
+        );
+        progress.register(
+            "balance snapshots",
+            Duration::from_secs(self.config.snapshot_interval_secs.saturating_add(120)),
+            true,
+        );
+
+        // Retry batches can contain overlapping pairs; each wallet has one writer.
         let mut initial_support = HashMap::new();
         match self.auditor_db.get_all_mints().await {
             Ok(mints) => {
@@ -221,80 +217,85 @@ impl Auditor {
             let net = self.net.clone();
             let support_cache = support_cache.clone();
             let interval_secs = self.config.health_check_interval_secs;
-            let mut shutdown = self.shutdown.subscribe();
+            let mut shutdown = shutdown.clone();
 
-            tokio::spawn(async move {
+            let progress = progress.clone();
+            workers.spawn(async move {
                 info!(
                     "Auditor health check loop started (every {}s)",
                     interval_secs
                 );
                 let mut ticker = tokio::time::interval(Duration::from_secs(interval_secs));
                 ticker.set_missed_tick_behavior(MissedTickBehavior::Skip);
-                loop {
+                while !*shutdown.borrow() {
                     tokio::select! {
+                        biased;
                         _ = shutdown.changed() => {
                             info!("Auditor health check loop stopping");
                             break;
                         }
                         _ = ticker.tick() => {
-                            if let Err(e) = health::run_probes(
-                                &wallet_repository,
-                                &auditor_db,
-                                &config,
-                                &net,
-                                &support_cache,
-                            )
-                            .await
-                            {
-                                warn!("Health probe round failed: {}", e);
+                            // Probes are read-only network work and can stop immediately.
+                            tokio::select! {
+                                biased;
+                                _ = shutdown.changed() => break,
+                                result = health::run_probes(
+                                    &wallet_repository, &auditor_db, &config, &net, &support_cache,
+                                ) => {
+                                    progress.beat("health probes");
+                                    if let Err(error) = result {
+                                        warn!(%error, "Health probe round failed");
+                                    }
+                                }
                             }
                         }
                     }
                 }
+                "health probes"
             });
         }
 
-        // Swap loop
+        // One paid worker schedules normal rounds and optional error retries.
         {
             let wallet_repository = self.wallet_repository.clone();
             let auditor_db = self.auditor_db.clone();
             let config = self.config.clone();
             let net = self.net.clone();
-            let guards = guards.clone();
-            let support_cache = support_cache.clone();
-            let mut shutdown = self.shutdown.subscribe();
+            let mut shutdown = shutdown.clone();
 
-            tokio::spawn(async move {
-                info!("Auditor swap loop started");
-                loop {
-                    if let Err(e) = swap::run_round(
+            let progress = progress.clone();
+            workers.spawn(async move {
+                let mut next_swap = Instant::now();
+                let retry_interval = Duration::from_secs(config.error_retry_interval_secs);
+                let mut next_retry =
+                    (config.error_retry_interval_secs > 0).then(|| Instant::now() + retry_interval);
+                while let Some(retry_errors) =
+                    next_paid_round(&mut shutdown, next_swap, next_retry).await
+                {
+                    if let Err(error) = swap::run_round(
                         &wallet_repository,
                         &auditor_db,
                         &config,
                         &net,
                         &guards,
                         &support_cache,
+                        retry_errors,
+                        &shutdown,
                     )
                     .await
                     {
-                        warn!("Swap round ended with error: {}", e);
+                        warn!(%error, retry_errors, "Paid round failed");
                     }
-
-                    let delay = if config.min_swap_delay_secs == config.max_swap_delay_secs {
-                        config.min_swap_delay_secs
+                    progress.beat("paid audits");
+                    if retry_errors {
+                        next_retry = Some(Instant::now() + retry_interval);
                     } else {
-                        let mut rng = rand::thread_rng();
-                        rng.gen_range(config.min_swap_delay_secs..=config.max_swap_delay_secs)
-                    };
-
-                    tokio::select! {
-                        _ = shutdown.changed() => {
-                            info!("Auditor swap loop stopping");
-                            break;
-                        }
-                        _ = sleep(Duration::from_secs(delay)) => {}
+                        let delay = rand::thread_rng()
+                            .gen_range(config.min_swap_delay_secs..=config.max_swap_delay_secs);
+                        next_swap = Instant::now() + Duration::from_secs(delay);
                     }
                 }
+                "paid audits"
             });
         }
 
@@ -303,74 +304,47 @@ impl Auditor {
             let wallet_repository = self.wallet_repository.clone();
             let auditor_db = self.auditor_db.clone();
             let interval = self.config.snapshot_interval_secs;
-            let mut shutdown = self.shutdown.subscribe();
+            let mut shutdown = shutdown.clone();
 
-            tokio::spawn(async move {
+            let progress = progress.clone();
+            workers.spawn(async move {
                 info!("Auditor snapshot loop started (every {}s)", interval);
-                loop {
+                while !*shutdown.borrow() {
                     tokio::select! {
+                        biased;
                         _ = shutdown.changed() => {
                             info!("Auditor snapshot loop stopping");
                             break;
                         }
                         _ = sleep(Duration::from_secs(interval)) => {
+                            progress.beat("balance snapshots");
                             if let Err(e) = snapshot::run(&wallet_repository, &auditor_db).await {
                                 warn!("Snapshot round failed: {}", e);
                             }
                         }
                     }
                 }
-            });
-        }
-
-        // Error-retry loop: re-audit mints currently in the Error state far more
-        // often than the slow main swap cadence, so a recovered mint returns to
-        // OK quickly (ignores the bench cooldown on purpose).
-        //
-        // Disabled when `error_retry_interval_secs == 0` (the default), which is
-        // the Python-parity behavior: the reference has no second audit path — a
-        // failed mint simply becomes eligible again on the next random swap round.
-        if self.config.error_retry_interval_secs > 0 {
-            let wallet_repository = self.wallet_repository.clone();
-            let auditor_db = self.auditor_db.clone();
-            let config = self.config.clone();
-            let net = self.net.clone();
-            let guards = guards.clone();
-            let support_cache = support_cache.clone();
-            let interval = self.config.error_retry_interval_secs;
-            let mut shutdown = self.shutdown.subscribe();
-
-            tokio::spawn(async move {
-                info!("Auditor error-retry loop started (every {}s)", interval);
-                loop {
-                    tokio::select! {
-                        _ = shutdown.changed() => {
-                            info!("Auditor error-retry loop stopping");
-                            break;
-                        }
-                        _ = sleep(Duration::from_secs(interval)) => {
-                            if let Err(e) = swap::run_error_retry_round(
-                                &wallet_repository,
-                                &auditor_db,
-                                &config,
-                                &net,
-                                &guards,
-                                &support_cache,
-                            )
-                            .await
-                            {
-                                warn!("Error-retry round failed: {}", e);
-                            }
-                        }
-                    }
-                }
+                "balance snapshots"
             });
         }
     }
+}
 
-    /// Signal all background loops to stop.
-    pub async fn stop(&self) {
-        let _ = self.shutdown.send(true);
+/// Pick the earliest due round; a disabled retry interval has no deadline.
+async fn next_paid_round(
+    shutdown: &mut watch::Receiver<bool>,
+    next_swap: Instant,
+    next_retry: Option<Instant>,
+) -> Option<bool> {
+    if *shutdown.borrow() {
+        return None;
+    }
+    let retry_errors = next_retry.is_some_and(|retry| retry < next_swap);
+    let deadline = next_retry.filter(|_| retry_errors).unwrap_or(next_swap);
+    tokio::select! {
+        biased;
+        _ = shutdown.changed() => None,
+        _ = sleep_until(deadline) => Some(retry_errors),
     }
 }
 
@@ -378,6 +352,110 @@ impl Auditor {
 mod tests {
     use super::*;
     use cdk::nuts::{CurrencyUnit, PaymentMethod};
+
+    #[tokio::test(start_paused = true)]
+    async fn paid_scheduler_preserves_both_cadences_and_prioritizes_shutdown() {
+        let (stop, mut shutdown) = watch::channel(false);
+        let start = Instant::now();
+        let normal = start + Duration::from_secs(300);
+        let retry = start + Duration::from_secs(20);
+        assert_eq!(
+            next_paid_round(&mut shutdown, start, Some(retry)).await,
+            Some(false)
+        );
+        assert_eq!(
+            next_paid_round(&mut shutdown, normal, Some(retry)).await,
+            Some(true)
+        );
+        assert_eq!(Instant::now(), retry);
+        assert_eq!(
+            next_paid_round(&mut shutdown, normal, None).await,
+            Some(false)
+        );
+        assert_eq!(Instant::now(), normal);
+        stop.send(true).unwrap();
+        assert_eq!(
+            next_paid_round(&mut shutdown, start, Some(retry)).await,
+            None
+        );
+    }
+
+    #[tokio::test]
+    async fn stats_skip_directory_entries_but_surface_missing_funded_wallets() {
+        use crate::server::{state::AppState, storage::AuditorDatabase};
+        use std::sync::Arc;
+
+        let db = Arc::new(AuditorDatabase::open_in_memory().unwrap());
+        let repository = Arc::new(
+            cdk::wallet::WalletRepositoryBuilder::new()
+                .localstore(Arc::new(
+                    cdk_sqlite::WalletSqliteDatabase::new(":memory:")
+                        .await
+                        .unwrap(),
+                ))
+                .seed([0; 64])
+                .build()
+                .await
+                .unwrap(),
+        );
+        let state = AppState {
+            workers: Default::default(),
+            wallet_guards: Default::default(),
+            leptos_options: leptos::prelude::get_configuration(Some("Cargo.toml"))
+                .unwrap()
+                .leptos_options,
+            wallet_repository: repository.clone(),
+            app_name: "test".into(),
+            auditor_db: db.clone(),
+            auditor_config: Default::default(),
+            cache: Arc::new(Default::default()),
+            base_url: None,
+            mint_url_aliases: Arc::new(vec![]),
+            nostr: Arc::new(Default::default()),
+            started_at: std::time::Instant::now(),
+        };
+        db.ensure_mint_for_url("https://directory.example")
+            .await
+            .unwrap();
+        assert_eq!(
+            crate::server::service::compute_stats(&state)
+                .await
+                .unwrap()
+                .total_balance,
+            0
+        );
+        db.record_donation("https://funded.example", 10, "token")
+            .await
+            .unwrap();
+        state.cache.clear();
+        assert!(crate::server::service::compute_stats(&state).await.is_err());
+        assert!(snapshot::run(&repository, &db).await.is_err());
+        let count: u64 = db
+            .run(
+                |conn| Ok(conn.query_row("SELECT COUNT(*) FROM mint_snapshots", [], |r| r.get(0))?),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            count, 0,
+            "an unavailable balance must not become a zero snapshot"
+        );
+        repository
+            .create_wallet(
+                "https://funded.example".parse().unwrap(),
+                cdk::nuts::CurrencyUnit::Sat,
+                None,
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            crate::server::service::compute_stats(&state)
+                .await
+                .unwrap()
+                .total_balance,
+            0
+        );
+    }
 
     #[test]
     fn swap_support_uses_sat_bolt11_nut04_and_nut05_settings() {

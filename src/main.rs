@@ -10,8 +10,8 @@ async fn main() {
     use cdk_cashu_auditor::server::state::AppState;
     use leptos::prelude::*;
     use leptos_axum::{generate_route_list, LeptosRoutes};
-    use std::sync::Arc;
-    use tracing::info;
+    use std::time::Duration;
+    use tracing::{error, info};
     use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
     // CLI subcommands run before the server boots and exit; everything else
@@ -65,13 +65,51 @@ async fn main() {
         .await
         .expect("Failed to initialize AppState");
 
-    let auditor = Arc::new(Auditor::new(
+    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
+    let (shutdown, shutdown_rx) = tokio::sync::watch::channel(false);
+    let mut workers = tokio::task::JoinSet::new();
+    state
+        .workers
+        .register("wallet recovery", Duration::from_secs(1800), true);
+    {
+        let state = state.clone();
+        let shutdown = shutdown_rx.clone();
+        workers.spawn(async move {
+            cdk_cashu_auditor::server::recovery::run(state, shutdown).await;
+            "wallet recovery"
+        });
+    }
+    Auditor::new(
         state.wallet_repository.clone(),
         state.auditor_db.clone(),
         state.auditor_config.clone(),
-    ));
-    auditor.start().await;
-    let nostr = cdk_cashu_auditor::server::nostr::start(&state).await;
+    )
+    .start(
+        &mut workers,
+        shutdown_rx.clone(),
+        state.wallet_guards.clone(),
+        state.workers.clone(),
+    )
+    .await;
+    let nostr =
+        cdk_cashu_auditor::server::nostr::start(&state, &mut workers, shutdown_rx.clone()).await;
+
+    {
+        let progress = state.workers.clone();
+        let mut stop = shutdown_rx.clone();
+        workers.spawn(async move {
+            loop {
+                tokio::select! {
+                    _ = stop.changed() => break,
+                    _ = tokio::time::sleep(Duration::from_secs(30)) => {
+                        let stalled: Vec<_> = progress.status().into_iter().filter(|w| w.stalled).map(|w| w.name).collect();
+                        if !stalled.is_empty() { error!(?stalled, "Worker watchdog requests restart"); break; }
+                    }
+                }
+            }
+            "worker watchdog"
+        });
+    }
 
     let routes = generate_route_list(App);
 
@@ -89,15 +127,104 @@ async fn main() {
         .with_state(state);
 
     info!("listening on http://{}", &addr);
-    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
-    axum::serve(listener, app.into_make_service())
-        .with_graceful_shutdown(shutdown_signal())
-        .await
-        .unwrap();
+    workers.spawn(async move {
+        axum::serve(listener, app.into_make_service())
+            .with_graceful_shutdown(async move {
+                let mut shutdown = shutdown_rx;
+                if !*shutdown.borrow() {
+                    let _ = shutdown.changed().await;
+                }
+            })
+            .await
+            .expect("HTTP server failed");
+        "HTTP server"
+    });
 
-    auditor.stop().await;
-    nostr.stop().await;
+    let mut failed = tokio::select! {
+        _ = shutdown_signal() => false,
+        result = workers.join_next() => {
+            error!(?result, "Worker exited unexpectedly; stopping the application");
+            true
+        }
+    };
+    let _ = shutdown.send(true);
+    failed |= !drain_workers(&mut workers, Duration::from_secs(30)).await;
+    if let Some(client) = nostr {
+        if tokio::time::timeout(Duration::from_secs(5), client.disconnect())
+            .await
+            .is_err()
+        {
+            error!("Relay disconnect timed out");
+            failed = true;
+        }
+    }
     info!("shutdown complete");
+    if failed {
+        std::process::exit(1);
+    }
+}
+
+/// Let active work finish before cancelling workers that exceed the grace period.
+#[cfg(feature = "ssr")]
+async fn drain_workers(
+    workers: &mut tokio::task::JoinSet<&'static str>,
+    grace: std::time::Duration,
+) -> bool {
+    let drained = tokio::time::timeout(grace, async {
+        let mut clean = true;
+        while let Some(result) = workers.join_next().await {
+            match result {
+                Ok(worker) => tracing::info!(worker, "Worker stopped"),
+                Err(error) => {
+                    tracing::error!(%error, "Worker failed during shutdown");
+                    clean = false;
+                }
+            }
+        }
+        clean
+    })
+    .await;
+    match drained {
+        Ok(clean) => clean,
+        Err(_) => {
+            tracing::error!(
+                remaining = workers.len(),
+                "Shutdown grace period expired; cancelling remaining workers"
+            );
+            workers.shutdown().await;
+            false
+        }
+    }
+}
+
+#[cfg(all(test, feature = "ssr"))]
+mod lifecycle_tests {
+    use super::drain_workers;
+    use std::time::Duration;
+    use tokio::{sync::oneshot, task::JoinSet};
+
+    #[tokio::test(start_paused = true)]
+    async fn shutdown_waits_for_active_work_and_cancels_hung_workers() {
+        let mut workers = JoinSet::new();
+        let (finished, result) = oneshot::channel();
+        workers.spawn(async move {
+            tokio::time::sleep(Duration::from_secs(2)).await;
+            finished.send(()).unwrap();
+            "payment"
+        });
+        assert!(drain_workers(&mut workers, Duration::from_secs(3)).await);
+        result.await.unwrap();
+        workers.spawn(std::future::pending());
+        assert!(!drain_workers(&mut workers, Duration::from_secs(3)).await);
+        assert!(workers.is_empty());
+    }
+
+    #[tokio::test]
+    async fn shutdown_reports_worker_panics() {
+        let mut workers = JoinSet::new();
+        workers.spawn(async { panic!("failed worker") });
+        assert!(!drain_workers(&mut workers, Duration::from_secs(3)).await);
+    }
 }
 
 /// `keygen`: print a fresh Nostr key pair for `IMF_NOSTR_NSEC` / `IMF_AUDITORS`
@@ -278,7 +405,7 @@ async fn doctor_one(
         .await
         .is_err()
     {
-        repo.add_wallet(mint_url.clone()).await?;
+        cdk_cashu_auditor::server::mint_transport::wallet(repo, &mint_url.to_string()).await?;
     }
     let wallet = repo.get_wallet(&mint_url, &CurrencyUnit::Sat).await?;
 
@@ -421,7 +548,7 @@ async fn cleanup_one(
         .await
         .is_err()
     {
-        repo.add_wallet(mint_url.clone()).await?;
+        cdk_cashu_auditor::server::mint_transport::wallet(repo, &mint_url.to_string()).await?;
     }
     let wallet = repo.get_wallet(&mint_url, &CurrencyUnit::Sat).await?;
 

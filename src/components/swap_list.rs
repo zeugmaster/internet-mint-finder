@@ -108,7 +108,7 @@ pub fn SwapItem(swap: SwapEventRead) -> impl IntoView {
                 </div>
                 <div class="flex items-baseline gap-2">
                     <span class="feed-amount">{format!("{} sat", format_sats(swap.amount))}</span>
-                    <span class="feed-fee">{format!("{} sat fee", swap.fee)}</span>
+                    <span class="feed-fee">{if swap.fee_known { format!("{} sat fee", swap.fee) } else { "fee unknown".into() }}</span>
                 </div>
             </div>
             <div class="feed-route">

@@ -55,6 +55,16 @@ pub fn absolute_time(dt: DateTime<Utc>) -> String {
     dt.format("%Y-%m-%d %H:%M:%S UTC").to_string()
 }
 
+/// First characters of a long identifier (pubkey, npub, payment request).
+pub fn short_pubkey(id: &str) -> String {
+    const KEEP: usize = 12;
+    if id.chars().count() <= KEEP {
+        id.to_string()
+    } else {
+        format!("{}…", id.chars().take(KEEP).collect::<String>())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -78,15 +88,5 @@ mod tests {
         assert_eq!(format_ms(850.0), "850 ms");
         assert_eq!(format_ms(1400.0), "1.4 s");
         assert_eq!(format_ms(12_000.0), "12 s");
-    }
-}
-
-/// First characters of a long identifier (pubkey, npub, payment request).
-pub fn short_pubkey(id: &str) -> String {
-    const KEEP: usize = 12;
-    if id.chars().count() <= KEEP {
-        id.to_string()
-    } else {
-        format!("{}…", id.chars().take(KEEP).collect::<String>())
     }
 }

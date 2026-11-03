@@ -66,7 +66,9 @@ pub(super) async fn run_probes(
         });
     }
 
-    while set.join_next().await.is_some() {}
+    while let Some(result) = set.join_next().await {
+        result.expect("health probe task failed");
+    }
     Ok(())
 }
 

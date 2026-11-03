@@ -12,7 +12,9 @@ NIP-87 announcements (kind 38172) and reviews (kind 38000) from relays, so any
 instance shows the union: a directory of every announced or audited mint, each
 auditor's own numbers side by side, and the reviews. Reviews are signed in the
 browser (pasted nsec or NIP-07) and sent to relays; this server never receives
-them directly.
+them directly. Pasted keys stay only in memory until reload or sign-out; a
+NIP-07 extension avoids giving the page the private key. Browser libraries are
+served from pinned local assets.
 Each operator runs one box behind a shared, health-checked domain; the stack is
 in `deploy/`.
 
@@ -87,13 +89,16 @@ All configuration is via environment variables (a `.env` file is loaded):
 | `AUDITOR_MAX_FEE_PERCENT` | 2.0 | Reject melt quotes above this fee reserve. |
 | `AUDITOR_FEE_TOLERANCE_SATS` | 10 | Absolute fee tolerance before the percent check applies. |
 | `AUDITOR_ERROR_COOLDOWN_SECS` | 1800 | How long failing mints are benched before retry. |
+| `AUDITOR_ERROR_RETRY_INTERVAL_SECS` | 0 | Optional error-retry cadence; 0 disables it. |
+| `AUDITOR_MAX_CONCURRENT_SWAPS` | 8 | Concurrent swaps within an optional error-retry batch. |
 | `AUDITOR_HEALTH_CHECK_INTERVAL_SECS` | 3600 | No-fee NUT-06 availability cadence; values below one hour are clamped to one hour. |
 | `AUDITOR_HEALTH_FAILURE_THRESHOLD` | 2 | Consecutive failed checks before a mint is marked failing. |
 | `AUDITOR_SNAPSHOT_INTERVAL_SECS` | 3600 | Balance snapshot interval. |
 | `RUST_LOG` | `info` | Tracing filter. |
 | `IMF_NOSTR_NSEC` | unset | This auditor's Nostr key (nsec or hex). Unset = nothing is published. `keygen` prints one. |
 | `IMF_AUDITORS` | unset | Comma-separated npub/hex keys whose audit events are ingested and shown. |
-| `IMF_RELAYS` | damus, nos.lol, primal, cashumints.space | Comma-separated relay URLs; put your own archive relay first. |
+| `IMF_RELAYS` | damus, nos.lol, primal, cashumints.space | Comma-separated relay URLs. The first is the required archive: its ACK completes outbox delivery. Put your own durable relay first. |
+| `AUDITOR_PRIVATE_MINT_URLS` | unset | Explicit private HTTP(S) origins allowed for local test mints, comma-separated. Production mints must resolve exclusively to public IPs. |
 | `IMF_PUBLIC_URLS` | `BASE_URL` | URLs announced for this instance (clearnet, onion). |
 | `IMF_CONTACT` | unset | Optional, pseudonymous, in the announcement. |
 
@@ -121,12 +126,41 @@ pair has enough liquidity and headroom. Swap size and fee exposure are controlle
 `AUDITOR_FEE_TOLERANCE_SATS`. Failed mints are benched for
 `AUDITOR_ERROR_COOLDOWN_SECS`.
 
+Setting `AUDITOR_ERROR_RETRY_INTERVAL_SECS` above zero enables additional paid
+rounds that retry failing mints without waiting for their cooldown. One paid
+worker runs whichever normal or retry round is due first; rounds never overlap.
+Each cadence resumes after its round finishes, so a slow round can delay the
+other cadence. Retry batches still allow disjoint pairs to run concurrently,
+bounded by `AUDITOR_MAX_CONCURRENT_SWAPS`, with locks protecting each wallet.
+
+Paid audits, balance snapshots and balance totals use the same
+set of locally funded, active mints. Recovery also checks existing wallets for
+unresolved work, including wallets no longer shown in the directory. Directory entries remain visible and receive
+availability probes without requiring a local wallet. A failed balance read is
+reported as unavailable and cannot become a zero-balance snapshot or a paid-swap
+candidate.
+
 Each tracked mint receives one no-fee NUT-06 availability check per hour. The
 checks are slightly staggered, use one request with no immediate retry, and
 feed 24 hourly uptime buckets independently of payment health. A rate-limited
 response is recorded as degraded rather than offline, and two consecutive
 failures are required before the mint
-is marked failing. Background unissued-quote reclaim sweeps remain disabled.
+is marked failing.
+
+Recovery runs in a separate supervised worker, so an offline mint cannot block
+HTTP startup. Every outbound mint request pins validated DNS answers, refuses
+redirects, has a deadline and accepts at most 4 MiB. Private, loopback and
+link-local destinations are rejected unless the operator explicitly allows
+that origin through `AUDITOR_PRIVATE_MINT_URLS`; proxy environment variables
+and mint WebSockets cannot bypass this check.
+
+Before moving value, IMF durably records a payment or donation receipt. Recovery
+reconciles completed CDK transactions with audit accounting exactly once and
+redeems already-paid quotes without paying another invoice. It also reclaims
+unissued quotes left by older versions, without inventing missing audit history.
+Mints involved in unresolved payments stay out of new paid rounds until those
+payments settle or both sides confirm an expired invoice is unpaid. Unknown
+fees are labeled unknown; rejected fee reserves are not counted as fees paid.
 
 Amount-limit rejections include the requested amount and the last advertised
 limits. CDK 0.18 discards the remote detail for error code 11006; the auditor
@@ -136,6 +170,13 @@ limits are identified as metadata and can lag a mint's configuration change.
 Data lives in `~/.internet-mint-finder/` (`wallet.db` for CDK, `auditor.db` for
 audit data). `cargo run --no-default-features --features=ssr -- keygen` prints a
 fresh Nostr key pair and wallet mnemonic.
+
+The application supervises HTTP, audit and relay workers together. An unexpected
+worker exit stops the process with a failure status. SIGINT or SIGTERM stops new
+rounds and queued swaps, drains active work for up to 30 seconds, then cancels
+remaining tasks and disconnects relays. The Compose files allow 45 seconds before
+forcing termination. A payment still in progress at the deadline may need wallet
+recovery on restart; shutdown does not guarantee payment settlement.
 
 CDK 0.18 applies wallet database migrations automatically when opening
 `wallet.db`. Before upgrading an existing installation, stop the auditor and
@@ -197,7 +238,7 @@ REST endpoints (also consumed by the analytics dashboard):
 
 | Endpoint | Description |
 | --- | --- |
-| `GET /api/health` | Liveness; 503 once the probe loop has stalled, so a DNS health check drops a hung instance. |
+| `GET /api/health` | Readiness and worker progress; 503 for stale probes, stalled workers or incomplete relay replay. |
 | `GET /api/mints/` · `GET /api/mints/{id}` | Tracked mints with live balances. |
 | `GET /api/mints/{id}/metrics` | Per-mint reliability metrics (success rate, latency, last error). |
 | `GET /api/mints/{id}/uptime` | Per-mint observed uptime timeline from hourly health probes, with swap-history fallback. |
@@ -218,6 +259,7 @@ REST endpoints (also consumed by the analytics dashboard):
 cargo +nightly test --no-default-features --features=ssr   # backend tests
 cargo +nightly fmt
 cargo +nightly clippy --no-default-features --features=ssr
+node scripts/check-browser.mjs
 ```
 
 ### Isolated interface preview
@@ -246,7 +288,34 @@ result supplies the credited amount after fees, independently of concurrent
 wallet activity. Settled swap events and both mint counters also commit in one
 transaction; write failures are surfaced in the auditor logs.
 CDK wallet storage and the auditor database remain separate;
-back up both. This does not provide a distributed transaction across the stores.
+back up both. The receipt journal reconciles the two stores after a crash; it
+cannot reconstruct missing receipts or audit history if a database was deleted.
+Schema v9 migrates in one transaction. Historical zero-fee successes are marked
+unknown when the old records cannot distinguish a free payment from an unknown
+fee. No mint, donation or swap records are deleted.
+
+Public mint IDs are now URL-safe base64 of the canonical mint URL, shared by
+both replicas regardless of insertion order. Use IDs returned by the directory
+in `/mints/{id}` and `/api/mints/{id}` links. Old numeric links are rejected:
+there is no safe cross-replica mapping for an old row number.
+
+A standalone instance ingests the public NIP-87 directory without needing peer
+keys. Relay history resumes from persisted pages, separately per relay/feed;
+only a verified end-of-history response advances the completed interval. Live
+notification gaps trigger replay. Future-dated events cannot move its cursor.
+Put each operator's own persistent archive first in `IMF_RELAYS`; another
+relay's ACK leaves the local outbox pending for retry.
+
+`/api/health` reports each worker's readiness and progress separately from mint
+successes. A stalled worker causes a controlled nonzero exit so Compose's
+`restart: unless-stopped` can restart the process. Configure failover checks
+against `/api/health`. A configured `ONION_HOSTNAME` continues to work over
+HTTP through Tor. Each redundant instance needs its own wallet seed, databases
+and Nostr signing key; do not share a live SQLite volume or wallet seed.
+
+The directory UI's mint-audit expansion remains deferred. Audit records,
+per-auditor metrics, fee certainty and recovery state remain in the backend for
+that future work.
 
 `.cargo/config.toml` sets `LEPTOS_OUTPUT_NAME` for every build so direct SSR and
 Docker builds request the same WASM filename generated by cargo-leptos.

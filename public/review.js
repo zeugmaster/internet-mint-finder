@@ -4,21 +4,16 @@
 // path; it ingests it from the relays like any client.
 // nostr-tools.js is lib/nostr.bundle.js from nostr-tools@2.25.2 on npm,
 // unmodified (sha256 a7c4846fde84a0d6ce7596f3fcfc88435d29fdcd616887205ab97f9a16bc6407).
-// shortcut: the nsec sits in localStorage, readable by any script on this
-// origin; move to NIP-46 if the site ever loads third-party scripts.
-const NSEC_KEY = 'imf.nsec';
+// Never retain a private key across page reloads. Remove keys saved by older builds.
+try { localStorage.removeItem('imf.nsec'); } catch (_) { /* storage disabled */ }
+let sessionKey = null;
 
 function say(msg, ok) {
   const status = document.getElementById('review-status');
   if (status) { status.textContent = msg; status.dataset.ok = ok ? '1' : '0'; }
 }
 
-function storedKey() {
-  try {
-    const nsec = localStorage.getItem(NSEC_KEY);
-    return nsec ? NostrTools.nip19.decode(nsec).data : null;
-  } catch (_) { return null; }
-}
+function storedKey() { return sessionKey; }
 
 // Shows either the sign-in box or the signed-in line. Re-runs on DOM changes
 // because pages are swapped client-side after the first load.
@@ -46,12 +41,13 @@ document.addEventListener('click', (ev) => {
     let decoded = null;
     try { decoded = NostrTools.nip19.decode(nsec); } catch (_) { /* not bech32 */ }
     if (!decoded || decoded.type !== 'nsec') { say('That isn’t an nsec key. It starts with nsec1.', false); return; }
-    try { localStorage.setItem(NSEC_KEY, nsec); } catch (_) { say('This browser won’t keep your key. Use a Nostr extension instead.', false); return; }
+    sessionKey = decoded.data;
     input.value = '';
     render();
     say('Signed in.', true);
   } else if (id === 'review-signout') {
-    try { localStorage.removeItem(NSEC_KEY); } catch (_) { /* nothing stored */ }
+    if (sessionKey) sessionKey.fill(0);
+    sessionKey = null;
     render();
   }
 });

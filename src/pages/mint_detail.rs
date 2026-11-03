@@ -1,6 +1,4 @@
-use crate::api::{
-    get_mint_by_id, get_mint_metrics, get_mint_reviews, get_mint_uptime,
-};
+use crate::api::{get_mint_by_id, get_mint_metrics, get_mint_reviews, get_mint_uptime};
 use crate::components::badge::{CategoryPill, StateBadge};
 use crate::components::mint_avatar::MintAvatar;
 use crate::components::mint_list::CopyUrl;
@@ -21,13 +19,7 @@ use leptos_router::hooks::use_params_map;
 #[component]
 pub fn MintDetailPage() -> impl IntoView {
     let params = use_params_map();
-    let mint_id = Signal::derive(move || {
-        params
-            .get()
-            .get("id")
-            .and_then(|id| id.parse::<u64>().ok())
-            .unwrap_or(0)
-    });
+    let mint_id = Signal::derive(move || params.get().get("id").unwrap_or_default());
 
     let tick = use_poll(15);
 
@@ -128,7 +120,11 @@ pub fn MintDetailPage() -> impl IntoView {
 /// The mint's avatar, name, state and copyable URL, and the latest failure
 /// verbatim when the mint is not healthy.
 #[component]
-fn MintHead(mint: MintRead, metrics: Option<MintMetrics>, uptime: Option<MintUptime>) -> impl IntoView {
+fn MintHead(
+    mint: MintRead,
+    metrics: Option<MintMetrics>,
+    uptime: Option<MintUptime>,
+) -> impl IntoView {
     let metrics_available = metrics.is_some();
     let metrics = metrics.unwrap_or_default();
     let display_name = if mint.name.trim().is_empty() {
@@ -145,7 +141,9 @@ fn MintHead(mint: MintRead, metrics: Option<MintMetrics>, uptime: Option<MintUpt
         pick_incident(&metrics, uptime.as_ref()),
     ) {
         (true, Some((message, category, at))) => {
-            let when = at.map(relative_time).unwrap_or_else(|| "recently".to_string());
+            let when = at
+                .map(relative_time)
+                .unwrap_or_else(|| "recently".to_string());
             let pill = category.map(|c| view! { <CategoryPill category=c/> });
             Some(view! {
                 <div class="incident">
@@ -256,7 +254,12 @@ fn UptimePanel(uptime: Option<MintUptime>) -> impl IntoView {
         .uptime_percent
         .map(|percent| format!("{percent:.1}%"))
         .unwrap_or_else(|| "No data".to_string());
-    let latest = uptime.bars.iter().rev().find(|bar| bar.checks > 0).map(|bar| bar.state);
+    let latest = uptime
+        .bars
+        .iter()
+        .rev()
+        .find(|bar| bar.checks > 0)
+        .map(|bar| bar.state);
     let state = match (latest, uptime.current_up_since, uptime.last_checked_at) {
         (Some(MintState::Ok), Some(since), _) => format!("Up for {}", elapsed_since(since)),
         (Some(MintState::Ok), None, _) => "Up now".to_string(),

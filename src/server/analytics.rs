@@ -34,6 +34,7 @@ pub struct DateBounds {
 pub struct Kpis {
     pub total_sats_swapped: i64,
     pub total_fees_paid: i64,
+    pub unknown_fee_payments: i64,
     pub total_swaps: i64,
     pub total_errors: i64,
     /// Donations received in the filter window, in sats.
@@ -100,7 +101,7 @@ pub struct ErrorCount {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GraphNode {
-    pub id: i64,
+    pub id: String,
     pub url: String,
     pub name: String,
     pub state: String,
@@ -112,8 +113,8 @@ pub struct GraphNode {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GraphEdge {
-    pub from_id: i64,
-    pub to_id: i64,
+    pub from_id: String,
+    pub to_id: String,
     pub count: i64,
     pub total_amount: i64,
     pub total_fee: i64,
@@ -145,7 +146,7 @@ pub struct UptimeCell {
 /// One mint's row in the SLA grid, plus its rollup figures.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UptimeRow {
-    pub mint_id: i64,
+    pub mint_id: String,
     pub mint: String,
     pub checks: i64,
     pub failures: i64,
@@ -173,7 +174,7 @@ pub struct FailureStage {
 /// Which mint is blamed for failures (even as a swap destination).
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BlameMint {
-    pub mint_id: i64,
+    pub mint_id: String,
     pub mint: String,
     pub failures: i64,
     /// Dominant coarse category for this mint's failures.
@@ -335,11 +336,12 @@ pub fn get_filter_options(conn: &Connection) -> Result<FilterOptions, AuditorErr
 
 /// KPI summary tiles, plus 24h momentum deltas.
 pub fn kpis(conn: &Connection, filters: &Filters) -> Result<Kpis, AuditorError> {
+    filters.validate()?;
     let (where_clause, params) = filters.where_swaps();
     let sql = format!(
         "SELECT \
             COALESCE(SUM(CASE WHEN state = 'OK' THEN amount ELSE 0 END), 0), \
-            COALESCE(SUM(fee), 0), \
+            COALESCE(SUM(CASE WHEN fee_known THEN fee ELSE 0 END), 0), \
             COUNT(*), \
             SUM(CASE WHEN state <> 'OK' THEN 1 ELSE 0 END) \
          FROM swaps {where_clause}"
@@ -362,7 +364,7 @@ pub fn kpis(conn: &Connection, filters: &Filters) -> Result<Kpis, AuditorError> 
     };
 
     // Donations in the same window (reuses the date/mint scope helper).
-    let (don_where, don_params) = filters.where_checks();
+    let (don_where, don_params) = filters.where_donations();
     let total_donations: i64 = bind_and_query_one(
         conn,
         &format!("SELECT COALESCE(SUM(amount), 0) FROM donations {don_where}"),
@@ -411,7 +413,14 @@ pub fn kpis(conn: &Connection, filters: &Filters) -> Result<Kpis, AuditorError> 
         (prev > 0).then(|| (cur - prev) as f64 / prev as f64 * 100.0)
     };
 
+    let unknown_fee_payments = bind_and_query_one(
+        conn,
+        &format!("SELECT COUNT(*) FROM swaps {where_clause} {extra} fee_known = 0"),
+        &params,
+        |row| row.get(0),
+    )?;
     Ok(Kpis {
+        unknown_fee_payments,
         total_sats_swapped,
         total_fees_paid,
         total_swaps,
@@ -451,6 +460,7 @@ pub fn latency_error_scatter(
         )));
     }
 
+    filters.validate()?;
     let (where_clause, params) = filters.where_swaps();
     let extra_and = if where_clause.is_empty() {
         "WHERE"
@@ -462,8 +472,8 @@ pub fn latency_error_scatter(
             {group_by} AS mint, \
             COUNT(*) AS attempts, \
             SUM(CASE WHEN state <> 'OK' THEN 1 ELSE 0 END) AS errors, \
-            AVG(CASE WHEN state = 'OK' THEN time_taken END) AS avg_latency_ok, \
-            AVG(time_taken) AS avg_latency_all \
+            AVG(CASE WHEN state = 'OK' AND time_taken > 0 THEN time_taken END) AS avg_latency_ok, \
+            AVG(NULLIF(time_taken,0)) AS avg_latency_all \
          FROM swaps {where_clause} {extra_and} {group_by} IS NOT NULL \
          GROUP BY {group_by} \
          HAVING attempts > 0 \
@@ -560,8 +570,8 @@ fn bucket_expr_col(start: Option<&str>, end: Option<&str>, col: &str) -> String 
     let days = match (start, end) {
         (Some(s), Some(e)) => {
             // Parse just enough to get day difference
-            let s_date = &s[..10.min(s.len())];
-            let e_date = &e[..10.min(e.len())];
+            let s_date = s.get(..10).unwrap_or(s);
+            let e_date = e.get(..10).unwrap_or(e);
             chrono::NaiveDate::parse_from_str(e_date, "%Y-%m-%d")
                 .and_then(|ed| {
                     chrono::NaiveDate::parse_from_str(s_date, "%Y-%m-%d")
@@ -587,6 +597,7 @@ pub fn swaps_errors_timeseries(
     conn: &Connection,
     filters: &Filters,
 ) -> Result<Vec<TimeseriesPoint>, AuditorError> {
+    filters.validate()?;
     let (where_clause, params) = filters.where_swaps();
     let bucket = bucket_expr(filters.start.as_deref(), filters.end.as_deref());
     let sql = format!(
@@ -612,12 +623,13 @@ pub fn latency_timeseries(
     conn: &Connection,
     filters: &Filters,
 ) -> Result<Vec<LatencyPoint>, AuditorError> {
+    filters.validate()?;
     let (where_clause, params) = filters.where_swaps();
     let bucket = bucket_expr(filters.start.as_deref(), filters.end.as_deref());
     let sql = format!(
         "SELECT \
             {bucket} AS bucket, \
-            AVG(CASE WHEN state = 'OK' THEN time_taken END) AS avg_ms, \
+            AVG(CASE WHEN state = 'OK' AND time_taken > 0 THEN time_taken END) AS avg_ms, \
             COUNT(CASE WHEN state = 'OK' THEN 1 END) AS n_ok \
          FROM swaps {where_clause} \
          GROUP BY bucket ORDER BY bucket"
@@ -638,6 +650,12 @@ pub fn latency_histogram(
     filters: &Filters,
     bins: usize,
 ) -> Result<Histogram, AuditorError> {
+    if !(1..=200).contains(&bins) {
+        return Err(AuditorError::InvalidInput(
+            "bins must be between 1 and 200".into(),
+        ));
+    }
+    filters.validate()?;
     let (where_clause, params) = filters.where_swaps();
     let extra_and = if where_clause.is_empty() {
         "WHERE"
@@ -688,6 +706,7 @@ pub fn errors_by_reason(
     filters: &Filters,
     limit: usize,
 ) -> Result<Vec<ErrorCount>, AuditorError> {
+    filters.validate()?;
     let (where_clause, params) = filters.where_swaps();
     let extra_and = if where_clause.is_empty() {
         "WHERE"
@@ -735,7 +754,7 @@ pub fn mint_graph(conn: &Connection) -> Result<MintGraph, AuditorError> {
         &[],
         |row| {
             Ok(GraphNode {
-                id: row.get(0)?,
+                id: crate::types::mint_key(&row.get::<_, String>(1)?),
                 url: row.get(1)?,
                 name: row.get(2)?,
                 state: row.get(3)?,
@@ -749,8 +768,8 @@ pub fn mint_graph(conn: &Connection) -> Result<MintGraph, AuditorError> {
 
     let edges: Vec<GraphEdge> = bind_and_query(
         conn,
-        "SELECT from_id, to_id, COUNT(*) AS cnt, \
-                SUM(amount) AS total_amount, SUM(fee) AS total_fee, \
+        "SELECT from_url, to_url, COUNT(*) AS cnt, \
+                SUM(amount) AS total_amount, SUM(CASE WHEN fee_known THEN fee ELSE 0 END) AS total_fee, \
                 MAX(created_at) AS last_swap, \
                 (SELECT s2.state FROM swaps s2 WHERE s2.from_id = swaps.from_id AND s2.to_id = swaps.to_id ORDER BY s2.created_at DESC LIMIT 1) AS last_state \
          FROM swaps \
@@ -759,8 +778,8 @@ pub fn mint_graph(conn: &Connection) -> Result<MintGraph, AuditorError> {
         &[],
         |row| {
             Ok(GraphEdge {
-                from_id: row.get(0)?,
-                to_id: row.get(1)?,
+                from_id: crate::types::mint_key(&row.get::<_, String>(0)?),
+                to_id: crate::types::mint_key(&row.get::<_, String>(1)?),
                 count: row.get(2)?,
                 total_amount: row.get(3)?,
                 total_fee: row.get(4)?,
@@ -807,6 +826,7 @@ fn and_or_where(where_clause: &str) -> &'static str {
 pub fn uptime_grid(conn: &Connection, filters: &Filters) -> Result<UptimeGrid, AuditorError> {
     use std::collections::{BTreeSet, HashMap};
 
+    filters.validate()?;
     let (where_clause, params) = filters.where_checks();
     let bucket = bucket_expr_col(
         filters.start.as_deref(),
@@ -918,7 +938,7 @@ pub fn uptime_grid(conn: &Connection, filters: &Filters) -> Result<UptimeGrid, A
                 .map(|(s, t)| (s.clone(), Some(t.clone())))
                 .unwrap_or_else(|| ("NONE".to_string(), None));
             UptimeRow {
-                mint_id: acc.mint_id,
+                mint_id: crate::types::mint_key(&acc.mint),
                 mint: acc.mint,
                 checks: acc.checks,
                 failures: acc.failures,
@@ -950,6 +970,7 @@ pub fn failure_stages(
     conn: &Connection,
     filters: &Filters,
 ) -> Result<Vec<FailureStage>, AuditorError> {
+    filters.validate()?;
     let (where_clause, params) = filters.where_swaps();
     let extra = and_or_where(&where_clause);
     let sql = format!(
@@ -973,25 +994,26 @@ pub fn blame_mints(
 ) -> Result<Vec<BlameMint>, AuditorError> {
     use std::collections::HashMap;
 
+    filters.validate()?;
     let (where_clause, params) = filters.where_swaps();
     let extra = and_or_where(&where_clause);
     let sql = format!(
         "SELECT swaps.failed_mint_id, \
             COALESCE(NULLIF(m.name, ''), m.url, 'mint ' || swaps.failed_mint_id) AS mint, \
-            swaps.category, swaps.error \
+            swaps.category, swaps.error, m.url \
          FROM swaps LEFT JOIN mints m ON m.id = swaps.failed_mint_id \
          {where_clause} {extra} swaps.failed_mint_id IS NOT NULL AND swaps.state <> 'OK'"
     );
 
     struct Raw {
-        id: i64,
+        id: String,
         mint: String,
         category: Option<String>,
         error: Option<String>,
     }
     let raw = bind_and_query(conn, &sql, &params, |row| {
         Ok(Raw {
-            id: row.get(0)?,
+            id: crate::types::mint_key(&row.get::<_, String>(4)?),
             mint: row.get(1)?,
             category: row.get(2)?,
             error: row.get(3)?,
@@ -1003,7 +1025,7 @@ pub fn blame_mints(
         failures: i64,
         cats: HashMap<String, i64>,
     }
-    let mut by_mint: HashMap<i64, Acc> = HashMap::new();
+    let mut by_mint: HashMap<String, Acc> = HashMap::new();
     for r in raw {
         let cat = resolve_category(r.category.as_deref(), r.error.as_deref())
             .unwrap_or("unknown")
@@ -1048,6 +1070,7 @@ pub fn errors_by_category(
 ) -> Result<Vec<CategoryCount>, AuditorError> {
     use std::collections::HashMap;
 
+    filters.validate()?;
     let (where_clause, params) = filters.where_swaps();
     let extra = and_or_where(&where_clause);
     let sql = format!(
@@ -1088,13 +1111,14 @@ pub fn errors_by_category(
 pub fn tvl_series(conn: &Connection, filters: &Filters) -> Result<TvlSeries, AuditorError> {
     use std::collections::{BTreeSet, HashMap};
 
+    filters.validate()?;
     let (where_clause, params) = filters.where_snapshots();
     let bucket = bucket_expr_col(filters.start.as_deref(), filters.end.as_deref(), "ts");
 
     // Last snapshot per (mint, bucket); join mints for a display name.
     let sql = format!(
-        "SELECT mint, bucket, balance FROM ( \
-            SELECT COALESCE(NULLIF(m.name, ''), m.url, 'mint ' || s.mint_id) AS mint, \
+        "SELECT mint_id, mint, bucket, balance FROM ( \
+            SELECT s.mint_id, COALESCE(NULLIF(m.name, ''), m.url, 'mint ' || s.mint_id) AS mint, \
                 {bucket} AS bucket, s.balance AS balance, \
                 ROW_NUMBER() OVER (PARTITION BY s.mint_id, {bucket} ORDER BY s.ts DESC, s.rowid DESC) AS rn \
             FROM mint_snapshots s LEFT JOIN mints m ON m.id = s.mint_id \
@@ -1103,15 +1127,17 @@ pub fn tvl_series(conn: &Connection, filters: &Filters) -> Result<TvlSeries, Aud
     );
 
     struct Row {
+        mint_id: i64,
         mint: String,
         bucket: String,
-        balance: i64,
+        balance: Option<i64>,
     }
     let rows = bind_and_query(conn, &sql, &params, |row| {
         Ok(Row {
-            mint: row.get(0)?,
-            bucket: row.get(1)?,
-            balance: row.get::<_, Option<i64>>(2)?.unwrap_or(0),
+            mint_id: row.get(0)?,
+            mint: row.get(1)?,
+            bucket: row.get(2)?,
+            balance: row.get(3)?,
         })
     })?;
 
@@ -1135,11 +1161,11 @@ pub fn tvl_series(conn: &Connection, filters: &Filters) -> Result<TvlSeries, Aud
         .map(|(i, b)| (b.as_str(), i))
         .collect();
 
-    let mut by_mint: HashMap<String, Vec<i64>> = HashMap::new();
+    let mut by_mint: HashMap<(i64, String), Vec<Option<i64>>> = HashMap::new();
     for r in &rows {
         let series = by_mint
-            .entry(r.mint.clone())
-            .or_insert_with(|| vec![0; buckets.len()]);
+            .entry((r.mint_id, r.mint.clone()))
+            .or_insert_with(|| vec![None; buckets.len()]);
         if let Some(&i) = bucket_idx.get(r.bucket.as_str()) {
             series[i] = r.balance;
         }
@@ -1149,15 +1175,17 @@ pub fn tvl_series(conn: &Connection, filters: &Filters) -> Result<TvlSeries, Aud
     // reads as a continuous level rather than dropping to zero between probes.
     let mut mints: Vec<TvlMintSeries> = by_mint
         .into_iter()
-        .map(|(mint, mut values)| {
+        .map(|((_, mint), values)| {
             let mut last = 0;
-            for v in values.iter_mut() {
-                if *v == 0 {
-                    *v = last;
-                } else {
-                    last = *v;
-                }
-            }
+            let values = values
+                .into_iter()
+                .map(|value| {
+                    if let Some(balance) = value {
+                        last = balance;
+                    }
+                    last
+                })
+                .collect();
             TvlMintSeries { mint, values }
         })
         .collect();
@@ -1178,10 +1206,11 @@ pub fn tvl_series(conn: &Connection, filters: &Filters) -> Result<TvlSeries, Aud
 pub fn flow_data(conn: &Connection, filters: &Filters) -> Result<FlowData, AuditorError> {
     use std::collections::HashMap;
 
+    filters.validate()?;
     let (where_clause, params) = filters.where_swaps();
     let extra = and_or_where(&where_clause);
     let sql = format!(
-        "SELECT from_url, to_url, SUM(amount) AS amt, SUM(fee) AS fee \
+        "SELECT from_url, to_url, SUM(amount) AS amt, SUM(CASE WHEN fee_known THEN fee ELSE 0 END) AS fee \
          FROM swaps {where_clause} {extra} state = 'OK' \
             AND from_url IS NOT NULL AND to_url IS NOT NULL \
          GROUP BY from_url, to_url HAVING amt > 0 ORDER BY amt DESC"
@@ -1233,12 +1262,13 @@ pub fn fee_routes(
     filters: &Filters,
     limit: usize,
 ) -> Result<Vec<FeeRoute>, AuditorError> {
+    filters.validate()?;
     let (where_clause, params) = filters.where_swaps();
     let extra = and_or_where(&where_clause);
     let sql = format!(
         "SELECT from_url, to_url, COUNT(*) AS n, \
             COALESCE(SUM(amount), 0) AS amt, COALESCE(SUM(fee), 0) AS fee \
-         FROM swaps {where_clause} {extra} state = 'OK' \
+         FROM swaps {where_clause} {extra} state = 'OK' AND fee_known = 1 \
             AND from_url IS NOT NULL AND to_url IS NOT NULL \
          GROUP BY from_url, to_url HAVING amt > 0 \
          ORDER BY (CAST(SUM(fee) AS REAL) / SUM(amount)) DESC, from_url, to_url LIMIT {limit}"
@@ -1268,7 +1298,8 @@ pub fn donations_timeseries(
     conn: &Connection,
     filters: &Filters,
 ) -> Result<Vec<DonationPoint>, AuditorError> {
-    let (where_clause, params) = filters.where_checks();
+    filters.validate()?;
+    let (where_clause, params) = filters.where_donations();
     let bucket = bucket_expr_col(
         filters.start.as_deref(),
         filters.end.as_deref(),
@@ -1364,6 +1395,7 @@ mod tests {
             to_url: to.url.clone(),
             amount,
             fee: 2,
+            fee_known: true,
             created_at: Utc::now(),
             time_taken,
             state,
@@ -1571,7 +1603,7 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(blame.len(), 1);
-        assert_eq!(blame[0].mint_id, b.id as i64);
+        assert_eq!(blame[0].mint_id, crate::types::mint_key(&b.url));
         assert_eq!(blame[0].failures, 1);
         assert_eq!(blame[0].top_category, "timeout");
 
@@ -1592,7 +1624,7 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(filtered.len(), 1);
-        assert_eq!(filtered[0].mint_id, b.id as i64);
+        assert_eq!(filtered[0].mint_id, crate::types::mint_key(&b.url));
 
         let cats = db
             .run(|c| errors_by_category(c, &Filters::default()))
@@ -1675,7 +1707,7 @@ mod tests {
             .any(|c| c.category == "internal" && c.count == 1));
         assert!(blame
             .iter()
-            .any(|m| m.mint_id == a.id as i64 && m.top_category == "internal"));
+            .any(|m| m.mint_id == crate::types::mint_key(&a.url) && m.top_category == "internal"));
         assert_eq!(
             db.get_mint_metrics(a.id, None)
                 .await
@@ -1800,13 +1832,101 @@ mod tests {
     #[tokio::test]
     async fn donations_timeseries_sums_amounts() {
         let (db, a, _b) = two_mints().await;
-        db.insert_donation(a.id, &a.url, 21, "token").await.unwrap();
-        db.insert_donation(a.id, &a.url, 79, "token").await.unwrap();
+        db.record_donation(&a.url, 21, "token").await.unwrap();
+        db.record_donation(&a.url, 79, "token").await.unwrap();
         let points = db
             .run(|c| donations_timeseries(c, &Filters::default()))
             .await
             .unwrap();
         assert_eq!(points.iter().map(|p| p.amount).sum::<i64>(), 100);
         assert_eq!(points.iter().map(|p| p.count).sum::<i64>(), 2);
+    }
+}
+
+#[cfg(test)]
+mod robustness_tests {
+    use super::*;
+    use crate::server::storage::{AuditorDatabase, SwapEvent};
+
+    #[tokio::test]
+    async fn donations_are_local_and_auditor_filters_are_valid() {
+        let db = AuditorDatabase::open_in_memory().unwrap();
+        db.record_donation("https://mint.example", 17, "token")
+            .await
+            .unwrap();
+        for (auditor, expected) in [
+            (vec![], 17),
+            (vec!["local".into()], 17),
+            (vec!["peer".into()], 0),
+            (vec!["peer".into(), "local".into()], 17),
+        ] {
+            db.run(move |c| {
+                let filters = Filters {
+                    auditor,
+                    ..Default::default()
+                };
+                assert_eq!(kpis(c, &filters)?.total_donations, expected);
+                assert_eq!(
+                    donations_timeseries(c, &filters)?
+                        .iter()
+                        .map(|r| r.amount)
+                        .sum::<i64>(),
+                    expected
+                );
+                Ok(())
+            })
+            .await
+            .unwrap();
+        }
+    }
+
+    #[tokio::test]
+    async fn a_zero_balance_is_observed_and_only_missing_samples_are_carried() {
+        let db = AuditorDatabase::open_in_memory().unwrap();
+        let a = db.ensure_mint_for_url("https://a.example").await.unwrap();
+        let b = db.ensure_mint_for_url("https://b.example").await.unwrap();
+        db.run(move |c| {
+            c.execute("UPDATE mints SET name='Shared display name'", [])?;
+            for (day, id, balance) in [(1, a.id, 100), (2, b.id, 10), (3, a.id, 0), (4, b.id, 10)] {
+                c.execute(
+                    "INSERT INTO mint_snapshots(ts,mint_id,balance) VALUES(?1,?2,?3)",
+                    rusqlite::params![format!("2026-06-{day:02}T00:00:00"), id, balance],
+                )?;
+            }
+            let tvl = tvl_series(
+                c,
+                &Filters {
+                    start: Some("2026-06-01".into()),
+                    end: Some("2026-06-05".into()),
+                    ..Default::default()
+                },
+            )?;
+            assert_eq!(tvl.total, vec![100, 110, 10, 10]);
+            Ok(())
+        })
+        .await
+        .unwrap();
+    }
+
+    #[tokio::test]
+    async fn unknown_fees_are_visible_and_do_not_remove_successful_transfers() {
+        let db = AuditorDatabase::open_in_memory().unwrap();
+        let a = db.ensure_mint_for_url("https://a.example").await.unwrap();
+        let b = db.ensure_mint_for_url("https://b.example").await.unwrap();
+        let mut swap = SwapEvent::success(&a, &b, 50, 999, 100.0);
+        swap.fee_known = false;
+        db.insert_swap(&swap).await.unwrap();
+        db.run(|c| {
+            let filters = Filters::default();
+            let k = kpis(c, &filters)?;
+            assert_eq!(k.unknown_fee_payments, 1);
+            assert_eq!(k.total_fees_paid, 0);
+            assert_eq!(flow_data(c, &filters)?.links[0].value, 50);
+            assert_eq!(flow_data(c, &filters)?.links[0].fee, 0);
+            assert!(fee_routes(c, &filters, 10)?.is_empty());
+            Ok(())
+        })
+        .await
+        .unwrap();
     }
 }

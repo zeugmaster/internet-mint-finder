@@ -26,26 +26,34 @@ pub async fn run(
     client: Arc<Client>,
     keys: Keys,
     announcement: Announcement,
+    archive: RelayUrl,
+    progress: Arc<crate::server::workers::Workers>,
     mut shutdown: watch::Receiver<bool>,
 ) {
     let mut last_announce: Option<Instant> = None;
     let mut last_status_pass: Option<Instant> = None;
     let mut last_status: HashMap<u64, (MintState, Instant)> = HashMap::new();
 
-    loop {
+    while !*shutdown.borrow() {
+        progress.beat("relay publishing");
         if last_announce.is_none_or(|t| t.elapsed() >= ANNOUNCE_INTERVAL)
-            && send(&client, &keys, events::announcement_builder(&announcement))
-                .await
-                .is_some()
+            && send(
+                &client,
+                &keys,
+                &archive,
+                events::announcement_builder(&announcement),
+            )
+            .await
+            .is_some()
         {
             info!("Published auditor announcement");
             last_announce = Some(Instant::now());
         }
 
-        flush_outbox(&db, &client, &keys).await;
+        flush_outbox(&db, &client, &keys, &archive, &progress).await;
 
         if last_status_pass.is_none_or(|t| t.elapsed() >= STATUS_INTERVAL) {
-            publish_status(&db, &client, &keys, &mut last_status).await;
+            publish_status(&db, &client, &keys, &archive, &progress, &mut last_status).await;
             last_status_pass = Some(Instant::now());
         }
 
@@ -60,8 +68,13 @@ pub async fn run(
     }
 }
 
-/// Sign and send one event. `Some(id)` once at least one relay accepted it.
-async fn send(client: &Client, keys: &Keys, builder: EventBuilder) -> Option<String> {
+/// Public relays are best effort; only the configured archive completes delivery.
+async fn send(
+    client: &Client,
+    keys: &Keys,
+    archive: &RelayUrl,
+    builder: EventBuilder,
+) -> Option<String> {
     let event = match builder.sign_with_keys(keys) {
         Ok(event) => event,
         Err(e) => {
@@ -69,14 +82,38 @@ async fn send(client: &Client, keys: &Keys, builder: EventBuilder) -> Option<Str
             return None;
         }
     };
-    match client.send_event(&event).await {
-        Ok(output) if !output.success.is_empty() => Some(event.id.to_hex()),
-        Ok(output) => {
-            warn!("No relay accepted event {}: {:?}", event.id, output.failed);
+    let public: Vec<_> = client
+        .relays()
+        .await
+        .into_keys()
+        .filter(|url| url != archive)
+        .collect();
+    // A slow public relay must not discard a successful acknowledgement from our archive.
+    let (archived, _) = tokio::join!(
+        tokio::time::timeout(
+            Duration::from_secs(20),
+            client.send_event_to([archive.clone()], &event)
+        ),
+        tokio::time::timeout(
+            Duration::from_secs(20),
+            client.send_event_to(public, &event)
+        ),
+    );
+    match archived {
+        Ok(Ok(output)) if output.success.contains(archive) => Some(event.id.to_hex()),
+        Ok(Ok(output)) => {
+            warn!(
+                "Archive relay did not accept event {}: {:?}",
+                event.id, output.failed
+            );
             None
         }
-        Err(e) => {
+        Ok(Err(e)) => {
             warn!("Could not publish event {}: {}", event.id, e);
+            None
+        }
+        Err(_) => {
+            warn!("Relay publication timed out; keeping the outbox row");
             None
         }
     }
@@ -85,7 +122,13 @@ async fn send(client: &Client, keys: &Keys, builder: EventBuilder) -> Option<Str
 /// Publish rows in id order and mark each as published. Stops at the first
 /// send failure so a relay outage is retried next tick instead of logged once
 /// per row.
-pub(super) async fn flush_outbox(db: &AuditorDatabase, client: &Client, keys: &Keys) {
+pub(super) async fn flush_outbox(
+    db: &AuditorDatabase,
+    client: &Client,
+    keys: &Keys,
+    archive: &RelayUrl,
+    progress: &crate::server::workers::Workers,
+) {
     let swaps = match db.unpublished_swaps(OUTBOX_BATCH).await {
         Ok(rows) => rows,
         Err(e) => {
@@ -94,7 +137,8 @@ pub(super) async fn flush_outbox(db: &AuditorDatabase, client: &Client, keys: &K
         }
     };
     for swap in swaps {
-        let Some(event_id) = send(client, keys, events::swap_builder(&swap)).await else {
+        progress.beat("relay publishing");
+        let Some(event_id) = send(client, keys, archive, events::swap_builder(&swap)).await else {
             return;
         };
         if let Err(e) = db.mark_swap_published(swap.id, &event_id).await {
@@ -110,7 +154,9 @@ pub(super) async fn flush_outbox(db: &AuditorDatabase, client: &Client, keys: &K
         }
     };
     for check in checks {
-        let Some(event_id) = send(client, keys, events::check_builder(&check)).await else {
+        progress.beat("relay publishing");
+        let Some(event_id) = send(client, keys, archive, events::check_builder(&check)).await
+        else {
             return;
         };
         if let Err(e) = db.mark_check_published(check.id, &event_id).await {
@@ -125,16 +171,19 @@ async fn publish_status(
     db: &AuditorDatabase,
     client: &Client,
     keys: &Keys,
+    archive: &RelayUrl,
+    progress: &crate::server::workers::Workers,
     last: &mut HashMap<u64, (MintState, Instant)>,
 ) {
-    let mints = match db.get_all_mints().await {
+    let mints = match db.get_audited_mints().await {
         Ok(mints) => mints,
         Err(e) => {
             warn!("Could not list mints for status events: {}", e);
             return;
         }
     };
-    for mint in mints.iter().filter(|m| m.sum_donations > 0) {
+    for mint in &mints {
+        progress.beat("relay publishing");
         let fresh = last
             .get(&mint.id)
             .is_some_and(|(state, at)| *state == mint.state && at.elapsed() < STATUS_MAX_AGE);
@@ -150,7 +199,7 @@ async fn publish_status(
         };
         let pubkey = mint.pubkey();
         let builder = events::status_builder(&mint.url, pubkey.as_deref(), mint.state, &metrics);
-        if send(client, keys, builder).await.is_none() {
+        if send(client, keys, archive, builder).await.is_none() {
             return;
         }
         last.insert(mint.id, (mint.state, Instant::now()));
