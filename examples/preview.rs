@@ -13,7 +13,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     use cdk_cashu_auditor::server::{
         auditor::AuditorConfig,
         cache::ResponseCache,
-        http::api_router,
+        http::{api_router, paid_router},
         state::AppState,
         storage::{Auditor, AuditorDatabase, Review, SwapEvent},
     };
@@ -23,6 +23,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     use leptos_axum::{generate_route_list, LeptosRoutes};
     use std::sync::Arc;
 
+    // AUDITOR_PAID_SWAPS=true previews the full auditor: swaps, peer auditors,
+    // donations and Analytics. Unset, the preview is the directory only.
+    let config = AuditorConfig::from_env();
     let db = Arc::new(AuditorDatabase::open_in_memory()?);
     let wallets = Arc::new(
         WalletRepositoryBuilder::new()
@@ -41,6 +44,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "Signal",
         "Atlas",
         "Common Ground",
+        "Lantern",
+        "Meadow",
+        "Quarry",
+        "Birch",
+        "Orchard",
+        "Tidewater",
+        "Granite",
+        "Kestrel",
+        "Saltmarsh",
+        "Ember",
+        "Bramble",
+        "Marigold",
+        "Cobalt",
+        "Driftwood",
+        "Foxglove",
+        "Wharf Street Mint",
     ];
     let mut mints = Vec::new();
     for (i, name) in names.iter().enumerate() {
@@ -50,15 +69,39 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .await?;
         mint.name = name.to_string();
         mint.state = match i {
-            2 => MintState::Warn,
-            4 => MintState::Error,
-            6 => MintState::Unknown,
+            2 | 12 => MintState::Warn,
+            4 | 16 => MintState::Error,
+            6 | 19 => MintState::Unknown,
             _ => MintState::Ok,
         };
         mint.n_mints = 90 + i as u64 * 23;
         mint.n_melts = 85 + i as u64 * 19;
         mint.n_errors = if i == 4 { 12 } else { i as u64 };
-        let mut info = serde_json::json!({"version": "Preview/1.0", "description": "Synthetic mint for interface development. No real funds.", "nuts": {"4": {}, "5": {}, "7": {}, "18": {}}});
+        // NUT-06 info shaped like a real mint's, varied so the About section
+        // shows each case: limits, another unit, a paused payout, a notice,
+        // an account requirement, contacts and terms, a bare mint, and one with
+        // every NUT-06 field filled in (Wharf Street Mint).
+        let lightning = |min: u64, max: u64| serde_json::json!({"methods": [{"method": "bolt11", "unit": "sat", "min_amount": min, "max_amount": max}], "disabled": false});
+        let yes = serde_json::json!({"supported": true});
+        let host = url.trim_start_matches("https://");
+        let mut info = serde_json::json!({
+            "name": name,
+            "version": "Nutshell/0.16.3",
+            "description": "Synthetic mint for interface development. No real funds.",
+            "contact": [
+                {"method": "email", "info": format!("ops@{host}")},
+                {"method": "nostr", "info": "npub1qe3e5wrvnsgpggtkytxteaqfprz0rgxr8c3l34kk3a9t7e2l3acslezefe"}
+            ],
+            // What Nutshell lists, each in its own shape.
+            "nuts": {
+                "4": lightning(1, 500_000), "5": lightning(1, 500_000),
+                "7": yes, "8": yes, "9": yes, "10": yes, "11": yes, "12": yes, "14": yes,
+                "15": {"methods": [{"method": "bolt11", "unit": "sat"}]},
+                "17": {"supported": [{"method": "bolt11", "unit": "sat", "commands": ["bolt11_mint_quote", "bolt11_melt_quote", "proof_state"]}]},
+                "19": {"ttl": 604_800, "cached_endpoints": [{"method": "POST", "path": "/v1/mint/bolt11"}, {"method": "POST", "path": "/v1/swap"}]},
+                "20": yes
+            }
+        });
         // One real icon, one that fails to load (the initial shows), the rest none.
         // Northstar also has a key, so its review form is open in the preview.
         match i {
@@ -66,28 +109,136 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 info["icon_url"] = "https://northstar.example/icon.png".into();
                 info["pubkey"] =
                     "02a9acc1e48c25eeeb9289b5031cc57da9fe72f3fe2861d264bdc074209b107ba2".into();
+                info["description_long"] = "A community mint run by two people in Lisbon since 2024. Lightning in and out, no account needed, and fees kept as low as routing allows.".into();
+                info["tos_url"] = "https://northstar.example/terms".into();
+                info["contact"]
+                    .as_array_mut()
+                    .unwrap()
+                    .push(serde_json::json!({"method": "twitter", "info": "@northstarmint"}));
             }
-            1 => info["icon_url"] = "https://github.com/cashubtc.png".into(),
+            1 => {
+                info["icon_url"] = "https://github.com/cashubtc.png".into();
+                info["version"] = "cdk-mintd/0.9.1".into();
+                info["nuts"]["4"]["methods"]
+                    .as_array_mut()
+                    .unwrap()
+                    .push(serde_json::json!({"method": "bolt11", "unit": "usd"}));
+                info["nuts"]["12"] = serde_json::json!({"supported": false});
+            }
+            2 => {
+                info["motd"] = "Payouts are paused while we move to a new Lightning node. Deposits still work.".into();
+                info["nuts"]["5"]["disabled"] = true.into();
+            }
+            3 => info["contact"] = serde_json::json!([]),
+            // The longest case: a description past eight lines on every screen.
+            4 => {
+                info["nuts"]["22"] =
+                    serde_json::json!({"bat_max_mint": 50, "protected_endpoints": []});
+                info["description_long"] = "Signal started as a mint for one neighbourhood market and has grown a little every year. We run it from a rented rack with a second Lightning node on standby. Deposits settle in seconds on a good day and in a minute on a bad one. Payouts depend on routing, so a large one can take longer or fail, and when it fails your ecash stays yours. ".repeat(4).trim().into();
+            }
+            5 => info["nuts"]["4"] = lightning(1_000, 2_000_000),
+            // Past eight lines on a phone only.
+            10 => {
+                info["description_long"] = "Birch is a small mint run by a family in the north of Portugal. We started it to learn how Cashu works and kept it running because a few friends came to rely on it. It has one Lightning node and no standby, so when the power goes out here the mint goes with it. That has happened twice in two years, both times for under an hour. We read every message that comes in, usually within a day. Fees are whatever routing costs us and nothing more. Good for small amounts and for trying Cashu out.".into();
+            }
+            6 => {
+                info["description"] = serde_json::Value::Null;
+                info["contact"] = serde_json::json!([]);
+                info["nuts"] = serde_json::json!({"4": lightning(1, 100_000), "5": lightning(1, 100_000), "7": yes});
+            }
+            // Every NUT-06 field, every NUT with a title, and one marked off.
+            22 => {
+                let methods = serde_json::json!({"methods": [
+                    {"method": "bolt11", "unit": "sat", "min_amount": 100, "max_amount": 2_000_000},
+                    {"method": "bolt11", "unit": "usd", "min_amount": 1, "max_amount": 50_000},
+                    {"method": "bolt11", "unit": "eur", "min_amount": 1, "max_amount": 50_000}
+                ], "disabled": false});
+                info["icon_url"] = "https://github.com/cashubtc.png".into();
+                info["pubkey"] =
+                    "02a9acc1e48c25eeeb9289b5031cc57da9fe72f3fe2861d264bdc074209b107ba2".into();
+                info["version"] = "Nutshell/0.20.1".into();
+                info["description"] = "A small community mint on the Lisbon waterfront.".into();
+                info["description_long"] = "Wharf Street is run by three people out of a shared workspace on the Lisbon waterfront. We have kept the same Lightning node online since 2023, publish our reserves every month, and never charge more than routing costs us. Good for everyday spending and zaps; please don't keep savings here.".into();
+                info["motd"] = "Scheduled maintenance on Saturday from 02:00 to 04:00 UTC while we upgrade the Lightning node. Swaps keep working, but deposits and payouts will pause for up to two hours.".into();
+                info["tos_url"] = "https://wharf-street-mint.example/terms-of-service".into();
+                info["urls"] = serde_json::json!([
+                    "https://wharf-street-mint.example",
+                    "http://wharfstreetmintexampleonionaddressforpreview.onion"
+                ]);
+                info["time"] = Utc::now().timestamp().into();
+                info["max_array_length"] = serde_json::json!(1000);
+                info["contact"] = serde_json::json!([
+                    {"method": "email", "info": "operators@wharf-street-mint.example"},
+                    {"method": "nostr", "info": "npub1qe3e5wrvnsgpggtkytxteaqfprz0rgxr8c3l34kk3a9t7e2l3acslezefe"},
+                    {"method": "twitter", "info": "@wharfstreetmint"},
+                    {"method": "telegram", "info": "@wharfstreetmint"},
+                    {"method": "matrix", "info": "@operators:wharf-street-mint.example"}
+                ]);
+                info["nuts"] = serde_json::json!({
+                    "4": methods, "5": methods,
+                    "7": yes, "8": yes, "9": yes, "10": yes, "11": yes, "12": yes, "13": yes, "14": yes,
+                    "15": {"methods": [{"method": "bolt11", "unit": "sat"}, {"method": "bolt11", "unit": "usd"}]},
+                    "16": yes,
+                    "17": {"supported": [{"method": "bolt11", "unit": "sat", "commands": ["bolt11_mint_quote", "bolt11_melt_quote", "proof_state"]}]},
+                    "18": yes,
+                    "19": {"ttl": 604_800, "cached_endpoints": [{"method": "POST", "path": "/v1/mint/bolt11"}, {"method": "POST", "path": "/v1/swap"}]},
+                    "20": yes,
+                    "21": {"openid_discovery": "https://auth.wharf-street-mint.example/.well-known/openid-configuration", "client_id": "cashu-client", "protected_endpoints": []},
+                    "22": {"bat_max_mint": 50, "protected_endpoints": []},
+                    "23": yes, "24": yes, "25": yes, "26": yes, "27": yes, "28": yes,
+                    "29": {"max_batch_size": 100, "methods": ["bolt11"]},
+                    "30": {"supported": false}
+                });
+            }
             _ => {}
         }
-        mint.info = Some(info.to_string());
+        // Driftwood has shared nothing: only its head, uptime and reviews show.
+        mint.info = (i != 20).then(|| info.to_string());
         db.upsert_mint(&mint).await?;
         wallets
             .create_wallet(url.parse()?, CurrencyUnit::Sat, None)
             .await?;
+        // Hourly checks chosen so every strip state shows: steady, gaps (no
+        // data), degraded now, a past outage, down now, newly listed, and
+        // never checked.
         for hour in 0..24 {
-            let state = if i == 4 && hour < 5 { "ERROR" } else { "OK" };
+            let (state, error, category) = match (i, hour) {
+                (1, 7 | 8) | (5, 6..) | (6 | 19, _) => continue,
+                (2 | 12, 0..=2) => (
+                    "WARN",
+                    Some("HTTP 429 Too Many Requests".to_string()),
+                    Some("rate_limit"),
+                ),
+                // A mint's whole HTML error page, as raw errors can be.
+                (4, 0..=4) => (
+                    "ERROR",
+                    Some(format!(
+                        "HTTP 502 Bad Gateway: <html><head><title>502 Bad Gateway</title></head><body><center><h1>502 Bad Gateway</h1></center><hr><center>nginx</center>{}</body></html>",
+                        "<!-- a padding to disable MSIE and Chrome friendly error page -->".repeat(8)
+                    )),
+                    Some("mint"),
+                ),
+                (3, 15) | (16, 0..=4) => (
+                    "ERROR",
+                    Some(format!(
+                        "error sending request for url ({url}/v1/info): connection refused"
+                    )),
+                    Some("network"),
+                ),
+                _ => ("OK", None, None),
+            };
             let at = (Utc::now() - Duration::hours(hour))
                 .format("%Y-%m-%dT%H:%M:%SZ")
                 .to_string();
             let url = url.clone();
             let id = mint.id;
-            db.run(move |conn| { conn.execute("INSERT INTO mint_checks(mint_id, mint_url, state, created_at) VALUES (?1, ?2, ?3, ?4)", rusqlite::params![id, url, state, at])?; Ok(()) }).await?;
+            db.run(move |conn| { conn.execute("INSERT INTO mint_checks(mint_id, mint_url, state, error, category, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)", rusqlite::params![id, url, state, error, category, at])?; Ok(()) }).await?;
         }
         mints.push(mint);
     }
-    // Reviews: six for Northstar (five rated, one not), one for Copper, none
-    // elsewhere, so the summary, "Show all" and the empty state all show.
+    // Reviews: six for Northstar (five rated, one not) and one for Copper,
+    // written out; more below. Common Ground and a few others have none, so
+    // the summary, "Show all" and the empty state all show.
     let samples: [(usize, Option<u8>, &str, i64); 7] = [
         (0, Some(5), "Been using it with my wallet for months. Mints and melts go through in a couple of seconds, and it has never lost a payment.", 2),
         (0, Some(4), "Reliable. Lightning withdrawals sometimes take a while to find a route, but they always land.", 6),
@@ -109,84 +260,164 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         })
         .await?;
     }
-    for i in 0..100 {
-        let from = &mints[i % 7];
-        let to = &mints[(i + 1) % 7];
-        let mut swap = SwapEvent::success(
-            from,
-            to,
-            20 + i as u64 % 80,
-            1,
-            850.0 + (i % 12) as f64 * 230.0,
-        );
-        swap.created_at = Utc::now() - Duration::minutes(i as i64 * 13 + 2);
-        if i % 6 == 1 {
-            swap.state = MintState::Error;
-            swap.error = Some("Mint did not respond within 30 seconds. A later audit will retry after the cooldown.".into());
-            swap.category = Some("timeout".into());
-            swap.failed_mint_id = Some(to.id);
-            swap.stage = Some("paying invoice".into());
-            swap.fee = 0;
+    // Star ratings across the range, from one review to a dozen per mint, so
+    // the directory's stars show every fill and sorting by rating has
+    // something to sort. Text is picked by rating from a small pool; a third
+    // come without words, and mint 15's all do, as Nostr ratings often do.
+    let ratings: [(usize, &[u8]); 16] = [
+        (2, &[2, 3, 2, 1, 3]),
+        (3, &[5, 5, 4, 5, 5, 5, 4, 5, 5]),
+        (4, &[1, 2, 1]),
+        (5, &[4, 3, 4, 4]),
+        (7, &[5]),
+        (8, &[3, 4, 3, 3, 4, 3]),
+        (9, &[1]),
+        (10, &[4, 5, 4, 4, 5, 4, 5, 4, 4, 5, 4, 4]),
+        (11, &[2, 2, 3]),
+        (12, &[5, 4]),
+        (14, &[3, 3, 2, 4]),
+        (15, &[5, 5, 5, 5, 4, 5, 5]),
+        (17, &[1, 1, 2, 1, 1, 1]),
+        (18, &[3, 4]),
+        (21, &[2]),
+        (22, &[5, 4, 5, 5, 3, 5, 4, 5]),
+    ];
+    let says: [&[&str]; 5] = [
+        &[
+            "Lost a payment and never heard back.",
+            "Melts failed three times in a row. Moved my sats elsewhere.",
+            "Down more often than up.",
+        ],
+        &[
+            "Slow, and the fees were higher than advertised.",
+            "Worked once, then the mint went quiet for a day.",
+            "Withdrawals keep failing to find a route.",
+        ],
+        &[
+            "Does the job, nothing more. Some slow melts.",
+            "Fine for small amounts.",
+            "Had one stuck payment. It cleared the next day.",
+        ],
+        &[
+            "Quick swaps, fair fees.",
+            "Solid. The odd slow withdrawal, but they always land.",
+            "Good mint, responsive operator.",
+        ],
+        &[
+            "Fast, cheap, never lost a sat.",
+            "My daily mint. Payments land in seconds.",
+            "Excellent. The operator answers on Nostr within the hour.",
+        ],
+    ];
+    let mut k = 7;
+    for (mint, stars) in ratings {
+        for (j, &rating) in stars.iter().enumerate() {
+            let pool = says[rating as usize - 1];
+            let wordless = mint == 15 || (mint + j) % 3 == 0;
+            db.upsert_review(&Review {
+                pubkey: nostr_sdk::prelude::Keys::generate().public_key().to_hex(),
+                d: format!("preview-{mint}"),
+                event_id: format!("{k:064x}"),
+                mint_url: Some(mints[mint].url.clone()),
+                rating: Some(rating),
+                content: if wordless {
+                    String::new()
+                } else {
+                    pool[(mint + j) % pool.len()].into()
+                },
+                created_at: Utc::now() - Duration::days(3 + ((mint * 5 + j * 9) % 60) as i64),
+            })
+            .await?;
+            k += 1;
         }
-        db.insert_swap(&swap).await?;
     }
-    // Two synthetic peer auditors, so each mint shows several hallmarks.
-    let peers = ["3f".repeat(32), "a9".repeat(32)];
-    for (peer, name) in peers.iter().zip(["Harbor auditor", "Ridge auditor"]) {
-        db.upsert_auditor(&Auditor {
-            pubkey: peer.clone(),
-            name: name.into(),
-            urls: vec![format!(
-                "https://{}.example",
-                name.split(' ').next().unwrap_or("peer").to_lowercase()
-            )],
-            donate: None,
-            software: "imf 0.1.0".into(),
-            frequency_secs: 600,
-            contact: None,
-            announced_at: Some(Utc::now() - Duration::hours(6)),
-            last_seen: Utc::now() - Duration::minutes(4),
-        })
-        .await?;
-    }
-    for i in 0..60 {
-        let peer = &peers[i % 2];
-        let from = &mints[(i * 3) % 7];
-        let to = &mints[(i * 3 + 2) % 7];
-        let mut swap = SwapEvent::success(
-            from,
-            to,
-            30 + i as u64 % 50,
-            1,
-            900.0 + (i % 9) as f64 * 310.0,
-        );
-        swap.created_at = Utc::now() - Duration::minutes(i as i64 * 19 + 4);
-        swap.auditor_pubkey = peer.clone();
-        swap.event_id = Some(format!("{i:064x}"));
-        if i % 7 == 3 {
-            swap.state = MintState::Error;
-            swap.error = Some("Lightning payment failed: no route found.".into());
-            swap.category = Some("network".into());
-            swap.failed_mint_id = Some(to.id);
-            swap.fee = 0;
+    // Paid swaps and peer auditors feed the audit pages. A directory-only
+    // instance has neither, so its uptime comes from the checks alone.
+    if config.paid_swaps {
+        for i in 0..100 {
+            let from = &mints[i % 7];
+            let to = &mints[(i + 1) % 7];
+            let mut swap = SwapEvent::success(
+                from,
+                to,
+                20 + i as u64 % 80,
+                1,
+                850.0 + (i % 12) as f64 * 230.0,
+            );
+            swap.created_at = Utc::now() - Duration::minutes(i as i64 * 13 + 2);
+            if i % 6 == 1 {
+                swap.state = MintState::Error;
+                swap.error = Some("Mint did not respond within 30 seconds. A later audit will retry after the cooldown.".into());
+                swap.category = Some("timeout".into());
+                swap.failed_mint_id = Some(to.id);
+                swap.stage = Some("paying invoice".into());
+                swap.fee = 0;
+            }
+            db.insert_swap(&swap).await?;
         }
-        db.insert_swap(&swap).await?;
+        // Two synthetic peer auditors, so each mint shows several hallmarks.
+        let peers = ["3f".repeat(32), "a9".repeat(32)];
+        for (peer, name) in peers.iter().zip(["Harbor auditor", "Ridge auditor"]) {
+            db.upsert_auditor(&Auditor {
+                pubkey: peer.clone(),
+                name: name.into(),
+                urls: vec![format!(
+                    "https://{}.example",
+                    name.split(' ').next().unwrap_or("peer").to_lowercase()
+                )],
+                donate: None,
+                software: "imf 0.1.0".into(),
+                frequency_secs: 600,
+                contact: None,
+                announced_at: Some(Utc::now() - Duration::hours(6)),
+                last_seen: Utc::now() - Duration::minutes(4),
+            })
+            .await?;
+        }
+        for i in 0..60 {
+            let peer = &peers[i % 2];
+            let from = &mints[(i * 3) % 7];
+            let to = &mints[(i * 3 + 2) % 7];
+            let mut swap = SwapEvent::success(
+                from,
+                to,
+                30 + i as u64 % 50,
+                1,
+                900.0 + (i % 9) as f64 * 310.0,
+            );
+            swap.created_at = Utc::now() - Duration::minutes(i as i64 * 19 + 4);
+            swap.auditor_pubkey = peer.clone();
+            swap.event_id = Some(format!("{i:064x}"));
+            if i % 7 == 3 {
+                swap.state = MintState::Error;
+                swap.error = Some("Lightning payment failed: no route found.".into());
+                swap.category = Some("network".into());
+                swap.failed_mint_id = Some(to.id);
+                swap.fee = 0;
+            }
+            db.insert_swap(&swap).await?;
+        }
     }
     let state = AppState {
         leptos_options: get_configuration(Some("Cargo.toml"))?.leptos_options,
         wallet_repository: wallets,
         app_name: "Internet Mint Finder".into(),
         auditor_db: db,
-        auditor_config: AuditorConfig::default(),
+        auditor_config: config,
         cache: Arc::new(ResponseCache::new()),
         base_url: None,
         mint_url_aliases: Arc::new(Vec::new()),
         nostr: Arc::new(Default::default()),
         started_at: std::time::Instant::now(),
     };
+    // Routes as the real server mounts them: donations and Analytics only
+    // with paid swaps on.
+    let mut app = axum::Router::new().merge(api_router());
+    if state.auditor_config.paid_swaps {
+        app = app.merge(paid_router());
+    }
     // Reject value-moving requests in the preview, including server functions.
-    let app = axum::Router::new()
-        .merge(api_router())
+    let app = app
         .leptos_routes(&state, generate_route_list(App), {
             let state = state.clone();
             move || {

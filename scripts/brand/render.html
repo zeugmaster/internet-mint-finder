@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>render</title>
+<!-- render.sh screenshots this page with headless Chrome to make each PNG:
+     ?a=<path under public/>&w=<image width>&cw=<canvas width>&ch=<canvas height>&bg=<css colour or none>
+     The canvas is pinned to the top-left corner: headless Chrome lays out
+     small windows wider than it captures, so anything centred lands off-frame. -->
+<style>
+  html, body { margin: 0; background: transparent; overflow: hidden; }
+  .canvas { position: fixed; left: 0; top: 0; display: grid; place-items: center; }
+  img { display: block; }
+</style>
+</head>
+<body>
+<div class="canvas"></div>
+<script>
+  const q = new URLSearchParams(location.search);
+  const canvas = document.querySelector(".canvas");
+  canvas.style.width = q.get("cw") + "px";
+  canvas.style.height = q.get("ch") + "px";
+  if (q.get("bg") && q.get("bg") !== "none") canvas.style.background = q.get("bg");
+  const img = document.createElement("img");
+  img.src = "../../public/" + q.get("a");
+  img.width = Number(q.get("w"));
+  canvas.append(img);
+</script>
+</body>
+</html>

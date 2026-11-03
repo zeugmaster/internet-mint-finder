@@ -173,8 +173,9 @@ impl Auditor {
         }
     }
 
-    /// Spawn the swap, hourly health, and snapshot loops. Idempotent: calling twice
-    /// only spawns once (subsequent calls warn).
+    /// Spawn the hourly health loop and, when paid swaps are on, the swap and
+    /// snapshot loops. Idempotent: calling twice only spawns once (subsequent
+    /// calls warn).
     pub async fn start(&self) {
         if self.shutdown.receiver_count() > 0 {
             warn!("Auditor already running");
@@ -252,6 +253,12 @@ impl Auditor {
                     }
                 }
             });
+        }
+
+        // Everything below moves or tracks real ecash.
+        if !self.config.paid_swaps {
+            info!("Paid swaps are off (AUDITOR_PAID_SWAPS): only the free health checks run");
+            return;
         }
 
         // Swap loop

@@ -24,14 +24,16 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use tower_http::cors::{Any, CorsLayer};
 
-/// Build the `/api` + `/dashboard` router. Leptos routes are attached by the
-/// caller.
-pub fn api_router() -> Router<AppState> {
-    let cors = CorsLayer::new()
+fn cors() -> CorsLayer {
+    CorsLayer::new()
         .allow_origin(Any)
         .allow_methods(Any)
-        .allow_headers(Any);
+        .allow_headers(Any)
+}
 
+/// Build the read-only `/api` router. Leptos routes are attached by the
+/// caller.
+pub fn api_router() -> Router<AppState> {
     Router::new()
         // CRUD API
         .route("/api/mints/", get(get_mints).post(add_mint))
@@ -68,13 +70,20 @@ pub fn api_router() -> Router<AppState> {
         .route("/api/flow", get(api_flow))
         .route("/api/fees", get(api_fees))
         .route("/api/donations/timeseries", get(api_donations_ts))
+        .layer(cors())
+}
+
+/// Donation endpoints and the analytics page, mounted only when the instance
+/// runs paid swaps (`AUDITOR_PAID_SWAPS`).
+pub fn paid_router() -> Router<AppState> {
+    Router::new()
         // NUT-18 Payment Request endpoints
         .route("/api/pr", get(api_get_pr))
         .route("/api/donate", post(api_donate))
         .route("/receive-token", post(receive_token_form))
         // Static analytics dashboard
         .route("/dashboard", get(dashboard_page))
-        .layer(cors)
+        .layer(cors())
 }
 
 // ---------------------------------------------------------------------------
