@@ -3,14 +3,12 @@ use crate::components::icons::Star;
 use crate::format::{absolute_time, format_count, short_npub};
 use crate::types::{MintReviews, ReviewContext, ReviewRead};
 use leptos::prelude::*;
-// Safari's autocorrect switch, which the view macro doesn't know by name.
-use leptos::tachys::html::attribute::custom::custom_attribute;
 
 /// How many reviews show before "Show all".
 const FIRST_REVIEWS: usize = 4;
 
 // Reviews are kind 38000 events read from relays; a new one is signed in the
-// browser (`public/review.js`) and never posted to us. The mint page loads
+// browser (`public/review.js`), verified here and queued for relay delivery. The mint page loads
 // reviews once, not on the poll, so a review being typed survives. The whole
 // section uses three text styles: its heading, body text, and small grey meta
 // (plus the average as the one large figure).
@@ -127,6 +125,7 @@ fn ReviewItem(review: ReviewRead) -> impl IntoView {
             <span class="review-who" title=full>{who}</span>
             <span class="review-date" title=absolute_time(review.created_at)>
                 {review.created_at.format("%b %-d, %Y").to_string()}
+                {(!review.published).then_some(" · Awaiting Nostr delivery")}
             </span>
             {(!review.content.trim().is_empty()).then(|| view! {
                 <p class="review-text" class:is-long=long dir="auto">{review.content.trim().to_string()}</p>
@@ -141,28 +140,13 @@ fn ReviewItem(review: ReviewRead) -> impl IntoView {
 /// The write-a-review row: one line of text and a button. The form stays in a
 /// details element, closed until asked for; `public/review.js` finds its
 /// fields by id either way. With no reviews yet the line says so itself. A
-/// review needs the mint's public key, so a mint without one gets a line and
-/// no form: nothing asks for a Nostr key that couldn't be used.
+/// review uses the mint public key when known and the URL for legacy mints.
 #[component]
 fn ReviewCompose(context: ReviewContext, #[prop(optional)] empty: bool) -> impl IntoView {
-    if context.mint_pubkey.is_none() {
-        let line = if empty {
-            "No reviews yet. They open once this mint shares its public key."
-        } else {
-            "New reviews open once this mint shares its public key."
-        };
-        return view! {
-            <p class=if empty { "review-compose is-empty" } else { "review-compose" }>
-                <span class="review-compose-line">{line}</span>
-            </p>
-        }
-        .into_any();
-    }
-    let relays = context.relays.join(",");
     let line = if empty {
-        "No reviews yet. Used this mint? Rate it with your Nostr key."
+        "No reviews yet. Used this mint? Rate it with your Nostr account."
     } else {
-        "Used this mint? Rate it with your Nostr key."
+        "Used this mint? Rate it with your Nostr account."
     };
     view! {
         <details class=if empty { "review-compose is-empty" } else { "review-compose" }>
@@ -175,49 +159,28 @@ fn ReviewCompose(context: ReviewContext, #[prop(optional)] empty: bool) -> impl 
             </summary>
             <div class="review-compose-body">
                 <div class="signer" data-signer="out">
-                    // Shown by review.js once it finds a Nostr extension
-                    // (NIP-07): one click, and the key never leaves it.
-                    <div class="signer-extension" data-extension="on" hidden=true>
-                        <button type="button" id="review-extension" class="btn">"Sign in with your Nostr extension"</button>
-                        <p class="field-hint">"It asks you to approve, and your key stays in the extension."</p>
-                        <p class="signer-or" aria-hidden="true">"or"</p>
-                    </div>
-                    <div class="field">
-                        <label class="field-label" for="review-nsec">"Your Nostr key (nsec)"</label>
-                        <div class="flex gap-2">
-                            <input id="review-nsec" type="password" class="field-input" placeholder="nsec1…" autocomplete="off" autocapitalize="none" {..custom_attribute("autocorrect", "off")} spellcheck="false"/>
-                            <button type="button" id="review-signin" class="btn">"Sign in"</button>
-                        </div>
-                        // A failed sign-in says so here, by the field, not at
-                        // the form's foot under the on-screen keyboard.
-                        <p id="review-signin-error" class="field-hint is-error" role="alert" hidden=true></p>
-                        <p class="field-hint">
-                            "A pasted key is used only to sign reviews and is forgotten when this page reloads."
-                            <span data-extension="off">" With a Nostr extension like Alby or nos2x, you won't need to paste it."</span>
-                        </p>
-                    </div>
+                    <button type="button" data-nostr-signin="" class="btn">"Sign in with Nostr"</button>
+                    <p class="field-hint">"Approve with a Nostr signing extension. Your private key stays there."</p>
                 </div>
                 <p class="field-hint signer-in" data-signer="in" hidden=true>
-                    <span>
-                        "Signed in as " <span id="review-npub" class="mono"></span>
-                        <span id="review-via"></span>
-                    </span>
-                    <button type="button" id="review-signout" class="btn btn-ghost btn-small">"Sign out"</button>
+                    "Reviewing as " <span data-nostr-pubkey="" class="mono"></span>
                 </p>
                 <form id="review-form" class="mt-4"
                     data-mint-url=context.mint_url.clone()
                     data-mint-pubkey=context.mint_pubkey.clone().unwrap_or_default()
                     data-announcer=context.announcer.clone().unwrap_or_default()
-                    data-relays=relays>
+                    data-mint-id=crate::types::mint_key(&context.mint_url)>
+                    <fieldset data-review-fields="" disabled=true>
                     <StarInput/>
                     <div class="field">
                         <label class="field-label" for="review-content">"Your experience"</label>
                         <textarea id="review-content" name="content" class="field-textarea" rows="3" maxlength="1000"></textarea>
                     </div>
                     <div class="review-submit">
-                        <p id="review-status" class="field-hint" aria-live="polite">"Posted to Nostr, not to this site."</p>
+                        <p id="review-status" class="field-hint" aria-live="polite">"Your review is public and signed with your extension."</p>
                         <button type="submit" class="btn btn-primary">"Post review"</button>
                     </div>
+                    </fieldset>
                 </form>
             </div>
         </details>

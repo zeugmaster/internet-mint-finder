@@ -4155,3 +4155,17 @@ button.hallmark {
         transition: none !important;
     }
 }
+
+/* Reviews phase: retain the directory layout without inactive audit columns. */
+.site-account { grid-area: nav; justify-self: end; min-width: 0; }
+.site-account-in { display: flex; align-items: center; gap: 8px; }
+.site-account [data-nostr-pubkey] { font-size: 0.875rem; }
+#nostr-login-status { max-width: 40ch; }
+[data-review-fields] { border: 0; padding: 0; margin: 0; min-width: 0; }
+.mint-row { grid-template-columns: auto minmax(0, 1fr) 160px; grid-template-areas: "avatar id rating"; }
+@media (max-width: 760px) {
+    .mint-row { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "avatar id" "avatar rating"; }
+}
+@media (max-width: 640px) {
+    .site-account { justify-self: start; }
+}

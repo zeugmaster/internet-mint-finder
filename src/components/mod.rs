@@ -1,12 +1,8 @@
-pub mod auditor_table;
-pub mod badge;
 pub mod brand;
 pub mod button;
-pub mod hallmarks;
 pub mod header;
 pub mod icons;
 pub mod input;
 pub mod mint_avatar;
 pub mod mint_list;
 pub mod reviews;
-pub mod swap_list;

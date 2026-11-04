@@ -21,7 +21,7 @@ use leptos_router::{
 /// theme-color tags above it split by width; the script only picks the
 /// theme). `js` on the root marks that scripts run, and an empty touchstart
 /// listener lets iOS show `:active` presses before hydration.
-/// `public/dashboard.html` carries the same script.
+/// `archive/auditor-ui/dashboard.html` carries the same script.
 const THEME_SCRIPT: &str = r#"(function(){
 var d=document.documentElement,swaps=0;
 d.dataset.theme=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
@@ -45,8 +45,7 @@ document.startViewTransition(swap).finished.finally(end);
 })();"#;
 
 /// The site description, shared by search results and link previews.
-const DESCRIPTION: &str =
-    "Find a Cashu mint that works: hourly uptime checks and reviews from Nostr.";
+const DESCRIPTION: &str = "Find a Cashu mint: community ratings and reviews from Nostr.";
 
 /// An Open Graph tag. The view macro doesn't know the `property` attribute,
 /// so the tag is built directly, as leptos_meta does.
@@ -107,13 +106,13 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
                 <script src="/nostr-tools.js" defer></script>
                 // Versioned like the icons: browsers keep scripts too, so bump
                 // ?v= whenever review.js changes or visitors run the old one.
-                <script src="/review.js?v=5" defer></script>
+                <script src="/review.js?v=6" defer></script>
             </head>
             <body>
                 <App/>
             </body>
         </html>
-    }
+    }.into_any()
 }
 
 #[component]
@@ -148,6 +147,7 @@ pub fn App() -> impl IntoView {
             </div>
         </Router>
     }
+    .into_any()
 }
 
 /// The page area. Once the page has changed, each new page fades in as it

@@ -1,227 +1,137 @@
-// Signs a NIP-87 mint review (kind 38000) in the browser, with the nsec the
-// user signed in with or their NIP-07 extension, and sends it straight to the
-// relays this instance reads. The server never sees the review on the write
-// path; it ingests it from the relays like any client.
-// nostr-tools.js is lib/nostr.bundle.js from nostr-tools@2.25.2 on npm,
-// unmodified (sha256 a7c4846fde84a0d6ce7596f3fcfc88435d29fdcd616887205ab97f9a16bc6407).
-// Never retain a private key across page reloads. Remove keys saved by older builds.
-try { localStorage.removeItem('imf.nsec'); } catch (_) { /* storage disabled */ }
-let sessionKey = null;
-// Signing in with an extension keeps only its public key, to show who is
-// signed in; the extension signs each review itself.
+// NIP-07 identity is shared by the whole site. Only a public key is remembered;
+// each review's signature is the server's proof of authorship, not localStorage.
+// nostr-tools.js is the existing, locally served nostr-tools 2.25.2 bundle.
 const EXTENSION_KEY = 'imf.extension';
+const validPubkey = key => typeof key === 'string' && /^[0-9a-f]{64}$/.test(key);
 let extensionPubkey = null;
-try { extensionPubkey = localStorage.getItem(EXTENSION_KEY); } catch (_) { /* not kept */ }
-
-// The line beside Post review starts as a hint; a message replaces it and
-// quiet() puts the hint back. Each message rises in a little, so saying the
-// same thing twice still answers the click; with reduced motion it only
-// fades (the stylesheet's motion rule doesn't reach a script's animation).
-function rise(el) {
-  if (!el.animate) return;
-  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  el.animate(
-    still
-      ? [{ opacity: 0 }, { opacity: 1 }]
-      : [{ opacity: 0, transform: 'translateY(4px)' }, { opacity: 1, transform: 'none' }],
-    { duration: still ? 150 : 200, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' },
-  );
-}
-
-function say(msg, ok) {
-  const status = document.getElementById('review-status');
-  if (!status) return;
-  if (status.dataset.hint === undefined) status.dataset.hint = status.textContent.trim();
-  status.textContent = msg;
-  status.dataset.ok = ok ? '1' : '0';
-  rise(status);
-}
-
-// A failed sign-in shows by the sign-in fields rather than at the form's foot.
-function sayAtSignIn(msg) {
-  const error = document.getElementById('review-signin-error');
-  if (!error) return;
-  error.textContent = msg;
-  setHidden(error, false);
-  rise(error);
-}
-
-function quiet() {
-  const error = document.getElementById('review-signin-error');
-  if (error) { error.textContent = ''; setHidden(error, true); }
-  const status = document.getElementById('review-status');
-  if (!status || status.dataset.hint === undefined) return;
-  status.textContent = status.dataset.hint;
-  delete status.dataset.ok;
-}
-
-function storedKey() { return sessionKey; }
-
-function setHidden(el, hidden) {
-  if (el.hidden !== hidden) el.hidden = hidden;
-}
+let accountVersion = 0;
+let signingIn = false;
+try {
+  localStorage.removeItem('imf.nsec'); // Remove private keys saved by older builds.
+  const remembered = localStorage.getItem(EXTENSION_KEY);
+  if (validPubkey(remembered)) extensionPubkey = remembered;
+  else localStorage.removeItem(EXTENSION_KEY);
+} catch (_) { /* Storage is optional. */ }
 
 function setText(el, text) {
   if (el && el.textContent !== text) el.textContent = text;
 }
-
-// Shows either the sign-in box or the signed-in line, and the extension
-// button once an extension is found. Re-runs on DOM changes because pages are
-// swapped client-side after the first load.
-function render() {
-  const sk = storedKey();
-  const pubkey = sk ? NostrTools.getPublicKey(sk) : extensionPubkey;
-  for (const el of document.querySelectorAll('[data-signer]')) {
-    setHidden(el, (el.dataset.signer === 'in') !== !!pubkey);
-  }
-  for (const el of document.querySelectorAll('[data-extension]')) {
-    setHidden(el, (el.dataset.extension === 'on') !== !!window.nostr);
-  }
-  const label = document.getElementById('review-npub');
-  if (label && pubkey) {
-    const npub = NostrTools.nip19.npubEncode(pubkey);
-    const short = `${npub.slice(0, 12)}…${npub.slice(-6)}`;
-    if (label.textContent !== short) { label.textContent = short; label.title = npub; }
-  }
-  setText(document.getElementById('review-via'), sk || !pubkey ? '' : ' with your extension');
+function setHidden(el, hidden) {
+  if (el.hidden !== hidden) el.hidden = hidden;
 }
-
+function render() {
+  for (const el of document.querySelectorAll('[data-signer]')) {
+    setHidden(el, (el.dataset.signer === 'in') !== !!extensionPubkey);
+  }
+  for (const el of document.querySelectorAll('[data-nostr-pubkey]')) {
+    const npub = extensionPubkey ? NostrTools.nip19.npubEncode(extensionPubkey) : '';
+    setText(el, npub ? `${npub.slice(0, 12)}…${npub.slice(-6)}` : '');
+    el.title = npub;
+  }
+  for (const el of document.querySelectorAll('[data-review-fields]')) el.disabled = !extensionPubkey;
+  for (const el of document.querySelectorAll('[data-nostr-signin]')) el.disabled = signingIn;
+}
 function signInWith(pubkey) {
-  extensionPubkey = pubkey;
+  extensionPubkey = validPubkey(pubkey) ? pubkey : null;
+  accountVersion++;
   try {
-    if (pubkey) localStorage.setItem(EXTENSION_KEY, pubkey);
+    if (extensionPubkey) localStorage.setItem(EXTENSION_KEY, extensionPubkey);
     else localStorage.removeItem(EXTENSION_KEY);
-  } catch (_) { /* kept for this page only */ }
+  } catch (_) { /* Kept only for this page when storage is unavailable. */ }
+  render();
+}
+function loginMessage(message) {
+  const status = document.getElementById('nostr-login-status');
+  if (status) { setText(status, message); setHidden(status, !message); }
+}
+function say(form, message, ok) {
+  if (!form.isConnected) return;
+  const status = form.querySelector('#review-status');
+  if (status) { setText(status, message); status.dataset.ok = ok ? '1' : '0'; }
+}
+async function signInWithExtension() {
+  if (signingIn) return;
+  if (!window.nostr?.getPublicKey || !window.nostr?.signEvent) {
+    loginMessage('Install a Nostr signing extension such as Alby or nos2x, then try again.');
+    return;
+  }
+  signingIn = true;
+  const version = accountVersion;
+  render();
+  try {
+    const pubkey = await window.nostr.getPublicKey();
+    if (version !== accountVersion) return;
+    if (!validPubkey(pubkey)) throw new Error('Invalid public key');
+    signInWith(pubkey);
+    loginMessage('');
+  } catch (_) {
+    loginMessage('Sign-in was declined or unavailable. Try again when your extension is ready.');
+  } finally { signingIn = false; render(); }
 }
 
 render();
 new MutationObserver(render).observe(document.documentElement, { childList: true, subtree: true });
-// Extensions can add window.nostr after this script runs.
 window.addEventListener('load', render);
-setTimeout(render, 1500);
-
-async function signInWithExtension(button) {
-  if (!window.nostr) { sayAtSignIn('No Nostr extension found in this browser.'); return; }
-  button.disabled = true;
-  try {
-    const pubkey = await window.nostr.getPublicKey();
-    if (!/^[0-9a-f]{64}$/.test(pubkey)) throw new Error('not a public key');
-    signInWith(pubkey);
+window.addEventListener('storage', ev => {
+  if (ev.key === EXTENSION_KEY || ev.key === null) {
+    extensionPubkey = validPubkey(ev.newValue) ? ev.newValue : null;
+    accountVersion++;
     render();
-    quiet();
-  } catch (_) {
-    sayAtSignIn('Your extension didn’t sign you in. Try again, or paste your nsec.');
-  } finally {
-    button.disabled = false;
-  }
-}
-
-document.addEventListener('click', (ev) => {
-  const id = ev.target instanceof Element ? ev.target.id : '';
-  if (id === 'review-signin') {
-    const input = document.getElementById('review-nsec');
-    const nsec = input.value.trim();
-    let decoded = null;
-    try { decoded = NostrTools.nip19.decode(nsec); } catch (_) { /* not bech32 */ }
-    if (!decoded || decoded.type !== 'nsec') { sayAtSignIn('That isn’t an nsec key. It starts with nsec1.'); return; }
-    sessionKey = decoded.data;
-    input.value = '';
-    signInWith(null);
-    render();
-    quiet();
-  } else if (id === 'review-extension') {
-    signInWithExtension(ev.target);
-  } else if (id === 'review-signout') {
-    if (sessionKey) sessionKey.fill(0);
-    sessionKey = null;
-    signInWith(null);
-    render();
-    quiet();
   }
 });
-
-// A complaint goes as soon as the person changes something in the form.
-document.addEventListener('input', (ev) => {
-  if (!(ev.target instanceof Element) || !ev.target.closest('.review-compose-body')) return;
-  const status = document.getElementById('review-status');
-  const error = document.getElementById('review-signin-error');
-  if ((status && status.dataset.ok === '0') || (error && !error.hidden)) quiet();
+document.addEventListener('click', ev => {
+  if (!(ev.target instanceof Element)) return;
+  if (ev.target.closest('[data-nostr-signin]')) signInWithExtension();
+  if (ev.target.closest('[data-nostr-signout]')) { signInWith(null); loginMessage(''); }
 });
 
-document.addEventListener('keydown', (ev) => {
-  if (ev.key === 'Enter' && ev.target instanceof Element && ev.target.id === 'review-nsec') {
-    document.getElementById('review-signin').click();
-  }
-});
-
-document.addEventListener('submit', async (ev) => {
+document.addEventListener('submit', async ev => {
   const form = ev.target;
   if (!(form instanceof HTMLFormElement) || form.id !== 'review-form') return;
   ev.preventDefault();
-  const sk = storedKey();
-  if (!sk && !window.nostr) {
-    say('Sign in with your nsec, use a Nostr extension like Alby, or review from a wallet such as Zeus or Boardwalk.', false);
+  if (!extensionPubkey || !window.nostr?.signEvent) {
+    say(form, 'Sign in with a Nostr signing extension first.', false);
     return;
   }
-  const data = form.dataset;
   const rating = form.elements.rating.value;
   const text = form.elements.content.value.trim();
-  if (!rating) { say('Choose a star rating first.', false); return; }
-  if (!text) { say('Write a few words first.', false); return; }
-  const tags = [['k', '38172'], ['d', data.mintPubkey]];
-  if (data.mintUrl) tags.push(['u', data.mintUrl]);
-  if (data.announcer) tags.push(['a', `38172:${data.announcer}:${data.mintPubkey}`]);
-  const unsigned = {
-    kind: 38000,
-    created_at: Math.floor(Date.now() / 1000),
-    tags,
-    content: `[${rating}/5] ${text}`,
-  };
-  // One review at a time: the button stays off from signing (an extension
-  // may ask first) until the relays answer, however that ends.
+  if (!/^[1-5]$/.test(rating)) { say(form, 'Choose a star rating first.', false); return; }
+  if (!text || [...text].length > 1000) { say(form, 'Write between 1 and 1,000 characters.', false); return; }
   const button = form.querySelector('button[type="submit"]');
   if (button.disabled) return;
+  const data = { ...form.dataset };
+  const version = accountVersion;
+  const author = extensionPubkey;
+  const tags = [['k', '38172'], ['d', data.mintPubkey || data.mintUrl], ['u', data.mintUrl]];
+  if (data.announcer && data.mintPubkey) tags.push(['a', `38172:${data.announcer}:${data.mintPubkey}`]);
+  const unsigned = { kind: 38000, created_at: Math.floor(Date.now() / 1000), tags, content: `[${rating}/5] ${text}` };
   button.disabled = true;
+  say(form, 'Approve the review in your extension…', true);
   try {
-    let event;
-    try { event = sk ? NostrTools.finalizeEvent(unsigned, sk) : await window.nostr.signEvent(unsigned); }
-    catch (_) { say('Couldn’t sign the review. Try again.', false); return; }
-    // The extension may have switched accounts since sign-in.
-    if (!sk && event.pubkey !== extensionPubkey) { signInWith(event.pubkey); render(); }
-    const relays = (data.relays || '').split(',').filter(Boolean);
-    say('Posting…', true);
-    const results = await Promise.all(relays.map((url) => publish(url, event)));
-    const ok = results.filter(Boolean).length;
-    if (ok) {
-      say('Posted. It shows up here once this site picks it up from Nostr.', true);
-      form.reset();
-    } else {
-      say('Couldn’t post: Nostr didn’t accept it. Try again later.', false);
+    const event = await window.nostr.signEvent(JSON.parse(JSON.stringify(unsigned)));
+    if (version !== accountVersion || !form.isConnected) return;
+    if (event.pubkey !== author) {
+      signInWith(null);
+      throw new Error('Your extension changed accounts. Sign in again before posting.');
     }
-  } finally {
-    button.disabled = false;
-  }
+    // Also reject extensions that return a different payload than the one approved here.
+    if (event.kind !== unsigned.kind || event.content !== unsigned.content || event.created_at !== unsigned.created_at
+      || JSON.stringify(event.tags) !== JSON.stringify(unsigned.tags) || !NostrTools.verifyEvent(event)) {
+      throw new Error('The extension returned an invalid or changed review. Please try again.');
+    }
+    say(form, 'Saving your review…', true);
+    const response = await fetch(`/api/mints/${encodeURIComponent(data.mintId)}/reviews`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(event),
+      signal: AbortSignal.timeout(15000),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.saved) throw new Error(result.error || 'Could not save your review. Please try again.');
+    say(form, result.published ? 'Review posted.' : 'Review saved. It will be sent to Nostr when a relay accepts it.', true);
+    form.reset();
+    if (form.isConnected) window.dispatchEvent(new Event('imf:review-posted'));
+  } catch (error) {
+    say(form, error?.name === 'TimeoutError'
+      ? 'The request timed out. Your review may have been saved; check the page before retrying.'
+      : (error?.message || 'Could not sign or save your review. Your draft is still here.'), false);
+  } finally { button.disabled = false; }
 });
-
-function publish(url, event) {
-  return new Promise((resolve) => {
-    let ws;
-    let done = false;
-    const finish = (v) => {
-      if (done) return;
-      done = true;
-      resolve(v);
-      try { ws.close(); } catch (_) { /* already closed */ }
-    };
-    try { ws = new WebSocket(url); } catch (_) { return resolve(false); }
-    const timer = setTimeout(() => finish(false), 8000);
-    ws.onopen = () => ws.send(JSON.stringify(['EVENT', event]));
-    ws.onmessage = (m) => {
-      try {
-        const msg = JSON.parse(m.data);
-        if (msg[0] === 'OK' && msg[1] === event.id) { clearTimeout(timer); finish(!!msg[2]); }
-      } catch (_) { /* ignore non-JSON */ }
-    };
-    ws.onerror = () => { clearTimeout(timer); finish(false); };
-  });
-}

@@ -1,36 +1,38 @@
-//! Canonical mint URL spelling, shared by the registry, token receive, the
-//! Nostr publisher/ingester and the CLIs. Delegates to CDK's `MintUrl` so a
-//! URL stored here always equals the one CDK prints for the same mint
-//! (lower-case scheme and host, no trailing slash, path case preserved).
-
-use std::str::FromStr;
-
-pub fn normalize_mint_url(url: &str) -> String {
-    let trimmed = url.trim().trim_end_matches('/');
-    cdk::mint_url::MintUrl::from_str(trimmed)
-        .map(|u| u.to_string())
-        .unwrap_or_else(|_| trimmed.to_string())
+//! The same URL spelling for legacy reviews, announcements and new reviews.
+pub fn normalize_mint_url(raw: &str) -> Option<String> {
+    if raw.len() > 2048 {
+        return None;
+    }
+    let url = url::Url::parse(raw.trim()).ok()?;
+    if !matches!(url.scheme(), "http" | "https")
+        || url.host_str().is_none()
+        || !url.username().is_empty()
+        || url.password().is_some()
+        || url.query().is_some()
+        || url.fragment().is_some()
+    {
+        return None;
+    }
+    Some(url.as_str().trim_end_matches('/').to_string())
 }
 
 #[cfg(test)]
 mod tests {
-    use super::normalize_mint_url;
-
+    use super::*;
     #[test]
-    fn matches_cdk_spelling() {
+    fn normalizes_without_changing_case_sensitive_paths() {
         assert_eq!(
-            normalize_mint_url(" https://Mint.Example.COM/ "),
-            "https://mint.example.com"
+            normalize_mint_url(" HTTPS://Mint.Example:443/Path/ ").as_deref(),
+            Some("https://mint.example/Path")
         );
-        assert_eq!(
-            normalize_mint_url("http://localhost:8085/"),
-            "http://localhost:8085"
-        );
-        assert_eq!(
-            normalize_mint_url("https://a.example/Path/"),
-            "https://a.example/Path"
-        );
-        // Not a URL: trimmed, otherwise untouched, never panics.
-        assert_eq!(normalize_mint_url(" junk/ "), "junk");
+        for value in [
+            "javascript:alert(1)",
+            "https://u:p@mint.example",
+            "https://mint.example?x=1",
+            "https://mint.example#x",
+            "junk",
+        ] {
+            assert!(normalize_mint_url(value).is_none());
+        }
     }
 }

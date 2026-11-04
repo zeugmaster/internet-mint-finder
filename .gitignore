@@ -2,6 +2,10 @@
 # will have compiled files and executables
 debug/
 target/
+data/
+*.sqlite3
+*.sqlite3-*
+
 result/
 .env
 
@@ -11,9 +15,6 @@ result/
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
 
-# Documentation lives outside the repository.
-*.md
-!README.md
 
 # Finder metadata
 .DS_Store
