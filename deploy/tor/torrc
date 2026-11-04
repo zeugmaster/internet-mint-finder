@@ -1,9 +1,0 @@
-# Onion entry point for this instance (plain HTTP; Tor provides the transport
-# security). The hostname appears in /var/lib/tor/imf/hostname after start.
-DataDirectory /var/lib/tor
-HiddenServiceDir /var/lib/tor/imf/
-HiddenServiceVersion 3
-HiddenServicePort 80 caddy:80
-# SOCKS for the connectivity matrix (reachability probes over Tor, PLAN P6).
-SocksPort 0.0.0.0:9050
-Log notice stdout

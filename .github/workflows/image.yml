@@ -1,0 +1,38 @@
+name: Build deployable image
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Test
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal
+          cargo +1.95.0 test --locked --features ssr -- --include-ignored
+          node scripts/check-browser.mjs
+      - name: Build
+        run: docker build -t imf:local .
+      - name: Smoke test image without wallet credentials
+        run: |
+          docker run -d --name imf-smoke -p 127.0.0.1:3000:3000 --read-only --cap-drop ALL --security-opt no-new-privileges imf:local
+          trap 'docker logs imf-smoke; docker rm -f imf-smoke' EXIT
+          curl --retry 20 --retry-connrefused --retry-delay 1 --fail http://127.0.0.1:3000/api/health/live
+          for asset in / /review.js /nostr-tools.js /pkg/imf.js /pkg/imf.wasm /pkg/imf.css; do
+            curl --fail --silent --output /dev/null "http://127.0.0.1:3000$asset"
+          done
+          test "$(docker exec imf-smoke id -u)" = 10001
+          docker cp imf-smoke:/app/site/pkg /tmp/imf-pkg
+          node scripts/check-wasm.mjs /tmp/imf-pkg
+      - name: Export image
+        run: docker save imf:local | gzip > imf-image.tar.gz
+      - uses: actions/upload-artifact@v7
+        with:
+          name: imf-linux-amd64
+          path: imf-image.tar.gz
+          compression-level: 0
+          retention-days: 7

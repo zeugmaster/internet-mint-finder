@@ -3,7 +3,7 @@ use crate::components::mint_list::MintList;
 use leptos::prelude::*;
 use leptos_meta::Title;
 
-/// The directory: just the mints, with their ratings and uptime, under a
+/// The directory: just the mints, with their ratings and reviews, under a
 /// head that carries the brand tag at full size.
 #[component]
 pub fn HomePage() -> impl IntoView {
@@ -14,7 +14,7 @@ pub fn HomePage() -> impl IntoView {
                 <h1 class="page-title">"Find a Cashu mint."</h1>
                 <p class="page-subtitle">
                     "Cashu mints found on Nostr, with the reviews posted there. "
-                    "Each mint is checked every hour to see if it's online."
+                    "Read what people say, and share your experience."
                 </p>
                 <HeroTag/>
             </div>

@@ -1,218 +1,93 @@
-use crate::api::{get_mint_by_id, get_mint_metrics, get_mint_reviews, get_mint_uptime};
-use crate::components::badge::{CategoryPill, StateBadge};
-use crate::components::icons::{Check, Cross, Help};
+use crate::api::{get_mint_by_id, get_mint_reviews};
+use crate::components::icons::{Check, Cross};
 use crate::components::mint_avatar::MintAvatar;
 use crate::components::mint_list::{CopyText, CopyUrl, DirectoryMemory};
 use crate::components::reviews::ReviewsBlock;
-use crate::format::{
-    absolute_time, format_sats, middle_ellipsis, relative_time, relative_time_from, short_url,
-};
-use crate::hooks::use_poll;
-use crate::types::{MintMetrics, MintRead, MintState, MintUptime, MintUptimeBar};
+use crate::format::{absolute_time, format_sats, middle_ellipsis, relative_time, short_url};
+use crate::types::MintRead;
 use chrono::{DateTime, Utc};
 use leptos::prelude::*;
-use leptos::web_sys::HtmlElement;
 use leptos_meta::Title;
 use leptos_router::hooks::use_params_map;
 
-/// How much of a failure message the mint page shows before "Read more".
-const INCIDENT_CHARS: usize = 300;
-
-/// About eight lines of the mint's words across the page's column, and across
-/// a phone's.
 const WORDS_CHARS: usize = 1100;
 const WORDS_CHARS_ON_PHONES: usize = 460;
 
-/// One mint for a wallet user: is it up, what people say, and what the mint
-/// says about itself. Audit detail (per-auditor results, swaps, funding) is
-/// left off. Each section is a card with its heading outside, on the page.
-/// The page polls every 15 seconds and keeps the last good data through a
-/// failed refresh.
 #[component]
 pub fn MintDetailPage() -> impl IntoView {
     let params = use_params_map();
     let mint_id = Signal::derive(move || params.get().get("id").unwrap_or_default());
-
-    // Going back returns to this place in the list.
     let memory = expect_context::<DirectoryMemory>();
     memory.return_to.set_value(Some(memory.scroll.get_value()));
     let directory = memory.view;
-
-    let tick = use_poll(15);
-
     let mint = Resource::new(
-        move || (mint_id.get(), tick.get()),
-        |(id, _)| async move { get_mint_by_id(id).await },
-    );
-
-    // Whether the mint exists, checked once per page (not on the poll), so the
-    // sections below are skipped for an unknown id without being rebuilt on
-    // every refresh.
-    let exists = Resource::new(
         move || mint_id.get(),
-        |id| async move { get_mint_by_id(id).await.map(|m| m.is_some()) },
+        |id| async move { get_mint_by_id(id).await },
     );
-
-    let metrics = Resource::new(
-        move || (mint_id.get(), tick.get()),
-        |(id, _)| async move { get_mint_metrics(id).await },
-    );
-
-    let uptime = Resource::new(
-        move || (mint_id.get(), tick.get()),
-        |(id, _)| async move { get_mint_uptime(id).await },
-    );
-
-    // Loaded once per page, not on the poll: a refresh would rebuild the
-    // review form and drop what someone is typing.
+    // Refetch on a successful submission only, so navigation and background sync
+    // never replace a draft being typed.
     let reviews = Resource::new(
         move || mint_id.get(),
         |id| async move { get_mint_reviews(id).await },
     );
-
-    // The last good answer to each polled request. A failed refresh keeps
-    // showing it, with a note, instead of wiping the page; only a first load
-    // that fails shows an error. Effects run in the browser only, so the
-    // server renders straight from the requests.
-    let last_mint = RwSignal::new(None::<Option<MintRead>>);
-    let last_metrics = RwSignal::new(None::<MintMetrics>);
-    let last_uptime = RwSignal::new(None::<MintUptime>);
-    let updated_at = RwSignal::new(None::<DateTime<Utc>>);
-    Effect::new(move |_| {
-        if let Some(Ok(found)) = mint.get() {
-            last_mint.set(Some(found));
-            updated_at.set(Some(Utc::now()));
-        }
-    });
-    Effect::new(move |_| {
-        if let Some(Ok(data)) = metrics.get() {
-            last_metrics.set(Some(data));
-        }
-    });
-    Effect::new(move |_| {
-        if let Some(Ok(data)) = uptime.get() {
-            last_uptime.set(Some(data));
-        }
-    });
-    let current_mint = move || {
-        mint.get()
-            .map(|res| res.or_else(|e| last_mint.get().ok_or(e)))
-    };
-    let current_uptime = move || {
-        uptime
-            .get()
-            .and_then(|r| r.ok())
-            .or_else(|| last_uptime.get())
-    };
-    let stale_note = move || {
-        tick.track();
-        let failed = matches!(mint.get(), Some(Err(_)))
-            || matches!(metrics.get(), Some(Err(_)))
-            || matches!(uptime.get(), Some(Err(_)));
-        let when = updated_at.get().map(relative_time_from)?;
-        failed.then(|| {
-            view! {
-                <div class="callout mt-4" role="status">
-                    {format!("Couldn't refresh. Showing data from {when}, retrying.")}
-                </div>
-            }
-        })
-    };
-
+    #[cfg(feature = "hydrate")]
+    {
+        let listener = window_event_listener(
+            leptos::ev::Custom::<leptos::web_sys::Event>::new("imf:review-posted"),
+            move |_| reviews.refetch(),
+        );
+        on_cleanup(move || listener.remove());
+    }
     view! {
         <div class="shell">
-            <Transition fallback=|| {
-                view! {
-                    <div class="skeleton" style="height: 36px; width: min(320px, 100%);"></div>
-                    <div class="skeleton mt-4" style="height: 14px; width: min(480px, 100%);"></div>
-                }
-            }>
-                // Built once, so it fades in where the skeleton was (`.arrives`)
-                // and the refresh redraws only what's inside.
-                <div class="arrives">
-                {move || {
-                    let metrics_data = metrics.get().and_then(|r| r.ok()).or_else(|| last_metrics.get());
-                    let uptime_data = current_uptime();
-                    current_mint().map(|res| match res {
-                        Ok(Some(mint)) => view! {
-                            <MintHead mint=mint metrics=metrics_data uptime=uptime_data/>
-                            {stale_note}
-                        }
-                        .into_any(),
-                        Ok(None) => {
-                            // A real 404, so dead mint pages drop out of search
-                            // results. The route renders after its data (Async),
-                            // so the status is still unsent here.
-                            #[cfg(feature = "ssr")]
-                            if let Some(response) = use_context::<leptos_axum::ResponseOptions>() {
-                                response.set_status(axum::http::StatusCode::NOT_FOUND);
-                            }
-                            view! {
-                                <Title text="Mint not found — Internet Mint Finder"/>
-                                <nav class="breadcrumb" aria-label="Breadcrumb"><a href=move || directory.get()>"Directory"</a></nav>
-                                <div class="empty-state"><h1 class="page-title">"This mint isn't in the directory."</h1></div>
-                            }
-                            .into_any()
-                        }
-                        Err(e) => view! {
-                            <div class="callout callout-err" role="alert" title=e.to_string()>
-                                "Couldn't load this mint. Retrying every 15 seconds."
+            <Transition fallback=|| view! { <div class="skeleton" style="height: 80px;"></div> }>
+                {move || mint.get().map(|result| match result {
+                    Ok(Some(mint)) => view! {
+                        <div class="arrives">
+                            <MintHead mint=mint.clone()/>
+                            <div class="mint-sections">
+                                <section aria-labelledby="reviews-title">
+                                    <h2 class="section-title" id="reviews-title">"Reviews"</h2>
+                                    <Transition fallback=|| view! { <div class="skeleton" style="height: 120px;"></div> }>
+                                        {move || reviews.get().map(|result| match result {
+                                            Ok(data) => view! { <ReviewsBlock data/> }.into_any(),
+                                            Err(_) => view! {
+                                                <div class="callout" role="alert">
+                                                    <p>"Couldn't load reviews."</p>
+                                                    <button class="btn" on:click=move |_| reviews.refetch()>"Try again"</button>
+                                                </div>
+                                            }.into_any(),
+                                        })}
+                                    </Transition>
+                                </section>
+                                <div class="mint-info"><MintInfoSections mint/></div>
                             </div>
-                        }
-                        .into_any(),
-                    })
-                }}
-                </div>
-            </Transition>
-
-            <Transition fallback=|| ()>
-                {move || exists.get().map(|found| matches!(found, Ok(true)).then(|| view! {
-                <div class="mint-sections">
-                    <section aria-labelledby="uptime-title">
-                        <h2 class="section-title" id="uptime-title">"Observed uptime"</h2>
-                        <Transition fallback=|| view! { <div class="skeleton" style="height: 136px;"></div> }>
-                            <div class="arrives">
-                                {move || uptime.get().map(|_| view! { <UptimePanel uptime=current_uptime()/> })}
-                            </div>
-                        </Transition>
-                    </section>
-
-                    <section aria-labelledby="reviews-title">
-                        <h2 class="section-title" id="reviews-title">"Reviews"</h2>
-                        <Transition fallback=|| view! { <div class="skeleton" style="height: 120px;"></div> }>
-                            <div class="arrives">
-                                {move || reviews.get().map(|res| match res {
-                                    Ok(data) => view! { <ReviewsBlock data/> }.into_any(),
-                                    Err(e) => view! { <p class="section-empty" title=e.to_string()>"Couldn't load reviews. Refresh the page to try again."</p> }.into_any(),
-                                })}
-                            </div>
-                        </Transition>
-                    </section>
-
-                    <Transition fallback=|| ()>
-                        <div class="arrives mint-info">
-                            {move || current_mint().and_then(|r| r.ok()).flatten().map(|mint| view! { <MintInfoSections mint/> })}
                         </div>
-                    </Transition>
-                </div>
-                }))}
+                    }.into_any(),
+                    Ok(None) => {
+                        #[cfg(feature = "ssr")]
+                        if let Some(response) = use_context::<leptos_axum::ResponseOptions>() { response.set_status(axum::http::StatusCode::NOT_FOUND); }
+                        view! {
+                            <Title text="Mint not found — Internet Mint Finder"/>
+                            <nav class="breadcrumb" aria-label="Breadcrumb"><a href=move || directory.get()>"Directory"</a></nav>
+                            <div class="empty-state"><h1 class="page-title">"This mint isn't in the directory."</h1></div>
+                        }.into_any()
+                    },
+                    Err(_) => view! {
+                        <div class="callout callout-err" role="alert">
+                            <p>"Couldn't load this mint."</p>
+                            <button class="btn" on:click=move |_| mint.refetch()>"Try again"</button>
+                        </div>
+                    }.into_any(),
+                })}
             </Transition>
         </div>
     }
 }
 
-/// The mint's avatar, name, state and copyable URL, the latest failure
-/// verbatim when the mint is not healthy or its newest uptime bar failed, then
-/// the mint's own words: its description and any notice, each skipped when the
-/// mint doesn't give one.
 #[component]
-fn MintHead(
-    mint: MintRead,
-    metrics: Option<MintMetrics>,
-    uptime: Option<MintUptime>,
-) -> impl IntoView {
+fn MintHead(mint: MintRead) -> impl IntoView {
     let directory = expect_context::<DirectoryMemory>().view;
-    let metrics = metrics.unwrap_or_default();
     let display_name = if mint.name.trim().is_empty() {
         short_url(&mint.url)
     } else {
@@ -223,56 +98,6 @@ fn MintHead(
     let description =
         info_text(&info, "description_long").or_else(|| info_text(&info, "description"));
     let notice = info_text(&info, "motd");
-
-    // The freshest error attributable to *this* mint, whether it came from a
-    // paid swap or a free health probe, with its category and timestamp.
-    let newest_failed = uptime
-        .as_ref()
-        .and_then(newest_bar_state)
-        .is_some_and(|state| matches!(state, MintState::Error | MintState::Warn));
-    let incident = match (
-        newest_failed || matches!(mint.state, MintState::Error | MintState::Warn),
-        pick_incident(&metrics, uptime.as_ref()),
-    ) {
-        (true, Some((message, category, at))) => {
-            let when = at
-                .map(relative_time)
-                .unwrap_or_else(|| "recently".to_string());
-            let pill = category.map(|c| view! { <CategoryPill category=c/> });
-            // A mint's raw error can be a whole HTML error page: the first
-            // 300 characters, and all of it behind "Read more".
-            let full = (message.chars().count() > INCIDENT_CHARS).then(|| message.clone());
-            let message = if full.is_some() {
-                format!(
-                    "{}…",
-                    message
-                        .chars()
-                        .take(INCIDENT_CHARS)
-                        .collect::<String>()
-                        .trim_end()
-                )
-            } else {
-                message
-            };
-            Some(view! {
-                <div class="incident">
-                    <div class="incident-head">
-                        <span class="incident-title">"Latest failure"</span>
-                        {pill}
-                        <span class="incident-when mono">{when}</span>
-                    </div>
-                    <div class="incident-msg mono">{message}</div>
-                    {full.map(|full| view! {
-                        <details class="incident-more">
-                            <summary class="text-link">"Read more"</summary>
-                            <div class="incident-msg mono">{full}</div>
-                        </details>
-                    })}
-                </div>
-            })
-        }
-        _ => None,
-    };
     view! {
         <Title text=page_title/>
         // A breadcrumb in words; navigation never gets a back arrow.
@@ -286,15 +111,13 @@ fn MintHead(
             <div class="detail-id">
                 <div class="detail-title">
                     <h1 class="page-title" dir="auto">{display_name}</h1>
-                    <StateBadge state=mint.state/>
                 </div>
                 <CopyUrl url=mint.url.clone()/>
             </div>
         </div>
-        {incident}
-        {description.map(|text| view! { <MintWords id="about-title" title="Description from the mint" text/> })}
+        {description.map(|text| view! { <MintWords id="about-title" title="Description on Nostr" text/> })}
         {notice.map(|text| view! {
-            <MintWords id="notice-title" title="Notice from the mint" text fetched=mint.updated_at/>
+            <MintWords id="notice-title" title="Notice on Nostr" text fetched=mint.updated_at/>
         })}
     }
 }
@@ -317,7 +140,7 @@ fn MintWords(
             <div class="section-head">
                 <h2 class="section-title" id=id>{title}</h2>
                 {fetched.map(|at| view! {
-                    <span title=absolute_time(at)>{format!("Fetched {}", relative_time(at))}</span>
+                    <span title=absolute_time(at)>{format!("Published {}", relative_time(at))}</span>
                 })}
             </div>
             <p dir="auto">{text}</p>
@@ -342,7 +165,7 @@ fn words_class(text: &str) -> &'static str {
     }
 }
 
-/// The mint's NUT-06 info; null when it has shared none, so every field reads
+/// Metadata from the mint announcement; null when absent, so every field reads
 /// as blank and its section is skipped.
 fn mint_info(mint: &MintRead) -> serde_json::Value {
     mint.info
@@ -375,7 +198,7 @@ fn MintInfoSections(mint: MintRead) -> impl IntoView {
         .map(features);
     let lists_offers = features.is_some() || software.is_some() || terms.is_some();
     let note = format!(
-        "As listed by the mint. Fetched {}.",
+        "As listed on Nostr. Published {}.",
         relative_time(mint.updated_at)
     );
     let fetched = absolute_time(mint.updated_at);
@@ -778,303 +601,10 @@ fn contacts(info: &serde_json::Value) -> Vec<Contact> {
 
 /// The 24-hour strip of hourly results and its figure, with what the figure
 /// rests on behind a question mark beside it.
-#[component]
-fn UptimePanel(uptime: Option<MintUptime>) -> impl IntoView {
-    let Some(uptime) = uptime else {
-        return view! {
-            <div class="card card-pad uptime-card">
-                <p class="text-dim">"Couldn't load uptime. Retrying every 15 seconds."</p>
-            </div>
-        }
-        .into_any();
-    };
-    let value = uptime
-        .uptime_percent
-        .map(|percent| format!("{percent:.1}%"))
-        .unwrap_or_else(|| "No data".to_string());
-    let state = uptime_state(&uptime);
-    let window = format!("{}h", uptime.window_hours);
-    let checks = if uptime.checks == 0 {
-        format!("No checks in the last {window}")
-    } else {
-        format!(
-            "{} of {} passed",
-            uptime.successes,
-            plural(uptime.checks, "check", "checks")
-        )
-    };
-    let last = match (uptime.checks, uptime.last_checked_at) {
-        (0, _) | (_, None) => String::new(),
-        (_, Some(ts)) => format!(", the last one {}", relative_time(ts)),
-    };
-    // When it failed, for anyone who can't hover a bar: a finger, the keyboard
-    // and a screen reader get it here.
-    let failed = failed_bars(&uptime.bars)
-        .map(|words| format!(" {words}"))
-        .unwrap_or_default();
-    let note = format!(
-        "{checks}{last}.{failed} Each bar is {}; grey means no data, not downtime.",
-        bar_span(uptime.bucket_minutes)
-    );
-    let label = format!("Observed uptime, last {window}: {value}. {checks}.{failed}");
-    let style = uptime_grid_style(uptime.bars.len());
-    let bars = uptime.bars;
-
-    let tip_open = RwSignal::new(false);
-    let tip = NodeRef::<leptos::html::Span>::new();
-    #[cfg(feature = "hydrate")]
-    {
-        use leptos::wasm_bindgen::JsCast;
-        let outside = window_event_listener(leptos::ev::pointerdown, move |ev| {
-            let target = ev.target();
-            let node = target
-                .as_ref()
-                .and_then(|t| t.dyn_ref::<leptos::web_sys::Node>());
-            if !tip.get_untracked().is_some_and(|tip| tip.contains(node)) {
-                tip_open.set(false);
-            }
-        });
-        on_cleanup(move || outside.remove());
-    }
-
-    view! {
-        <div class="card card-pad uptime-card">
-            <div class="uptime-head">
-                <span class="uptime-figure">
-                    <span class="uptime-value">{value}</span>
-                    // Shown on hover (a mouse) or focus (the keyboard), and
-                    // toggled by a tap, since iOS doesn't focus a tapped
-                    // button; a press elsewhere or Escape hides it again.
-                    <span class="help-tip" class:is-open=move || tip_open.get() node_ref=tip>
-                        <button
-                            type="button"
-                            class="help-tip-button"
-                            aria-describedby="uptime-note"
-                            aria-expanded=move || if tip_open.get() { "true" } else { "false" }
-                            on:click=move |_| tip_open.update(|open| *open = !*open)
-                            on:keydown=move |ev: leptos::ev::KeyboardEvent| {
-                                if ev.key() == "Escape" {
-                                    tip_open.set(false);
-                                    let _ = event_target::<HtmlElement>(&ev).blur();
-                                }
-                            }
-                        >
-                            <Help/>
-                            <span class="sr-only">"How this is measured"</span>
-                        </button>
-                        <span class="help-tip-text" role="tooltip" id="uptime-note">{note}</span>
-                    </span>
-                </span>
-                <span class="uptime-state">{state}</span>
-            </div>
-            <div class="uptime-bars" style=style role="img" aria-label=label>
-                {if bars.is_empty() {
-                    view! {
-                        <div class="uptime-empty" aria-hidden="true">
-                            <span></span><span></span><span></span><span></span><span></span><span></span>
-                        </div>
-                    }
-                    .into_any()
-                } else {
-                    bars.into_iter()
-                        .map(|bar| {
-                            let (class, word) = match bar.state {
-                                MintState::Ok => ("uptime-bar ok", "Healthy"),
-                                MintState::Warn => ("uptime-bar warn", "Degraded"),
-                                MintState::Error => ("uptime-bar err", "Failing"),
-                                MintState::Unknown => ("uptime-bar unknown", "No data"),
-                            };
-                            let title = format!(
-                                "{} to {}: {word} ({}, {})",
-                                absolute_time(bar.start_at),
-                                absolute_time(bar.end_at),
-                                plural(bar.checks, "check", "checks"),
-                                plural(bar.failures, "failure", "failures"),
-                            );
-                            view! { <span class=class title=title aria-hidden="true"></span> }
-                        })
-                        .collect_view()
-                        .into_any()
-                }}
-            </div>
-            <div class="uptime-axis" aria-hidden="true">
-                <span>{format!("{window} ago")}</span>
-                <span>"Now"</span>
-            </div>
-        </div>
-    }
-    .into_any()
-}
-
-/// The state of the newest bar holding any checks. A bar is the worst result
-/// of its hour, so this can be a failure even when the last check passed.
-fn newest_bar_state(uptime: &MintUptime) -> Option<MintState> {
-    uptime
-        .bars
-        .iter()
-        .rev()
-        .find(|bar| bar.checks > 0)
-        .map(|bar| bar.state)
-}
-
-/// The line across from the uptime figure. It answers for the last check, so
-/// a passed check reads as up even if the newest bar holds an earlier failure.
-fn uptime_state(uptime: &MintUptime) -> String {
-    match (
-        newest_bar_state(uptime),
-        uptime.current_up_since,
-        uptime.last_checked_at,
-    ) {
-        (Some(_), Some(since), _) => match elapsed_since(since).as_str() {
-            "just now" => "Up just now".to_string(),
-            elapsed => format!("Up for {elapsed}"),
-        },
-        (Some(MintState::Ok), None, _) => "Up now".to_string(),
-        (Some(MintState::Warn), None, _) => "Degraded at last check".to_string(),
-        (Some(MintState::Error), None, _) => "Failed at last check".to_string(),
-        (Some(MintState::Unknown), None, _) => "No answer at last check".to_string(),
-        (None, _, Some(_)) => format!("Not checked in {}h", uptime.window_hours),
-        (None, _, None) => "Not checked yet".to_string(),
-    }
-}
-
-/// How many bars hold a failure and when the latest began, or nothing when
-/// none do.
-fn failed_bars(bars: &[MintUptimeBar]) -> Option<String> {
-    let failed = bars.iter().filter(|bar| bar.failures > 0).count();
-    let latest = bars.iter().rev().find(|bar| bar.failures > 0)?;
-    let when = absolute_time(latest.start_at);
-    Some(if failed == 1 {
-        format!("1 bar shows failures, from {when}.")
-    } else {
-        format!("{failed} bars show failures, the latest from {when}.")
-    })
-}
-
-/// Pick the most recent error attributable to this mint, preferring whichever
-/// of the swap-derived metrics or the health-probe uptime carries the newer
-/// event. Returns `(message, category, when)`.
-fn pick_incident(
-    metrics: &MintMetrics,
-    uptime: Option<&MintUptime>,
-) -> Option<(String, Option<String>, Option<DateTime<Utc>>)> {
-    let from_metrics = metrics.last_error.clone().map(|m| {
-        (
-            m,
-            metrics.last_error_category.clone(),
-            metrics.last_error_at,
-        )
-    });
-    let from_uptime = uptime.and_then(|u| {
-        u.last_error
-            .clone()
-            .map(|m| (m, u.last_error_category.clone(), u.last_error_at))
-    });
-
-    match (from_metrics, from_uptime) {
-        (Some(a), Some(b)) => Some(if b.2 > a.2 { b } else { a }),
-        (Some(a), None) => Some(a),
-        (None, Some(b)) => Some(b),
-        (None, None) => None,
-    }
-}
-
-fn elapsed_since(dt: DateTime<Utc>) -> String {
-    let secs = (Utc::now() - dt).num_seconds().max(0);
-    match secs {
-        0..=89 => "just now".to_string(),
-        90..=3599 => format!("{}m", secs / 60),
-        3600..=86_399 => format!("{}h", secs / 3600),
-        _ => format!("{}d", secs / 86_400),
-    }
-}
-
-fn plural(n: u64, one: &str, many: &str) -> String {
-    format!("{n} {}", if n == 1 { one } else { many })
-}
-
-/// How long one uptime bar covers, as a phrase: "one hour", "2 hours".
-fn bar_span(minutes: u64) -> String {
-    match minutes {
-        60 => "one hour".to_string(),
-        minutes if minutes > 0 && minutes % 60 == 0 => format!("{} hours", minutes / 60),
-        minutes => format!("{minutes} minutes"),
-    }
-}
-
-fn uptime_grid_style(bar_count: usize) -> String {
-    format!("--uptime-columns: {}", bar_count.max(1))
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{
-        and_list, bar_span, contacts, failed_bars, features, nut_title, uptime_grid_style,
-        uptime_state, words_class, Nut, Piece,
-    };
-    use crate::types::{MintState, MintUptime, MintUptimeBar};
-    use chrono::{Duration, TimeZone, Utc};
+    use super::{and_list, contacts, features, nut_title, words_class, Nut, Piece};
     use serde_json::json;
-
-    fn bar(state: MintState, checks: u64, failures: u64) -> MintUptimeBar {
-        let start_at = Utc.with_ymd_and_hms(2026, 11, 3, 14, 0, 0).unwrap();
-        MintUptimeBar {
-            start_at,
-            end_at: start_at + Duration::hours(1),
-            state,
-            checks,
-            failures,
-        }
-    }
-
-    #[test]
-    fn the_uptime_line_answers_for_the_last_check() {
-        // Passed, in an hour that also holds a failure: up, not down.
-        let passed = MintUptime {
-            current_up_since: Some(Utc::now() - Duration::minutes(5)),
-            last_checked_at: Some(Utc::now()),
-            bars: vec![bar(MintState::Error, 5, 1)],
-            ..Default::default()
-        };
-        assert_eq!(uptime_state(&passed), "Up for 5m");
-
-        // The first check after a failure can have just passed.
-        let just = MintUptime {
-            current_up_since: Some(Utc::now()),
-            ..passed.clone()
-        };
-        assert_eq!(uptime_state(&just), "Up just now");
-
-        let failed = MintUptime {
-            current_up_since: None,
-            ..passed.clone()
-        };
-        assert_eq!(uptime_state(&failed), "Failed at last check");
-
-        // Up long ago, but nothing checked in the window: not "up".
-        let silent = MintUptime {
-            current_up_since: Some(Utc::now() - Duration::days(9)),
-            last_checked_at: Some(Utc::now() - Duration::days(2)),
-            bars: vec![bar(MintState::Unknown, 0, 0)],
-            ..Default::default()
-        };
-        assert_eq!(uptime_state(&silent), "Not checked in 24h");
-        assert_eq!(uptime_state(&MintUptime::default()), "Not checked yet");
-    }
-
-    #[test]
-    fn failed_bars_say_how_many_and_when_the_latest_began() {
-        assert_eq!(failed_bars(&[bar(MintState::Ok, 1, 0)]), None);
-        assert_eq!(
-            failed_bars(&[bar(MintState::Error, 1, 1)]).as_deref(),
-            Some("1 bar shows failures, from 2026-11-03 14:00:00 UTC.")
-        );
-        assert_eq!(
-            failed_bars(&[bar(MintState::Error, 1, 1), bar(MintState::Warn, 2, 1)]).as_deref(),
-            Some("2 bars show failures, the latest from 2026-11-03 14:00:00 UTC.")
-        );
-    }
-
     #[test]
     fn long_words_are_clamped_where_they_pass_eight_lines() {
         assert_eq!(words_class("A small mint."), "mint-words");
@@ -1203,19 +733,5 @@ mod tests {
             three.lightning[0].detail,
             [Piece::Text("In msat, USD and EUR".into())]
         );
-    }
-
-    #[test]
-    fn uptime_grid_tracks_the_number_of_server_buckets() {
-        assert_eq!(uptime_grid_style(24), "--uptime-columns: 24");
-        assert_eq!(uptime_grid_style(48), "--uptime-columns: 48");
-        assert_eq!(uptime_grid_style(0), "--uptime-columns: 1");
-    }
-
-    #[test]
-    fn bar_spans_are_human_readable() {
-        assert_eq!(bar_span(30), "30 minutes");
-        assert_eq!(bar_span(60), "one hour");
-        assert_eq!(bar_span(120), "2 hours");
     }
 }

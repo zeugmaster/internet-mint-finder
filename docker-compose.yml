@@ -1,181 +1,20 @@
-x-cdk-mintd-env: &cdk-mintd-env
-  CDK_MINTD_LISTEN_HOST: "0.0.0.0"
-  CDK_MINTD_LISTEN_PORT: "8085"
-  CDK_MINTD_LN_BACKEND: "fakewallet"
-  CDK_MINTD_DATABASE: "sqlite"
-  CDK_MINTD_CACHE_BACKEND: "memory"
-  CDK_MINTD_PROMETHEUS_ENABLED: "false"
-  CDK_MINTD_FAKE_WALLET_SUPPORTED_UNITS: "sat"
-  CDK_MINTD_FAKE_WALLET_FEE_PERCENT: "0.02"
-  CDK_MINTD_FAKE_WALLET_RESERVE_FEE_MIN: "1"
-  CDK_MINTD_FAKE_WALLET_MIN_DELAY: "1"
-  CDK_MINTD_FAKE_WALLET_MAX_DELAY: "3"
-
-x-cdk-mintd: &cdk-mintd
-  image: cashubtc/mintd:0.17.7  # 0.18+ needs a TOML imported with `config init`; 0.17 still reads env vars
-  restart: unless-stopped
-  command: ["cdk-mintd"]
-
 services:
-  # Two instances share one relay so the mirror can be watched locally:
-  # whatever instance A audits shows up on B (and vice versa) within a minute.
-  # Keys below are throwaway dev keys; never reuse them. Swaps run every
-  # 20-60 s, and the relay is also listed as ws://localhost:7777 so the
-  # browser review form can reach it through the published port (the app
-  # logs a refused connection for that address; harmless).
-  auditor:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: imf:latest
-    container_name: imf-a
+  imf:
+    image: imf:local
+    build: .
     restart: unless-stopped
-    stop_grace_period: 45s
-    depends_on:
-      - strfry
-      - mint-one
-      - mint-two
-      - mint-three
-      - mint-four
     ports:
-      - "3000:3000"
-    env_file:
-      - .env
+      - "127.0.0.1:${IMF_PORT:-3000}:3000"
     environment:
-      APP_NAME: "IMF A (dev)"
-      CDK_MNEMONIC: "shock rally bird garage senior false farm picture duty rack vault donkey"
-      IMF_NOSTR_NSEC: nsec1xdknd0qnqvrg7tc4wwqxvpcqju6zecmmv67xp9cd6nj565yhhq4q4wp4a2
-      IMF_AUDITORS: npub1qj4rfl4wzfdpet9lpwjqxjrsqn7r8gjy3qesuygcldagekdmew2ss4wf5m,npub1c4dc6c3sskttnv38t469xa8v0n0hgq6wrnuex8h52n8mgtm82e5qmhf69j
-      IMF_RELAYS: ws://strfry:7777,ws://localhost:7777
-      AUDITOR_PAID_SWAPS: "true"
-      AUDITOR_MIN_DELAY_SECS: "20"
-      AUDITOR_MAX_DELAY_SECS: "60"
-      IMF_PUBLIC_URLS: http://localhost:3000
-      AUDITOR_PRIVATE_MINT_URLS: http://mint-one:8085,http://mint-two:8085,http://mint-three:8085,http://mint-four:8085
-      AUDITOR_MINT_URL_ALIASES: >-
-        http://0.0.0.0:8085=http://mint-one:8085,
-        http://localhost:8085=http://mint-one:8085,
-        http://127.0.0.1:8085=http://mint-one:8085,
-        http://0.0.0.0:8086=http://mint-two:8085,
-        http://localhost:8086=http://mint-two:8085,
-        http://127.0.0.1:8086=http://mint-two:8085,
-        http://0.0.0.0:8087=http://mint-three:8085,
-        http://localhost:8087=http://mint-three:8085,
-        http://127.0.0.1:8087=http://mint-three:8085,
-        http://0.0.0.0:8088=http://mint-four:8085,
-        http://localhost:8088=http://mint-four:8085,
-        http://127.0.0.1:8088=http://mint-four:8085
+      IMF_DATA_DIR: /data
+      IMF_RELAYS: ${IMF_RELAYS:-wss://relay.damus.io,wss://nos.lol,wss://relay.primal.net,wss://relay.cashumints.space,wss://relay.nostr.net}
+      BASE_URL: ${BASE_URL:-http://localhost:${IMF_PORT:-3000}}
+      RUST_LOG: ${RUST_LOG:-info}
     volumes:
-      - auditor-data:/data
-
-  auditor-b:
-    image: imf:latest
-    container_name: imf-b
-    restart: unless-stopped
-    stop_grace_period: 45s
-    depends_on:
-      - auditor
-    ports:
-      - "3001:3000"
-    environment:
-      APP_NAME: "IMF B (dev)"
-      CDK_MNEMONIC: "private position month coconut club error above park absurd divorce symbol blind"
-      IMF_NOSTR_NSEC: nsec19gc6hhldm0h3nd7ce0kd0uuqu9965wrjas6sk2ntpdemfxr5ghxq6fykt3
-      IMF_AUDITORS: npub1qj4rfl4wzfdpet9lpwjqxjrsqn7r8gjy3qesuygcldagekdmew2ss4wf5m,npub1c4dc6c3sskttnv38t469xa8v0n0hgq6wrnuex8h52n8mgtm82e5qmhf69j
-      IMF_RELAYS: ws://strfry:7777,ws://localhost:7777
-      AUDITOR_PAID_SWAPS: "true"
-      AUDITOR_MIN_DELAY_SECS: "20"
-      AUDITOR_MAX_DELAY_SECS: "60"
-      IMF_PUBLIC_URLS: http://localhost:3001
-      AUDITOR_PRIVATE_MINT_URLS: http://mint-one:8085,http://mint-two:8085,http://mint-three:8085,http://mint-four:8085
-      AUDITOR_MINT_URL_ALIASES: >-
-        http://0.0.0.0:8085=http://mint-one:8085,
-        http://localhost:8085=http://mint-one:8085,
-        http://127.0.0.1:8085=http://mint-one:8085,
-        http://0.0.0.0:8086=http://mint-two:8085,
-        http://localhost:8086=http://mint-two:8085,
-        http://127.0.0.1:8086=http://mint-two:8085,
-        http://0.0.0.0:8087=http://mint-three:8085,
-        http://localhost:8087=http://mint-three:8085,
-        http://127.0.0.1:8087=http://mint-three:8085,
-        http://0.0.0.0:8088=http://mint-four:8085,
-        http://localhost:8088=http://mint-four:8085,
-        http://127.0.0.1:8088=http://mint-four:8085
-    volumes:
-      - auditor-b-data:/data
-
-  strfry:
-    image: ghcr.io/hoytech/strfry:latest
-    container_name: imf-strfry
-    restart: unless-stopped
-    command: ["relay"]
-    volumes:
-      - ./deploy/strfry/strfry.conf:/etc/strfry.conf:ro
-      - strfry-data:/app/strfry-db
-    ports:
-      - "7777:7777"
-
-  mint-one:
-    <<: *cdk-mintd
-    container_name: cdk-auditor-mint-one
-    ports:
-      - "8085:8085"
-    environment:
-      <<: *cdk-mintd-env
-      CDK_MINTD_URL: "http://mint-one:8085"
-      CDK_MINTD_SEED: "cashu-auditor-test-mint-one"
-      CDK_MINTD_MINT_NAME: "Auditor Test Mint One"
-      CDK_MINTD_MINT_DESCRIPTION: "Fake-wallet mint for local auditor testing"
-    volumes:
-      - mint-one-data:/root/.cdk-mintd
-
-  mint-two:
-    <<: *cdk-mintd
-    container_name: cdk-auditor-mint-two
-    ports:
-      - "8086:8085"
-    environment:
-      <<: *cdk-mintd-env
-      CDK_MINTD_URL: "http://mint-two:8085"
-      CDK_MINTD_SEED: "cashu-auditor-test-mint-two"
-      CDK_MINTD_MINT_NAME: "Auditor Test Mint Two"
-      CDK_MINTD_MINT_DESCRIPTION: "Fake-wallet mint for local auditor testing"
-    volumes:
-      - mint-two-data:/root/.cdk-mintd
-
-  mint-three:
-    <<: *cdk-mintd
-    container_name: cdk-auditor-mint-three
-    ports:
-      - "8087:8085"
-    environment:
-      <<: *cdk-mintd-env
-      CDK_MINTD_URL: "http://mint-three:8085"
-      CDK_MINTD_SEED: "cashu-auditor-test-mint-three"
-      CDK_MINTD_MINT_NAME: "Auditor Test Mint Three"
-      CDK_MINTD_MINT_DESCRIPTION: "Fake-wallet mint for local auditor testing"
-    volumes:
-      - mint-three-data:/root/.cdk-mintd
-
-  mint-four:
-    <<: *cdk-mintd
-    container_name: cdk-auditor-mint-four
-    ports:
-      - "8088:8085"
-    environment:
-      <<: *cdk-mintd-env
-      CDK_MINTD_URL: "http://mint-four:8085"
-      CDK_MINTD_SEED: "cashu-auditor-test-mint-four"
-      CDK_MINTD_MINT_NAME: "Auditor Test Mint Four"
-      CDK_MINTD_MINT_DESCRIPTION: "Fake-wallet mint for local auditor testing"
-    volumes:
-      - mint-four-data:/root/.cdk-mintd
-
+      - imf_data:/data
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    stop_grace_period: 40s
 volumes:
-  auditor-data:
-  auditor-b-data:
-  strfry-data:
-  mint-one-data:
-  mint-two-data:
-  mint-three-data:
-  mint-four-data:
+  imf_data:

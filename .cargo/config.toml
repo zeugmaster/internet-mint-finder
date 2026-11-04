@@ -1,4 +1,4 @@
 # Leptos uses this at compile time to match cargo-leptos' .wasm filename.
 # Keep it set for direct SSR builds too (including the Docker release build).
 [env]
-LEPTOS_OUTPUT_NAME = "cdk-cashu-auditor"
+LEPTOS_OUTPUT_NAME = "imf"

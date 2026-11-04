@@ -7,7 +7,7 @@ use leptos_router::hooks::use_location;
 
 /// Brand and the theme switch. The directory is the only section, so there is
 /// no nav; the brand links home. On the directory itself the head carries the
-/// tag, so the brand there is the name alone. public/dashboard.html carries
+/// tag, so the brand there is the name alone. archive/auditor-ui/dashboard.html carries
 /// its own copy of this markup, with the nav it needs.
 #[component]
 pub fn Header() -> impl IntoView {
@@ -35,6 +35,15 @@ pub fn Header() -> impl IntoView {
                         </Suspense>
                     </span>
                 </a>
+
+                <div class="site-account">
+                    <button type="button" data-nostr-signin="" data-signer="out" class="btn btn-small">"Sign in with Nostr"</button>
+                    <div class="site-account-in" data-signer="in" hidden=true>
+                        <span data-nostr-pubkey="" class="mono"></span>
+                        <button type="button" data-nostr-signout="" class="btn btn-ghost btn-small">"Sign out"</button>
+                    </div>
+                    <p id="nostr-login-status" class="field-hint" role="status" aria-live="polite" hidden=true></p>
+                </div>
 
                 // The click is handled by the theme script in the shell, so the
                 // switch works before (and without) hydration.
